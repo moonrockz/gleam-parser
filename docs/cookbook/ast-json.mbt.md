@@ -55,7 +55,6 @@ test "aj: a decode error names the path" {
     "no error"
   } catch {
     @gleam.DecodeError::DecodeError(path~, message~) => "\{path}: \{message}"
-    _ => "other"
   }
   @expect.expect(message).to_equal("$.name: missing field")
 }
