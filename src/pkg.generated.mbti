@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonrockz/gleam-parser"
 
+import {
+  "moonrockz/gleam-parser/span",
+}
+
 // Values
 pub fn version() -> String
 
@@ -9,5 +13,8 @@ pub fn version() -> String
 // Types and methods
 
 // Type aliases
+pub using @span {type Position}
+
+pub using @span {type SrcSpan}
 
 // Traits
