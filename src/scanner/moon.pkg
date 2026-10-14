@@ -9,6 +9,7 @@ import {
   "moonrockz/expect",
   "moonrockz/gleam-parser/lawkit",
   "moonbitlang/core/quickcheck",
+  "moonbitlang/core/debug",
 } for "test"
 
 import {

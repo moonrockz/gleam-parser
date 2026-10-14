@@ -3,3 +3,9 @@ import {
   "moonbitlang/core/quickcheck",
   "moonbitlang/core/quickcheck/splitmix",
 }
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/quickcheck",
+  "moonbitlang/core/quickcheck/splitmix",
+} for "test"
