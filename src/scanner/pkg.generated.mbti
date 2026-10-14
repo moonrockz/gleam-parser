@@ -15,6 +15,10 @@ pub fn parse_float_value(String) -> Double?
 
 pub fn parse_int_value(String) -> @bigint.BigInt?
 
+pub fn tokenize(SourceText) -> TokenStream
+
+pub fn tokenize_text(String) -> TokenStream
+
 // Errors
 
 // Types and methods

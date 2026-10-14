@@ -34,13 +34,13 @@ fn is_digit_of_radix(c : Char?, radix : Int32) -> Bool {
 /// ```
 pub fn parse_int_value(value : String) -> BigInt? {
   let negative = value.has_prefix("-")
-  let body = if negative { value.substring(start=1) } else { value }
+  let body = if negative { value[1:].to_string() } else { value }
   let (radix, digits) = if body.has_prefix("0x") {
-    (16, body.substring(start=2))
+    (16, body[2:].to_string())
   } else if body.has_prefix("0o") {
-    (8, body.substring(start=2))
+    (8, body[2:].to_string())
   } else if body.has_prefix("0b") {
-    (2, body.substring(start=2))
+    (2, body[2:].to_string())
   } else {
     (10, body)
   }
@@ -82,9 +82,10 @@ pub fn parse_float_value(value : String) -> Double? {
   if text == "" || text.has_suffix("e") || text.has_suffix("e-") {
     return None
   }
-  match (try? @string.parse_double(text)) {
-    Ok(d) => if d != d { None } else { Some(d) }
-    Err(_) => out_of_range(text)
+  try @string.parse_double(text) catch {
+    _ => out_of_range(text)
+  } noraise {
+    d => if d != d { None } else { Some(d) }
   }
 }
 
@@ -94,8 +95,8 @@ pub fn parse_float_value(value : String) -> Double? {
 /// mantissa and the exponent apart and pick the limit.
 fn out_of_range(text : String) -> Double? {
   guard text.split_once("e") is Some((mantissa, exponent)) else { return None }
-  guard (try? @string.parse_double(mantissa)) is Ok(m) else { return None }
-  guard (try? @string.parse_int(exponent)) is Ok(x) else { return None }
+  let m = @string.parse_double(mantissa) catch { _ => return None }
+  let x = @string.parse_int(exponent) catch { _ => return None }
   let sign = if m < 0.0 { -1.0 } else { 1.0 }
   if x < 0 {
     Some(sign * 0.0)
