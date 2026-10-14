@@ -1,7 +1,7 @@
 ///|
 test "GleamText reaches every edge piece and shrinks toward fewer pieces" {
-  let seen : Set[String] = Set::new()
-  let rs = @splitmix.RandomState::new(seed=2026)
+  let seen : Set[String] = Set([])
+  let rs = @splitmix.RandomState(seed=2026)
   for _ in 0..<2000 {
     let t : @lawkit.GleamText = @quickcheck.Arbitrary::arbitrary(12, rs)
     for p in t.0 {

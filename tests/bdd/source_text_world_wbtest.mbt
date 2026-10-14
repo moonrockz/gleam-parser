@@ -7,7 +7,7 @@ struct SourceTextWorld {
 
 ///|
 fn SourceTextWorld::new() -> SourceTextWorld {
-  SourceTextWorld::default()
+  Default::default()
 }
 
 ///|

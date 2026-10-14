@@ -4,4 +4,5 @@ import {
   "moonrockz/expect",
   "moonbitlang/async",
   "moonbitlang/x/fs",
+  "moonbitlang/core/debug",
 } for "wbtest"

@@ -6,7 +6,7 @@ struct DiagnosticsWorld {
 
 ///|
 fn DiagnosticsWorld::new() -> DiagnosticsWorld {
-  DiagnosticsWorld::default()
+  Default::default()
 }
 
 ///|

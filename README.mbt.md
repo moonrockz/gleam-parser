@@ -5,13 +5,19 @@ language in MoonBit. One expected user is
 [morphir-moonbit](https://github.com/finos/morphir-moonbit), as a frontend
 that reads Gleam and a backend that writes it.
 
-Status: bootstrap. The AST will mirror the Gleam compiler's untyped AST at
-v1.19.2; the parity oracle is the compiler itself.
+Status: the scanner is done. The AST will mirror the Gleam compiler's
+untyped AST at v1.19.2; the parity oracle is the compiler itself.
+
+Done:
+
+- **Scanner** (`tokenize`): lossless tokens with trivia (whitespace, line
+  breaks, `//`, `///` and `////` comments) that rebuild the source byte for
+  byte; spans are UTF-8 byte offsets as in the compiler; a lexical error is
+  a `GL-SCAN-001` diagnostic with the compiler's message plus an `Error`
+  token, and scanning goes on.
 
 Planned, in order:
 
-- **Scanner**: lossless tokens with trivia (whitespace, `//`, `///` and
-  `////` comments) that rebuild the source byte for byte.
 - **Parser**: tokens to AST, concrete syntax tree (CST) and diagnostics with
   the compiler's wording; a definition that does not parse is reported and
   the rest of the file is parsed.
