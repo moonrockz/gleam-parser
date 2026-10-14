@@ -276,7 +276,7 @@ fn render(
     )
   }
 
-  let lines : Map[Int32, Line] = {}
+  let lines : Map[Int32, Line] = Map([])
   fn line_at(i : Int32) -> Line {
     match lines.get(i) {
       Some(l) => l
@@ -577,14 +577,10 @@ fn snippet_source(
 
   // Single-line labels underneath
   if single.length() > 0 {
-    let mut num_messages = 0
     let mut max_label_start = 0
     let mut max_label_end = 0
     let mut trailing : Int32? = None
     for i, label in single {
-      if label.message != "" {
-        num_messages += 1
-      }
       max_label_start = @cmp.maximum(max_label_start, label.start)
       max_label_end = @cmp.maximum(max_label_end, label.end)
       if label.end == max_label_end {

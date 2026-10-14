@@ -11,9 +11,14 @@ import {
 import {
   "moonrockz/expect",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+  "moonrockz/gleam-parser/lawkit",
+  "moonbitlang/core/quickcheck",
 } for "test"
 
 import {
   "moonrockz/expect",
   "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/lawkit",
+  "moonbitlang/core/quickcheck",
 } for "wbtest"
