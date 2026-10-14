@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Record the oracle's JSON for every tests/fixtures/ast/*.gleam (needs mise run oracle:build)"
+set -euo pipefail
+exec moon run -q --target wasm scripts/fixtures.mbtx -- record tools/gleam-ast-oracle/target/release/gleam-ast-oracle tests/fixtures/ast

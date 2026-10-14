@@ -22,6 +22,8 @@ pub fn decode_extra(Json) -> ModuleExtra raise DecodeError
 
 pub fn decode_module(Json) -> Module raise DecodeError
 
+pub fn decode_oracle_output(Json) -> OracleOutput raise DecodeError
+
 pub fn decode_parsed(Json) -> Parsed raise DecodeError
 
 pub fn decode_pattern(Json) -> Pattern raise DecodeError
@@ -43,6 +45,8 @@ pub fn encode_expr(Expr) -> Json
 pub fn encode_extra(ModuleExtra) -> Json
 
 pub fn encode_module(Module) -> Json
+
+pub fn encode_oracle_output(OracleOutput) -> Json
 
 pub fn encode_parsed(Parsed) -> Json
 
@@ -347,6 +351,11 @@ pub(all) struct ModuleExtra {
   trailing_commas : ArrayView[Int]
 } derive(Eq, @debug.Debug)
 pub fn ModuleExtra::empty() -> Self
+
+pub(all) enum OracleOutput {
+  Parsed(Parsed)
+  Error(kind~ : String, lexical_kind~ : String?, location~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct Parsed {
   module_ : Module
