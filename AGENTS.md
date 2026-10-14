@@ -64,7 +64,9 @@ moonrockz/gleam-parser
 
 ### Diagnostics
 
-Every `Diagnostic` has a `code`, a `severity`, a one-line `message`, a `span`,
+Every `Diagnostic` has a `code`, a `kind` (the compiler's error variant, for
+example `UnrecognizedToken`; empty when there is none), a `severity`, a
+one-line `message`, a `span`,
 a `title` (the compiler's: "Syntax error"), `labels` (the primary label text
 at the span, plus extra labels) and an optional `hint`, with the compiler's
 wording from `parse/error.rs`.

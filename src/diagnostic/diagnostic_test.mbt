@@ -50,3 +50,28 @@ test "the code table matches AGENTS.md" {
     "GL-SCAN-001", "GL-PARSE-001", "GL-PARSE-002", "GL-PARSE-003", "GL-PARSE-004",
   ])
 }
+
+///|
+test "a diagnostic carries the compiler's error kind" {
+  let d = @diagnostic.Diagnostic::new(
+    code="GL-SCAN-001",
+    kind="UnrecognizedToken",
+    severity=Error,
+    title="Syntax error",
+    message="I can't figure out what to do with this character",
+    span=@span.SrcSpan::new(0, 0),
+  )
+  @expect.expect(d.kind).to_equal("UnrecognizedToken")
+}
+
+///|
+test "the kind defaults to the empty string" {
+  let d = @diagnostic.Diagnostic::new(
+    code="GL-PARSE-004",
+    severity=Error,
+    title="Syntax error",
+    message="Too much nesting",
+    span=@span.SrcSpan::new(0, 0),
+  )
+  @expect.expect(d.kind).to_equal("")
+}
