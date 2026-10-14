@@ -2,14 +2,35 @@
 package "moonrockz/gleam-parser/scanner"
 
 import {
+  "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/span",
 }
 
 // Values
+pub fn lexical_diagnostic(LexicalErrorType, @span.SrcSpan) -> @diagnostic.Diagnostic
 
 // Errors
 
 // Types and methods
+pub(all) enum LexicalErrorType {
+  BadStringEscape
+  InvalidUnicodeEscape(UnicodeEscapeError)
+  DigitOutOfRadix
+  NumTrailingUnderscore
+  RadixIntNoValue
+  MissingExponent
+  UnexpectedStringEnd
+  UnrecognizedToken(Char)
+  InvalidTripleEqual
+  MergeConflictIndicator
+  UnsupportedProceduralOperator
+  VisuallySimilarInvalidCharacter(name~ : String, correct~ : String)
+} derive(Eq, @debug.Debug)
+pub fn LexicalErrorType::hints(Self) -> Array[String]
+pub fn LexicalErrorType::kind(Self) -> String
+pub fn LexicalErrorType::label(Self) -> String
+
 pub struct SourceText {
   // private fields
 }
@@ -20,6 +41,13 @@ pub fn SourceText::new(String) -> Self
 pub fn SourceText::position_of(Self, Int) -> @span.Position?
 pub fn SourceText::text(Self) -> String
 pub fn SourceText::utf16_offset_of(Self, Int) -> Int?
+
+pub(all) enum UnicodeEscapeError {
+  MissingOpeningBrace
+  ExpectedHexDigitOrCloseBrace
+  InvalidNumberOfHexDigits
+  InvalidCodepoint
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
