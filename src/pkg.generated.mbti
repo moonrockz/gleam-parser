@@ -3,13 +3,28 @@ package "moonrockz/gleam-parser"
 
 import {
   "moonbitlang/core/bigint",
+  "moonrockz/gleam-parser/ast",
   "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
 }
 
 // Values
+pub fn canonical(Json) -> String
+
+pub fn decode_expr(Json) -> @ast.Expr raise @ast.DecodeError
+
+pub fn decode_oracle_output(Json) -> @ast.OracleOutput raise @ast.DecodeError
+
+pub fn decode_parsed(Json) -> @ast.Parsed raise @ast.DecodeError
+
 pub fn diagnostic_description(String) -> String?
+
+pub fn encode_expr(@ast.Expr) -> Json
+
+pub fn encode_oracle_output(@ast.OracleOutput) -> Json
+
+pub fn encode_parsed(@ast.Parsed) -> Json
 
 pub fn parse_float_value(String) -> Double?
 
@@ -26,11 +41,65 @@ pub fn version() -> String
 // Types and methods
 
 // Type aliases
+pub using @ast {type Arg}
+
+pub using @ast {type ArgNames}
+
+pub using @ast {type Assert}
+
+pub using @ast {type AssignName}
+
+pub using @ast {type Assignment}
+
+pub using @ast {type AssignmentKind}
+
+pub using @ast {type BinOp}
+
+pub using @ast {type BitArrayOption}
+
+pub using @ast {type BitArraySegment}
+
+pub using @ast {type BitArraySize}
+
+pub using @ast {type CallArg}
+
+pub using @ast {type Clause}
+
+pub using @ast {type ClauseGuard}
+
 pub using @scanner {type Comment}
 
 pub using @scanner {type CommentKind}
 
+pub using @ast {type Constant}
+
+pub using @ast {type CustomType}
+
+pub using @ast {type DecodeError}
+
+pub using @ast {type Definition}
+
+pub using @ast {type Deprecation}
+
 pub using @diagnostic {type Diagnostic}
+
+pub using @ast {type Documentation}
+
+pub using @ast {type Expr}
+
+pub using @ast {type External}
+
+pub using @ast {type Function}
+
+pub using @ast {type FunctionLiteralKind}
+
+pub using @ast {type ImplicitCallArgOrigin}
+
+pub using @ast {type Import}
+
+pub using @ast {type ImportAlias}
+
+pub using @ast {type IntOperator}
 
 pub using @scanner {type Keyword}
 
@@ -38,13 +107,49 @@ pub using @diagnostic {type Label}
 
 pub using @scanner {type LexicalErrorType}
 
+pub using @ast {type Module}
+
+pub using @ast {type ModuleConstant}
+
+pub using @ast {type ModuleExtra}
+
+pub using @ast {type OracleOutput}
+
+pub using @ast {type Parsed}
+
+pub using @ast {type Pattern}
+
 pub using @span {type Position}
+
+pub using @ast {type Publicity}
+
+pub using @ast {type RecordBeingUpdated}
+
+pub using @ast {type RecordConstructor}
+
+pub using @ast {type RecordConstructorArg}
+
+pub using @ast {type RecordUpdateArg}
 
 pub using @diagnostic {type Severity}
 
 pub using @scanner {type SourceText}
 
+pub using @ast {type SpannedString}
+
 pub using @span {type SrcSpan}
+
+pub using @ast {type Statement}
+
+pub using @ast {type StringPrefixLeftSideAssignment}
+
+pub using @ast {type TailPattern}
+
+pub using @ast {type Target}
+
+pub using @ast {type TargetedDefinition}
+
+pub using @ast {type TodoKind}
 
 pub using @scanner {type Token}
 
@@ -54,6 +159,30 @@ pub using @scanner {type TokenStream}
 
 pub using @scanner {type Trivia}
 
+pub using @ast {type TypeAlias}
+
+pub using @ast {type TypeAst}
+
+pub using @ast {type TypeAstConstructor}
+
+pub using @ast {type TypeAstConstructorName}
+
+pub using @ast {type TypeAstFn}
+
+pub using @ast {type TypeAstHole}
+
+pub using @ast {type TypeAstTuple}
+
+pub using @ast {type TypeAstVar}
+
 pub using @scanner {type UnicodeEscapeError}
+
+pub using @ast {type UnqualifiedImport}
+
+pub using @ast {type Use}
+
+pub using @ast {type UseAssignment}
+
+pub using @ast {type Warning}
 
 // Traits

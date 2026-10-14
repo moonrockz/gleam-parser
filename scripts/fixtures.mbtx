@@ -1,0 +1,92 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/x@0.5.5/sys",
+  "moonbitlang/core/env",
+  "moonrockz/moonspec@0.11.0",
+  "moonrockz/expect@0.6.1",
+}
+
+///|
+/// Record the oracle's canonical JSON next to each `.gleam` fixture.
+///
+/// Usage: fixtures.mbtx record <oracle-binary> <fixture-dir>
+
+///|
+let usage : String = "Usage: fixtures.mbtx record <oracle-binary> <fixture-dir>"
+
+///|
+/// The `.gleam` files of a directory listing, sorted, with the `.json` path
+/// each one's output goes to.
+fn fixture_pairs(
+  dir : String,
+  entries : Array[String],
+) -> Array[(String, String)] {
+  let gleam = entries.filter(e => e.has_suffix(".gleam"))
+  gleam.sort()
+  gleam.map(e => {
+    let stem = e[:e.length() - 6].to_owned()
+    ("\{dir}/\{e}", "\{dir}/\{stem}.json")
+  })
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["record", oracle, dir] => {
+      let entries = @fs.readdir(dir, sort=true)
+      for pair in fixture_pairs(dir, entries) {
+        let (source, target) = pair
+        let (code, out) = @process.collect_stdout(oracle, [source])
+        if code != 0 {
+          println("oracle failed on \{source} (exit \{code})")
+          @sys.exit(1)
+        }
+        @fs.write_file(target, out.text())
+        println("recorded \{target}")
+      }
+    }
+    _ => {
+      println(usage)
+      @sys.exit(2)
+    }
+  }
+}
+
+///|
+/// Scenario state for `features/fixtures.feature`.
+struct FixturesWorld {
+  mut dir : String
+  mut entries : Array[String]
+  mut pairs : Array[(String, String)]
+} derive(Default)
+
+///|
+impl @moonspec.World for FixturesWorld with fn configure(self, setup) {
+  setup.given1("the fixture directory {string}", fn(dir : String) {
+    self.dir = dir
+  })
+  setup.given1("it holds the files {string}", fn(files : String) {
+    self.entries = files.split(",").map(s => s.trim().to_owned()).collect()
+  })
+  setup.when0("I pair the fixtures", fn() {
+    self.pairs = fixture_pairs(self.dir, self.entries)
+  })
+  setup.then1("the pairs are {string}", fn(expected : String) raise {
+    let actual = self.pairs.map(p => "\{p.0} -> \{p.1}").join("; ")
+    @expect.expect(actual).to_equal(expected)
+  })
+}
+
+///|
+async test "fixtures feature" {
+  @moonspec.run_or_fail(
+    () => (Default::default() : FixturesWorld),
+    @moonspec.RunOptions::new([
+      @moonspec.FeatureSource::File("features/fixtures.feature"),
+    ]),
+  )
+  |> ignore
+}
