@@ -15,3 +15,7 @@ pub fn version() -> String {
 ///|
 /// Spans (UTF-8 byte offsets) and positions (1-based line and column).
 pub using @span {type SrcSpan, type Position}
+
+///|
+/// Source text with byte, UTF-16 and line/column lookups.
+pub using @scanner {type SourceText}

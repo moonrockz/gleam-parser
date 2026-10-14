@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/scanner"
+
+import {
+  "moonrockz/gleam-parser/span",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct SourceText {
+  text : String
+  bound_bytes : Array[Int]
+  bound_units : Array[Int]
+  line_bounds : Array[Int]
+}
+pub fn SourceText::byte_length(Self) -> Int
+pub fn SourceText::byte_offset_of(Self, Int) -> Int?
+pub fn SourceText::line_count(Self) -> Int
+pub fn SourceText::new(String) -> Self
+pub fn SourceText::position_of(Self, Int) -> @span.Position?
+pub fn SourceText::text(Self) -> String
+pub fn SourceText::utf16_offset_of(Self, Int) -> Int?
+
+// Type aliases
+
+// Traits

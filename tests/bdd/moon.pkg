@@ -1,5 +1,6 @@
 import {
   "moonrockz/gleam-parser" @gleam,
+  "moonrockz/moonspec",
   "moonrockz/expect",
   "moonbitlang/async",
   "moonbitlang/x/fs",

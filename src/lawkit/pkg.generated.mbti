@@ -1,0 +1,26 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/lawkit"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/quickcheck",
+  "moonbitlang/core/quickcheck/shrink",
+  "moonbitlang/core/quickcheck/splitmix",
+}
+
+// Values
+pub fn edge_chars() -> Array[String]
+
+pub fn units(Array[Int]) -> String
+
+// Errors
+
+// Types and methods
+pub struct Units(String) derive(@debug.Debug)
+pub fn Units::text(Self) -> String
+pub impl @quickcheck.Arbitrary for Units
+pub impl @shrink.Shrink for Units
+
+// Type aliases
+
+// Traits

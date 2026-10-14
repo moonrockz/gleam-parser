@@ -2,6 +2,7 @@
 package "moonrockz/gleam-parser"
 
 import {
+  "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
 }
 
@@ -14,6 +15,8 @@ pub fn version() -> String
 
 // Type aliases
 pub using @span {type Position}
+
+pub using @scanner {type SourceText}
 
 pub using @span {type SrcSpan}
 
