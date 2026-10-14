@@ -69,3 +69,102 @@ pub fn parse_int_value(value : String) -> BigInt? {
 pub fn parse_float_value(value : String) -> Double? {
   @scanner.parse_float_value(value)
 }
+
+///|
+/// The AST: a mirror of the Gleam compiler's untyped AST (v1.19.2), with
+/// canonical JSON (`docs/ast-json.md`).
+pub using @ast {
+  type Parsed,
+  type Module,
+  type TargetedDefinition,
+  type Target,
+  type Definition,
+  type SpannedString,
+  type Documentation,
+  type External,
+  type Publicity,
+  type Deprecation,
+  type Function,
+  type Arg,
+  type ArgNames,
+  type Import,
+  type ImportAlias,
+  type AssignName,
+  type UnqualifiedImport,
+  type ModuleConstant,
+  type CustomType,
+  type RecordConstructor,
+  type RecordConstructorArg,
+  type TypeAlias,
+  type TypeAst,
+  type TypeAstConstructor,
+  type TypeAstConstructorName,
+  type TypeAstFn,
+  type TypeAstVar,
+  type TypeAstTuple,
+  type TypeAstHole,
+  type Statement,
+  type Assignment,
+  type AssignmentKind,
+  type Use,
+  type UseAssignment,
+  type Assert,
+  type Expr,
+  type FunctionLiteralKind,
+  type CallArg,
+  type ImplicitCallArgOrigin,
+  type BinOp,
+  type Clause,
+  type ClauseGuard,
+  type Pattern,
+  type TailPattern,
+  type StringPrefixLeftSideAssignment,
+  type BitArraySize,
+  type IntOperator,
+  type BitArraySegment,
+  type BitArrayOption,
+  type TodoKind,
+  type RecordBeingUpdated,
+  type RecordUpdateArg,
+  type Constant,
+  type ModuleExtra,
+  type Warning,
+  type OracleOutput,
+  type DecodeError,
+}
+
+///|
+/// Canonical JSON text of an encoded AST value (sorted keys, no whitespace).
+pub fn canonical(json : Json) -> String {
+  @ast.canonical(json)
+}
+
+///|
+pub fn encode_parsed(p : Parsed) -> Json {
+  @ast.encode_parsed(p)
+}
+
+///|
+pub fn decode_parsed(json : Json) -> Parsed raise DecodeError {
+  @ast.decode_parsed(json)
+}
+
+///|
+pub fn encode_oracle_output(o : OracleOutput) -> Json {
+  @ast.encode_oracle_output(o)
+}
+
+///|
+pub fn decode_oracle_output(json : Json) -> OracleOutput raise DecodeError {
+  @ast.decode_oracle_output(json)
+}
+
+///|
+pub fn encode_expr(e : Expr) -> Json {
+  @ast.encode_expr(e)
+}
+
+///|
+pub fn decode_expr(json : Json) -> Expr raise DecodeError {
+  @ast.decode_expr(json)
+}

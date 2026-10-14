@@ -6,12 +6,23 @@ import {
   "moonbitlang/core/quickcheck",
   "moonbitlang/core/quickcheck/shrink",
   "moonbitlang/core/quickcheck/splitmix",
+  "moonrockz/gleam-parser/ast",
 }
 
 // Values
 pub fn broken_pieces() -> Array[String]
 
 pub fn edge_chars() -> Array[String]
+
+pub fn gen_constant(Int, @splitmix.RandomState) -> @ast.Constant
+
+pub fn gen_expr(Int, @splitmix.RandomState) -> @ast.Expr
+
+pub fn gen_parsed(Int, @splitmix.RandomState) -> @ast.Parsed
+
+pub fn gen_pattern(Int, @splitmix.RandomState) -> @ast.Pattern
+
+pub fn gen_type_ast(Int, @splitmix.RandomState) -> @ast.TypeAst
 
 pub fn small_module() -> String
 
@@ -24,6 +35,11 @@ pub fn units(Array[Int]) -> String
 // Errors
 
 // Types and methods
+pub(all) struct GleamAst(@ast.Parsed) derive(@debug.Debug)
+pub fn GleamAst::parsed(Self) -> @ast.Parsed
+pub impl @quickcheck.Arbitrary for GleamAst
+pub impl @shrink.Shrink for GleamAst
+
 pub(all) struct GleamText(Array[String]) derive(@debug.Debug)
 pub fn GleamText::text(Self) -> String
 pub impl @quickcheck.Arbitrary for GleamText

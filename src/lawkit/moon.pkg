@@ -2,10 +2,14 @@ import {
   "moonbitlang/core/builtin",
   "moonbitlang/core/quickcheck",
   "moonbitlang/core/quickcheck/splitmix",
+  "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/scanner",
+  "moonrockz/gleam-parser/ast",
 }
 
 import {
   "moonrockz/expect",
   "moonbitlang/core/quickcheck",
   "moonbitlang/core/quickcheck/splitmix",
+  "moonbitlang/core/debug",
 } for "test"
