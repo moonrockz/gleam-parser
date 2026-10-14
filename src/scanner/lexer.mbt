@@ -881,10 +881,35 @@ fn Lexer::lex_string(self : Lexer) -> Unit {
 }
 
 ///|
+/// The compiler's `lex_comment`, entered after two slashes: a third makes a
+/// doc comment, a fourth a module comment. Content runs to the line break
+/// (`\n`, or the `\r` of `\r\n`), not included.
 fn Lexer::lex_comment(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
+  let kind = match (self.cursor.peek(), self.cursor.peek1()) {
+    (Some('/'), Some('/')) => {
+      self.cursor.advance()
+      self.cursor.advance()
+      Module
+    }
+    (Some('/'), _) => {
+      self.cursor.advance()
+      Doc
+    }
+    _ => Regular
+  }
   ignore(start_unit)
-  ignore(start)
-  self.not_yet()
+  let content_unit = self.cursor.unit()
+  while self.cursor.peek() is Some(c) && c != '\n' {
+    self.cursor.advance()
+  }
+  let content = self.cursor.slice(content_unit)
+  self.trivia(
+    Comment({
+      kind,
+      content,
+      span: @span.SrcSpan::new(start, self.cursor.position()),
+    }),
+  )
 }
 
 ///|
