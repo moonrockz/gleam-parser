@@ -139,3 +139,82 @@ test "law: no byte offset makes a lookup panic" {
     seed=2029,
   )
 }
+
+///|
+/// Reference position: walk the units, count code points per line, and start
+/// a new line after `\n`, after a lone `\r`, and after the `\n` of CRLF.
+/// `None` when `byte` is not a code point boundary.
+fn reference_position(text : String, byte : Int32) -> @span.Position? {
+  let mut line = 1
+  let mut column = 1
+  let mut bytes = 0
+  let mut i = 0
+  while true {
+    if bytes == byte {
+      return Some(@span.Position::new(line, column))
+    }
+    if i >= text.length() || bytes > byte {
+      return None
+    }
+    let c = text.code_unit_at(i).to_int()
+    if c == '\n'.to_int() {
+      bytes += 1
+      i += 1
+      line += 1
+      column = 1
+    } else if c == '\r'.to_int() {
+      bytes += 1
+      i += 1
+      if i < text.length() && text.code_unit_at(i).to_int() == '\n'.to_int() {
+        // The boundary between `\r` and `\n` is still on the old line.
+        if bytes == byte {
+          return Some(@span.Position::new(line, column + 1))
+        }
+        bytes += 1
+        i += 1
+      }
+      line += 1
+      column = 1
+    } else {
+      if c < 0x80 {
+        bytes += 1
+        i += 1
+      } else if c < 0x800 {
+        bytes += 2
+        i += 1
+      } else if c >= 0xD800 &&
+        c <= 0xDBFF &&
+        i + 1 < text.length() &&
+        text.code_unit_at(i + 1).to_int() >= 0xDC00 &&
+        text.code_unit_at(i + 1).to_int() <= 0xDFFF {
+        bytes += 4
+        i += 2
+      } else {
+        bytes += 3
+        i += 1
+      }
+      column += 1
+    }
+  }
+  None
+}
+
+///|
+/// Edge values: byte 0; the boundary between `\r` and `\n`; the end of the
+/// text; bytes inside multi-byte characters (both sides give `None`).
+test "law: position_of agrees with a reference count over the source" {
+  @quickcheck.check(
+    (u : @lawkit.Units) => {
+      let text = u.text()
+      let st = @scanner.SourceText::new(text)
+      let mut ok = true
+      for b = 0; b <= st.byte_length(); b = b + 1 {
+        ok = ok && st.position_of(b) == reference_position(text, b)
+      }
+      ok
+    },
+    count=300,
+    max_size=24,
+    seed=2030,
+  )
+}

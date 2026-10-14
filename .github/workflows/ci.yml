@@ -58,6 +58,9 @@ jobs:
       - name: Run unit tests
         run: mise run test:unit
 
+      - name: Run BDD features
+        run: mise run test:bdd
+
       - name: Run script tests
         run: mise run test:scripts
 

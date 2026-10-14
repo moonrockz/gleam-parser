@@ -11,10 +11,7 @@ import {
 
 // Types and methods
 pub struct SourceText {
-  text : String
-  bound_bytes : Array[Int]
-  bound_units : Array[Int]
-  line_bounds : Array[Int]
+  // private fields
 }
 pub fn SourceText::byte_length(Self) -> Int
 pub fn SourceText::byte_offset_of(Self, Int) -> Int?

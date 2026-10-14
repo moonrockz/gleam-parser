@@ -9,10 +9,10 @@
 /// unit of a surrogate pair is not a boundary. `line_bounds[l]` is the
 /// boundary index of line `l + 1`'s first character.
 pub struct SourceText {
-  text : String
-  bound_bytes : Array[Int32]
-  bound_units : Array[Int32]
-  line_bounds : Array[Int32]
+  priv text : String
+  priv bound_bytes : Array[Int32]
+  priv bound_units : Array[Int32]
+  priv line_bounds : Array[Int32]
 }
 
 ///|

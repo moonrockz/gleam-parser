@@ -224,7 +224,7 @@ Two kinds of user documentation, both tested:
   add or change a public item, update its doc comment and example.
 - **Cookbook** (`docs/cookbook/`): one article per user task
   (`<slug>.mbt.md`), indexed in `docs/cookbook/README.md`. The directory is
-  the unpublished workspace module `moonrockz/gleam-parser_cookbook` with one
+  the unpublished workspace module `moonrockz/gleam_parser_cookbook` with one
   package; `mise run test:docs` runs every `mbt check` block (CI job
   `unit-tests`). All articles share one namespace, so prefix each article's
   top-level names (`gs_`, …). Use an `mbt nocheck` block only
