@@ -34,13 +34,13 @@ fn is_digit_of_radix(c : Char?, radix : Int32) -> Bool {
 /// ```
 pub fn parse_int_value(value : String) -> BigInt? {
   let negative = value.has_prefix("-")
-  let body = if negative { value[1:].to_string() } else { value }
+  let body = if negative { value[1:].to_owned() } else { value }
   let (radix, digits) = if body.has_prefix("0x") {
-    (16, body[2:].to_string())
+    (16, body[2:].to_owned())
   } else if body.has_prefix("0o") {
-    (8, body[2:].to_string())
+    (8, body[2:].to_owned())
   } else if body.has_prefix("0b") {
-    (2, body[2:].to_string())
+    (2, body[2:].to_owned())
   } else {
     (10, body)
   }

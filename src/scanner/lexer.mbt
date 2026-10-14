@@ -565,28 +565,196 @@ fn is_number_start(c : Char, c1 : Char?) -> Bool {
 }
 
 ///|
-/// Placeholders until Tasks 6 to 8 write them. Each consumes one character
-/// as an `Error`, so the stream stays lossless meanwhile.
+/// The compiler's `is_name_continuation`: `_`, digits, ASCII letters.
+fn Lexer::is_name_continuation(self : Lexer) -> Bool {
+  match self.cursor.peek() {
+    Some(c) =>
+      c == '_' ||
+      (c >= '0' && c <= '9') ||
+      (c >= 'a' && c <= 'z') ||
+      (c >= 'A' && c <= 'Z')
+    None => false
+  }
+}
+
+///|
+/// The compiler's `lex_name`: a keyword, a discard name (`_` start) or a
+/// name.
 fn Lexer::lex_name(self : Lexer) -> Unit {
-  self.not_yet()
+  let (u, p) = (self.cursor.unit(), self.cursor.position())
+  while self.is_name_continuation() {
+    self.cursor.advance()
+  }
+  let name = self.cursor.slice(u)
+  let kind = match Keyword::of(name) {
+    Some(k) => Keyword(k)
+    None => if name.has_prefix("_") { DiscardName(name) } else { Name(name) }
+  }
+  self.emit(kind, u, p)
 }
 
 ///|
+/// The compiler's `lex_upname`: a type or constructor name (a keyword
+/// check is kept for parity; no keyword starts with a capital).
 fn Lexer::lex_upname(self : Lexer) -> Unit {
-  self.not_yet()
+  let (u, p) = (self.cursor.unit(), self.cursor.position())
+  while self.is_name_continuation() {
+    self.cursor.advance()
+  }
+  let name = self.cursor.slice(u)
+  let kind = match Keyword::of(name) {
+    Some(k) => Keyword(k)
+    None => UpName(name)
+  }
+  self.emit(kind, u, p)
 }
 
 ///|
+/// The compiler's `radix_run`: digits of `radix`, with `_` before a digit.
+/// Returns the digits read (with separators).
+fn Lexer::radix_run(self : Lexer, radix : Int32) -> String {
+  let start = self.cursor.unit()
+  while true {
+    if is_digit_of_radix(self.cursor.peek(), radix) {
+      self.cursor.advance()
+    } else if self.cursor.peek() == Some('_') &&
+      is_digit_of_radix(self.cursor.peek1(), radix) {
+      self.cursor.advance()
+    } else {
+      break
+    }
+  }
+  self.cursor.slice(start)
+}
+
+///|
+/// The compiler's `lex_number`: an optional `-`, a radix prefix or a
+/// decimal number, then no `_` may follow.
 fn Lexer::lex_number(self : Lexer) -> Unit {
-  self.not_yet()
+  let (u, p) = (self.cursor.unit(), self.cursor.position())
+  let negative = if self.cursor.peek() == Some('-') {
+    self.cursor.advance()
+    true
+  } else {
+    false
+  }
+  let ok = if self.cursor.peek() == Some('0') {
+    match self.cursor.peek1() {
+      Some('x') | Some('X') => {
+        self.cursor.advance()
+        self.cursor.advance()
+        self.lex_number_radix(u, p, 16, negative, "0x")
+      }
+      Some('o') | Some('O') => {
+        self.cursor.advance()
+        self.cursor.advance()
+        self.lex_number_radix(u, p, 8, negative, "0o")
+      }
+      Some('b') | Some('B') => {
+        self.cursor.advance()
+        self.cursor.advance()
+        self.lex_number_radix(u, p, 2, negative, "0b")
+      }
+      _ => self.lex_decimal_or_int_number(u, p, negative, true)
+    }
+  } else {
+    self.lex_decimal_or_int_number(u, p, negative, true)
+  }
+  guard ok is Some(kind) else { return }
+  if self.cursor.peek() == Some('_') {
+    let at = self.cursor.position()
+    self.fail(NumTrailingUnderscore, @span.SrcSpan::new(at, at), u, p)
+  } else {
+    self.emit(kind, u, p)
+  }
 }
 
 ///|
+/// The compiler's `lex_number_radix`, after the prefix. `None` after an
+/// error (already reported and covered by an `Error` token).
+fn Lexer::lex_number_radix(
+  self : Lexer,
+  start_unit : Int32,
+  start : Int32,
+  radix : Int32,
+  negative : Bool,
+  prefix : String,
+) -> TokenKind? {
+  let digits = self.radix_run(radix)
+  if digits == "" {
+    let at = self.cursor.position() - 1
+    self.fail(RadixIntNoValue, @span.SrcSpan::new(at, at), start_unit, start)
+    None
+  } else if radix < 16 && is_digit_of_radix(self.cursor.peek(), 16) {
+    let at = self.cursor.position()
+    self.fail(DigitOutOfRadix, @span.SrcSpan::new(at, at), start_unit, start)
+    None
+  } else {
+    let value = (if negative { "-" } else { "" }) + prefix + digits
+    guard parse_int_value(value) is Some(int_value) else {
+      // The run holds only digits of the radix, so this cannot happen.
+      return None
+    }
+    Some(Int(value~, int_value~))
+  }
+}
+
+///|
+/// The compiler's `lex_decimal_or_int_number`. `can_lex_decimal` is false
+/// after a `.` (tuple access), so `t.1.2` is two integers.
+fn Lexer::lex_decimal_or_int_number(
+  self : Lexer,
+  start_unit : Int32,
+  start : Int32,
+  negative : Bool,
+  can_lex_decimal : Bool,
+) -> TokenKind? {
+  let value_unit = if negative { start_unit } else { self.cursor.unit() }
+  self.radix_run(10) |> ignore
+  if can_lex_decimal && self.cursor.peek() == Some('.') {
+    self.cursor.advance()
+    self.radix_run(10) |> ignore
+    if self.cursor.peek() == Some('e') {
+      self.cursor.advance()
+      if self.cursor.peek() == Some('-') {
+        self.cursor.advance()
+      }
+      if self.radix_run(10) == "" {
+        self.fail(
+          MissingExponent,
+          @span.SrcSpan::new(start, self.cursor.position()),
+          start_unit,
+          start,
+        )
+        return None
+      }
+    }
+    let value = self.cursor.slice(value_unit)
+    guard parse_float_value(value) is Some(float_value) else { return None }
+    Some(Float(value~, float_value~))
+  } else {
+    let value = self.cursor.slice(value_unit)
+    guard parse_int_value(value) is Some(int_value) else { return None }
+    Some(Int(value~, int_value~))
+  }
+}
+
+///|
+/// The compiler's `maybe_lex_dot_access`: after `.`, digits are integers
+/// (`tuple.1.2.3`), never a float.
 fn Lexer::maybe_lex_dot_access(self : Lexer) -> Unit {
-  ()
+  while self.cursor.peek() is Some(c) && c >= '0' && c <= '9' {
+    let (u, p) = (self.cursor.unit(), self.cursor.position())
+    match self.lex_decimal_or_int_number(u, p, false, false) {
+      Some(kind) => self.emit(kind, u, p)
+      None => return
+    }
+  }
 }
 
 ///|
+/// Placeholders until Tasks 7 and 8 write them. Each consumes one
+/// character as an `Error`, so the stream stays lossless meanwhile.
 fn Lexer::lex_string(self : Lexer) -> Unit {
   self.not_yet()
 }
