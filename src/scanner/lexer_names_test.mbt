@@ -153,3 +153,28 @@ test "number errors: trailing underscore, empty radix, digit out of radix, missi
     e.expect(kinds("1__0")).to_equal([Error, DiscardName("_0")])
   })
 }
+
+///|
+test "a float with a huge exponent is infinity and the scan stays lossless" {
+  let text = "x = 1.0e99999999999 + y"
+  let s = stream(text)
+  @expect.expect_all(e => {
+    e.expect(s.to_source()).to_equal(text)
+    e.expect(s.diagnostics.length()).to_equal(0)
+    e
+    .expect(kinds(text))
+    .to_equal([
+      Name("x"),
+      Equal,
+      Float(value="1.0e99999999999", float_value=1.0 / 0.0),
+      Plus,
+      Name("y"),
+    ])
+    e
+    .expect(kinds("-1.5e2147483648"))
+    .to_equal([Float(value="-1.5e2147483648", float_value=-1.0 / 0.0)])
+    e
+    .expect(kinds("1.0e-99999999999"))
+    .to_equal([Float(value="1.0e-99999999999", float_value=0.0)])
+  })
+}

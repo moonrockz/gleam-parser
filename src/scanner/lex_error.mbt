@@ -82,10 +82,13 @@ pub fn LexicalErrorType::label(self : LexicalErrorType) -> String {
 let merge_conflict_hint : String =
   #|Your code appears to have a merge conflict. Resolve it by removing
   #|the code you do not want to keep.
+  #|
   #|If you are in a merge, the top chunk is the checked-out code, and the
   #|bottom chunk is the new code being merged.
+  #|
   #|If you are in a rebase, the top chunk is the code being rebased onto,
   #|and the chunk section is the checked-out code which is being rebased.
+  #|
   #|More information can be found in the official git documentation:
   #|https://git-scm.com/book/en/v2/Git-Tools-Advanced-Merging#_checking_out_conflicts
 
@@ -94,6 +97,7 @@ let procedural_operator_hint : String =
   #|Gleam is an immutable language and does not have any operators that
   #|change the value of an existing variable. You might want to create a
   #|new variable with the same name as the previous one:
+  #|
   #|    let wibble = 10
   #|    let blobby = wibble
   #|    let wibble = wibble + 20
@@ -130,7 +134,9 @@ pub fn LexicalErrorType::hints(self : LexicalErrorType) -> Array[String] {
     UnsupportedProceduralOperator => [procedural_operator_hint]
     VisuallySimilarInvalidCharacter(name~, correct~) =>
       [
-        "This looks like ascii \{correct}, but it is actually the unicode \{name}.",
+        wrap(
+          "This looks like ascii \{correct}, but it is actually the unicode \{name}.",
+        ),
       ]
     DigitOutOfRadix
     | RadixIntNoValue
@@ -160,4 +166,79 @@ pub fn lexical_diagnostic(
     labels=[@diagnostic.Label::{ span: location, text: label, }],
     hint=if hints.is_empty() { None } else { Some(hints.join("\n")) },
   )
+}
+
+///|
+/// The number of UTF-8 bytes of `s` (the compiler measures width in bytes).
+fn utf8_length(s : StringView) -> Int32 {
+  let mut n = 0
+  let mut i = 0
+  while i < s.length() {
+    let c = s.code_unit_at(i).to_int()
+    if c < 0x80 {
+      n += 1
+      i += 1
+    } else if c < 0x800 {
+      n += 2
+      i += 1
+    } else if c >= 0xD800 &&
+      c <= 0xDBFF &&
+      i + 1 < s.length() &&
+      s.code_unit_at(i + 1).to_int() >= 0xDC00 &&
+      s.code_unit_at(i + 1).to_int() <= 0xDFFF {
+      n += 4
+      i += 2
+    } else {
+      n += 3
+      i += 1
+    }
+  }
+  n
+}
+
+///|
+/// The compiler's `wrap` (`error.rs`): each line longer than 75 bytes is
+/// broken at spaces; a word longer than the width is cut into pieces of
+/// the width.
+pub fn wrap(text : String) -> String {
+  let width = 75
+  let out : Array[String] = []
+  for line in text.split("\n") {
+    if utf8_length(line) <= width {
+      out.push(line.to_owned())
+      continue
+    }
+    let mut current = ""
+    for word in line.split(" ") {
+      let word = word.to_owned()
+      let is_new_line = current == ""
+      let fits = if is_new_line {
+        utf8_length(current[:]) + utf8_length(word[:]) <= width
+      } else {
+        utf8_length(current[:]) + utf8_length(word[:]) + 1 <= width
+      }
+      if fits {
+        current = if is_new_line { word } else { current + " " + word }
+      } else {
+        if current != "" {
+          out.push(current)
+          current = ""
+        }
+        if utf8_length(word[:]) <= width {
+          current = word
+        } else {
+          // Cut a long word into pieces of the width (by code units; the
+          // compiler cuts by bytes, which agrees for ASCII).
+          let mut rest = word
+          while rest.length() > width {
+            out.push(rest[:width].to_owned())
+            rest = rest[width:].to_owned()
+          }
+          current = rest
+        }
+      }
+    }
+    out.push(current)
+  }
+  out.join("\n")
 }

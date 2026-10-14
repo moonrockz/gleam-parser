@@ -178,7 +178,7 @@ test "visually similar characters name the ascii character" {
     .expect(s.diagnostics[0].hint)
     .to_equal(
       Some(
-        "This looks like ascii space, but it is actually the unicode non-breaking space.",
+        "This looks like ascii space, but it is actually the unicode non-breaking\nspace.",
       ),
     )
     e.expect(s.diagnostics[0].span).to_equal(@span.SrcSpan::new(1, 1))
@@ -190,7 +190,7 @@ test "visually similar characters name the ascii character" {
     .expect(stream("\u{FF08}").diagnostics[0].hint)
     .to_equal(
       Some(
-        "This looks like ascii left parenthesis, but it is actually the unicode fullwidth left parenthesis.",
+        "This looks like ascii left parenthesis, but it is actually the unicode\nfullwidth left parenthesis.",
       ),
     )
   })
@@ -240,5 +240,16 @@ test "a byte order mark is whitespace" {
       @scanner.Trivia::Whitespace("\u{FEFF}", @span.SrcSpan::new(0, 3)),
     ])
     e.expect(s.tokens[0].span).to_equal(@span.SrcSpan::new(3, 4))
+  })
+}
+
+///|
+test "a byte order mark after the start is an unrecognized token" {
+  let s = stream("a\u{FEFF}b")
+  @expect.expect_all(e => {
+    e.expect(error_kinds("a\u{FEFF}b")).to_equal(["UnrecognizedToken"])
+    e.expect(s.diagnostics[0].span).to_equal(@span.SrcSpan::new(1, 1))
+    e.expect(kinds("a\u{FEFF}b")).to_equal([Name("a"), Error, Name("b")])
+    e.expect(s.to_source()).to_equal("a\u{FEFF}b")
   })
 }

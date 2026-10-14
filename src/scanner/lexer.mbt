@@ -90,6 +90,36 @@ fn Lexer::fail(
 }
 
 ///|
+/// A number literal whose digits the lexer accepted but whose value did not
+/// parse. The lexer validates the digits first, so this does not happen;
+/// it keeps the stream lossless if it ever does: an `Error` token over the
+/// literal with one diagnostic, so no text is dropped.
+fn Lexer::fail_literal_value(
+  self : Lexer,
+  start_unit : Int32,
+  start : Int32,
+) -> Unit {
+  let location = @span.SrcSpan::new(start, self.cursor.position())
+  self.diagnostics.push(
+    @diagnostic.Diagnostic::new(
+      code="GL-SCAN-001",
+      kind="LiteralValue",
+      severity=Error,
+      title="Syntax error",
+      message="I could not read the value of this number",
+      span=location,
+      labels=[
+        @diagnostic.Label::{
+          span: location,
+          text: "I could not read the value of this number",
+        },
+      ],
+    ),
+  )
+  self.emit(Error, start_unit, start)
+}
+
+///|
 /// The compiler's `eat_single_char`.
 fn Lexer::eat_single_char(self : Lexer, kind : TokenKind) -> Unit {
   let (u, p) = (self.cursor.unit(), self.cursor.position())
@@ -354,19 +384,9 @@ fn Lexer::consume_character(self : Lexer, c : Char) -> Unit {
         Newline(self.cursor.slice(u), span(p, self.cursor.position())),
       )
     }
-    ' ' | '\t' | '\u{0C}' | '\u{FEFF}' => {
-      // A run of blanks is one trivia. The byte order mark is only read
-      // here at offset 0 (the compiler consumes it before lexing).
-      while self.cursor.peek() is Some(' ' | '\t' | '\u{0C}') {
-        self.cursor.advance()
-      }
-      if self.cursor.unit() == u {
-        self.cursor.advance()
-      }
-      self.trivia(
-        Whitespace(self.cursor.slice(u), span(p, self.cursor.position())),
-      )
-    }
+    ' ' | '\t' | '\u{0C}' => self.lex_blanks(u, p)
+    '\u{FEFF}' if p == 0 => self.lex_blanks(u, p)
+    '\u{FEFF}' => self.fail(UnrecognizedToken(c), span(p, p), u, p)
     _ =>
       match visually_similar(c) {
         Some((name, correct)) =>
@@ -379,6 +399,26 @@ fn Lexer::consume_character(self : Lexer, c : Char) -> Unit {
         None => self.fail(UnrecognizedToken(c), span(p, p), u, p)
       }
   }
+}
+
+///|
+/// A run of blanks (space, tab, form feed) is one `Whitespace` trivia. The
+/// byte order mark counts only at offset 0, where the compiler consumes it
+/// before lexing (`make_tokenizer`); anywhere else it is an unknown
+/// character.
+fn Lexer::lex_blanks(self : Lexer, u : Int32, p : Int32) -> Unit {
+  if self.cursor.peek() == Some('\u{FEFF}') {
+    self.cursor.advance()
+  }
+  while self.cursor.peek() is Some(' ' | '\t' | '\u{0C}') {
+    self.cursor.advance()
+  }
+  self.trivia(
+    Whitespace(
+      self.cursor.slice(u),
+      @span.SrcSpan::new(p, self.cursor.position()),
+    ),
+  )
 }
 
 ///|
@@ -693,6 +733,7 @@ fn Lexer::lex_number_radix(
     let value = (if negative { "-" } else { "" }) + prefix + digits
     guard parse_int_value(value) is Some(int_value) else {
       // The run holds only digits of the radix, so this cannot happen.
+      self.fail_literal_value(start_unit, start)
       return None
     }
     Some(Int(value~, int_value~))
@@ -730,11 +771,17 @@ fn Lexer::lex_decimal_or_int_number(
       }
     }
     let value = self.cursor.slice(value_unit)
-    guard parse_float_value(value) is Some(float_value) else { return None }
+    guard parse_float_value(value) is Some(float_value) else {
+      self.fail_literal_value(start_unit, start)
+      return None
+    }
     Some(Float(value~, float_value~))
   } else {
     let value = self.cursor.slice(value_unit)
-    guard parse_int_value(value) is Some(int_value) else { return None }
+    guard parse_int_value(value) is Some(int_value) else {
+      self.fail_literal_value(start_unit, start)
+      return None
+    }
     Some(Int(value~, int_value~))
   }
 }

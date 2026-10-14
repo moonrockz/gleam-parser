@@ -19,6 +19,8 @@ pub fn tokenize(SourceText) -> TokenStream
 
 pub fn tokenize_text(String) -> TokenStream
 
+pub fn wrap(String) -> String
+
 // Errors
 
 // Types and methods

@@ -92,13 +92,30 @@ pub fn parse_float_value(value : String) -> Double? {
 ///|
 /// Rust reads a float whose exponent is too big as infinity and one whose
 /// exponent is too small as zero; MoonBit's parser rejects both. Read the
-/// mantissa and the exponent apart and pick the limit.
+/// mantissa, and only the sign and the digits of the exponent (it may be
+/// larger than any integer type), and pick the limit.
 fn out_of_range(text : String) -> Double? {
   guard text.split_once("e") is Some((mantissa, exponent)) else { return None }
   let m = @string.parse_double(mantissa) catch { _ => return None }
-  let x = @string.parse_int(exponent) catch { _ => return None }
+  let negative_exponent = exponent.has_prefix("-")
+  let digits = if negative_exponent { exponent[1:] } else { exponent[:] }
+  if digits.length() == 0 {
+    return None
+  }
+  let mut nonzero = false
+  for i = 0; i < digits.length(); i = i + 1 {
+    let c = digits.code_unit_at(i).to_int()
+    if c < '0'.to_int() || c > '9'.to_int() {
+      return None
+    }
+    if c != '0'.to_int() {
+      nonzero = true
+    }
+  }
   let sign = if m < 0.0 { -1.0 } else { 1.0 }
-  if x < 0 {
+  if m == 0.0 || !nonzero {
+    Some(m)
+  } else if negative_exponent {
     Some(sign * 0.0)
   } else {
     Some(sign * (1.0 / 0.0))

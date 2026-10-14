@@ -46,3 +46,17 @@ test "parse_float_value reads the compiler's float forms" {
     e.expect(@scanner.parse_float_value("1.0e")).to_equal(None)
   })
 }
+
+///|
+test "exponents beyond Int range give infinity or zero like Rust" {
+  @expect.expect_all(e => {
+    e
+    .expect(@scanner.parse_float_value("1.0e2147483648"))
+    .to_equal(Some(1.0 / 0.0))
+    e
+    .expect(@scanner.parse_float_value("-1.0e99999999999"))
+    .to_equal(Some(-1.0 / 0.0))
+    e.expect(@scanner.parse_float_value("1.0e-99999999999")).to_equal(Some(0.0))
+    e.expect(@scanner.parse_float_value("0.0e99999999999")).to_equal(Some(0.0))
+  })
+}

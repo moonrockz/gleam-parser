@@ -185,8 +185,10 @@ pub fn Comment::content_span(self : Comment) -> @span.SrcSpan {
 
 ///|
 /// Text between tokens. `Whitespace` is a run of spaces, tabs and form
-/// feeds (and the byte order mark at the start of the text); `Newline` is
-/// one `\n`, `\r\n` or `\r`; a `Comment` runs to the end of its line.
+/// feeds, with the byte order mark when the text starts with one (a byte
+/// order mark anywhere else is an unknown character, as in the compiler);
+/// `Newline` is one `\n`, `\r\n` or `\r`; a `Comment` runs to the end of its
+/// line.
 pub(all) enum Trivia {
   Whitespace(String, @span.SrcSpan)
   Newline(String, @span.SrcSpan)

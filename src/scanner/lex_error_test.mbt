@@ -121,11 +121,57 @@ test "the remaining messages match the compiler" {
     e
     .expect(diag(MergeConflictIndicator).message)
     .to_equal("Merge conflict marker found")
-    e.expect(diag(MergeConflictIndicator).hint is Some(_)).to_be_true()
+    e
+    .expect(diag(MergeConflictIndicator).hint)
+    .to_equal(
+      Some(
+        (
+          #|Your code appears to have a merge conflict. Resolve it by removing
+          #|the code you do not want to keep.
+          #|
+          #|If you are in a merge, the top chunk is the checked-out code, and the
+          #|bottom chunk is the new code being merged.
+          #|
+          #|If you are in a rebase, the top chunk is the code being rebased onto,
+          #|and the chunk section is the checked-out code which is being rebased.
+          #|
+          #|More information can be found in the official git documentation:
+          #|https://git-scm.com/book/en/v2/Git-Tools-Advanced-Merging#_checking_out_conflicts
+        ),
+      ),
+    )
     e
     .expect(diag(UnsupportedProceduralOperator).message)
     .to_equal("Unknown operator")
-    e.expect(diag(UnsupportedProceduralOperator).hint is Some(_)).to_be_true()
+    e
+    .expect(diag(UnsupportedProceduralOperator).hint)
+    .to_equal(
+      Some(
+        (
+          #|Gleam is an immutable language and does not have any operators that
+          #|change the value of an existing variable. You might want to create a
+          #|new variable with the same name as the previous one:
+          #|
+          #|    let wibble = 10
+          #|    let blobby = wibble
+          #|    let wibble = wibble + 20
+          #|    assert wibble == 30
+          #|    assert blobby == 10
+          #|
+        ),
+      ),
+    )
+    e
+    .expect(
+      diag(
+        VisuallySimilarInvalidCharacter(name="en dash", correct="minus sign"),
+      ).hint,
+    )
+    .to_equal(
+      Some(
+        "This looks like ascii minus sign, but it is actually the unicode en dash.",
+      ),
+    )
     e
     .expect(
       diag(
@@ -147,7 +193,7 @@ test "the remaining messages match the compiler" {
     )
     .to_equal(
       Some(
-        "This looks like ascii space, but it is actually the unicode non-breaking space.",
+        "This looks like ascii space, but it is actually the unicode non-breaking\nspace.",
       ),
     )
   })
