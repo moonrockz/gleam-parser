@@ -1,0 +1,26 @@
+import {
+  "moonbitlang/core/builtin",
+  "moonbitlang/core/bigint",
+  "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/scanner",
+  "moonrockz/gleam-parser/diagnostic",
+  "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/cst",
+  "moonrockz/gleam-parser/dialect",
+}
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/json",
+  "moonrockz/gleam-parser/lawkit",
+  "moonbitlang/core/quickcheck",
+  "moonbitlang/core/quickcheck/splitmix",
+  "moonbitlang/core/debug",
+} for "test"
+
+import {
+  "moonrockz/expect",
+  "moonrockz/gleam-parser/lawkit",
+  "moonbitlang/core/quickcheck",
+  "moonbitlang/core/debug",
+} for "wbtest"

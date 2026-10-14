@@ -1,0 +1,130 @@
+///|
+fn parser_of(text : String) -> Parser {
+  Parser::new(@scanner.tokenize_text(text), @dialect.Dialect::gleam_1_19())
+}
+
+///|
+/// Run a parser step and keep its error as a value (`try?` is deprecated).
+fn[A] attempt(f : () -> A raise ParseError) -> Result[A, ParseError] {
+  try f() catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
+}
+
+///|
+test "the cursor loads two tokens and an Error token is a hole" {
+  // `;` is a lexical error: the compiler's parser sees None in that slot.
+  let p = parser_of("a ; b")
+  guard p.token0 is Some(a) && a.kind is Name("a") else { fail("token0") }
+  @expect.expect(p.token1).to_equal(None)
+  p.advance()
+  @expect.expect(p.token0).to_equal(None)
+  guard p.token1 is Some(b) && b.kind is Name("b") else { fail("token1") }
+  p.advance()
+  p.advance()
+  @expect.expect_all(e => {
+    e.expect(p.token0).to_equal(None)
+    e.expect(p.token1).to_equal(None)
+    e.expect(p.farthest).to_equal(5)
+    e.expect(p.here()).to_equal(@span.SrcSpan::new(5, 5))
+  })
+}
+
+///|
+test "series_of records a trailing comma and rejects an extra one" {
+  let p = parser_of("a, b, )")
+  let names = p.series_of(q => q.maybe_name().map(n => n.1), Some(Comma))
+  @expect.expect_all(e => {
+    e.expect(names).to_equal(["a", "b"])
+    e.expect(p.trailing_commas).to_equal([5])
+    e.expect(p.maybe_one(RightParen)).to_equal(Some((6, 7)))
+  })
+  let extra = parser_of("a,, b")
+  let r = attempt(() => {
+    extra.series_of(q => q.maybe_name().map(n => n.1), Some(Comma))
+  })
+  guard r is Err(ParseError(error=ExtraSeparator, location~)) else {
+    fail("expected ExtraSeparator, got \{@debug.to_string(r)}")
+  }
+  @expect.expect(location).to_equal(@span.SrcSpan::new(2, 3))
+}
+
+///|
+test "expect helpers give the compiler's errors" {
+  let p = parser_of("= Foo _x")
+  let eq = attempt(() => p.expect_name(Function))
+  guard eq is Err(ParseError(error=ExpectedName, location=l1)) else {
+    fail("expected ExpectedName")
+  }
+  let up = attempt(() => p.expect_name(Function))
+  guard up is Err(ParseError(error=IncorrectName(Variable), location=l2)) else {
+    fail("expected IncorrectName")
+  }
+  let discard = attempt(() => p.expect_name(Function))
+  guard discard is Err(ParseError(error=IncorrectName(Function), location=l3)) else {
+    fail("expected IncorrectName(Function)")
+  }
+  let eof = attempt(() => p.expect_name(Function))
+  guard eof is Err(ParseError(error=UnexpectedEof, location=l4)) else {
+    fail("expected UnexpectedEof")
+  }
+  @expect.expect_all(e => {
+    e.expect(l1).to_equal(@span.SrcSpan::new(0, 1))
+    e.expect(l2).to_equal(@span.SrcSpan::new(2, 5))
+    e.expect(l3).to_equal(@span.SrcSpan::new(6, 8))
+    e.expect(l4).to_equal(@span.SrcSpan::new(0, 0))
+  })
+  let reserved = parser_of("fn")
+  let r = attempt(() => reserved.expect_assign_name())
+  guard r is Err(ParseError(error=UnexpectedReservedWord, ..)) else {
+    fail("expected UnexpectedReservedWord")
+  }
+  let q = parser_of("x")
+  let unexpected = attempt(() => q.expect_one(Equal))
+  guard unexpected
+    is Err(
+      ParseError(
+        error=UnexpectedToken(token=Name("x"), expected~, hint=None),
+        ..
+      )
+    ) else {
+    fail("expected UnexpectedToken")
+  }
+  @expect.expect(expected).to_equal(["`=`"][:])
+}
+
+///|
+test "nesting past the limit is TooMuchNesting at the current token" {
+  let p = parser_of("x")
+  for _ in 0..<max_nesting {
+    p.enter()
+  }
+  let r = attempt(() => p.enter())
+  guard r is Err(ParseError(error=TooMuchNesting, location~)) else {
+    fail("expected TooMuchNesting")
+  }
+  @expect.expect(location).to_equal(@span.SrcSpan::new(0, 1))
+}
+
+///|
+test "definition starts are column-1 keywords or attributes" {
+  let p = parser_of("import a\n  fn b() {}\n@target(erlang)\npub fn c() {}\n}")
+  let starts = []
+  for i in 0..<p.tokens.length() {
+    if p.at_definition_start(i) {
+      starts.push(p.tokens[i].lexeme)
+    }
+  }
+  @expect.expect(starts).to_equal(["import", "@", "pub"])
+}
+
+///|
+test "seek reloads the lookahead" {
+  let p = parser_of("a b c d")
+  p.seek(2)
+  guard p.token0 is Some(c) && c.kind is Name("c") else { fail("token0") }
+  guard p.token1 is Some(d) && d.kind is Name("d") else { fail("token1") }
+  @expect.expect(p.index0).to_equal(2)
+}

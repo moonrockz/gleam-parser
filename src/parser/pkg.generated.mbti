@@ -1,0 +1,112 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/parser"
+
+import {
+  "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/diagnostic",
+  "moonrockz/gleam-parser/scanner",
+  "moonrockz/gleam-parser/span",
+}
+
+// Values
+pub let max_nesting : Int
+
+pub fn token_text(@scanner.TokenKind) -> String
+
+pub fn type_ast_text(@ast.TypeAst) -> String
+
+pub fn warning_diagnostic(@ast.Warning) -> @diagnostic.Diagnostic
+
+// Errors
+pub(all) suberror ParseError {
+  ParseError(error~ : ParseErrorType, location~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
+pub fn ParseError::to_diagnostic(Self) -> @diagnostic.Diagnostic
+
+// Types and methods
+pub(all) enum IncorrectNamePosition {
+  AsPattern
+  Module
+  Function
+  Attribute
+  Constant
+  Target
+  Variable
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ParseErrorDetails {
+  text : String
+  label_text : String
+  extra_labels : ArrayView[@diagnostic.Label]
+  hint : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ParseErrorType {
+  ExpectedEqual
+  ExpectedExpr
+  ExpectedName
+  ExpectedPattern
+  ExpectedType
+  ExpectedUpName
+  ExpectedValue
+  ExpectedDefinition
+  ExpectedDeprecationMessage
+  ExpectedExternalArguments
+  ExpectedFunctionDefinition
+  ExpectedTargetName
+  ExprLparStart
+  ExtraSeparator
+  IncorrectName(IncorrectNamePosition)
+  IncorrectUpName
+  InvalidBitArraySegment
+  InvalidBitArrayUnit
+  InvalidTailPattern
+  InvalidTupleAccess
+  LexError(@diagnostic.Diagnostic)
+  NestedBitArrayPattern
+  NoLetBinding
+  NoValueAfterEqual
+  NotConstType
+  OpNakedRight
+  OpaqueTypeAlias
+  TooManyArgHoles
+  DuplicateAttribute
+  UnknownAttribute
+  UnknownTarget
+  ListSpreadWithoutElements
+  ListSpreadFollowedByElements
+  ListSpreadWithAnotherSpread(first_spread_location~ : @span.SrcSpan)
+  UnexpectedLabel
+  UnexpectedEof
+  UnexpectedReservedWord
+  UnexpectedToken(token~ : @scanner.TokenKind, expected~ : ArrayView[String], hint~ : String?)
+  UnexpectedFunction
+  ConcatPatternVariableLeftHandSide
+  ConcatPatternVariableWithSuffix(name~ : String)
+  ListSpreadWithoutTail
+  ExpectedFunctionBody
+  RedundantInternalAttribute
+  InvalidModuleTypePattern
+  ListPatternSpreadFollowedByElements
+  ExpectedRecordConstructor(type_name~ : String, public~ : Bool, opaque_~ : Bool, fields~ : ArrayView[@ast.RecordConstructorArg])
+  CallInClauseGuard
+  IfExpression
+  TypeDefinitionNoArguments
+  UnknownAttributeRecordVariant
+  IncorrectImportModuleSeparator(module_~ : String, item~ : String)
+  EmptyGuardBlock
+  ConstantInsideFunction
+  FunctionDefinitionAngleGenerics
+  TypeUsageAngleGenerics(module_~ : String?, name~ : String, arguments~ : ArrayView[@ast.TypeAst])
+  TypeDefinitionAngleGenerics(name~ : String, arguments~ : ArrayView[String])
+  MissingConstantAsMessage
+  RecordUpdateAfterFields
+  TooMuchNesting
+} derive(Eq, @debug.Debug)
+pub fn ParseErrorType::details(Self) -> ParseErrorDetails
+pub fn ParseErrorType::kind(Self) -> String
+
+// Type aliases
+
+// Traits
