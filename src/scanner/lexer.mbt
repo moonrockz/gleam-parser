@@ -753,10 +753,131 @@ fn Lexer::maybe_lex_dot_access(self : Lexer) -> Unit {
 }
 
 ///|
-/// Placeholders until Tasks 7 and 8 write them. Each consumes one
-/// character as an `Error`, so the stream stays lossless meanwhile.
+/// After an error inside a string, read to the closing quote (an escaped
+/// quote does not close) or the end of the text, so the `Error` token
+/// covers the whole literal.
+fn Lexer::skip_string_rest(self : Lexer) -> Unit {
+  while true {
+    match self.cursor.peek() {
+      None => return
+      Some('\\') => {
+        self.cursor.advance()
+        self.cursor.advance()
+      }
+      Some('"') => {
+        self.cursor.advance()
+        return
+      }
+      Some(_) => self.cursor.advance()
+    }
+  }
+}
+
+///|
+/// The compiler's `lex_string`. The value is the raw text between the
+/// quotes with `\r\n` and `\r` as `\n`; escapes stay as written.
 fn Lexer::lex_string(self : Lexer) -> Unit {
-  self.not_yet()
+  let (u, p) = (self.cursor.unit(), self.cursor.position())
+  let span = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+  self.cursor.advance() // the opening quote
+  let content_unit = self.cursor.unit()
+  let fail_in_string = (error : LexicalErrorType, location : @span.SrcSpan) => {
+    self.diagnostics.push(lexical_diagnostic(error, location))
+    self.skip_string_rest()
+    self.emit(Error, u, p)
+  }
+  while true {
+    let char_unit = self.cursor.unit()
+    match self.cursor.peek() {
+      None => {
+        self.diagnostics.push(
+          lexical_diagnostic(UnexpectedStringEnd, span(p, p)),
+        )
+        self.emit(Error, u, p)
+        return
+      }
+      Some('"') => {
+        self.cursor.advance()
+        let raw = self.text.unsafe_substring(start=content_unit, end=char_unit)
+        let value = if raw.contains("\r") {
+          raw.replace(old="\r\n", new="\n").replace(old="\r", new="\n")
+        } else {
+          raw
+        }
+        self.emit(String(value), u, p)
+        return
+      }
+      Some('\\') => {
+        let slash = self.cursor.position()
+        self.cursor.advance()
+        match self.cursor.peek() {
+          Some('f')
+          | Some('n')
+          | Some('r')
+          | Some('t')
+          | Some('"')
+          | Some('\\') => self.cursor.advance()
+          Some('u') => {
+            self.cursor.advance()
+            if self.cursor.peek() != Some('{') {
+              let at = self.cursor.position()
+              return fail_in_string(
+                InvalidUnicodeEscape(MissingOpeningBrace),
+                span(at - 1, at),
+              )
+            }
+            // All digits inside \u{...}; no early stop at 6 digits, so the
+            // error message can say how many there were.
+            let mut digits = 0
+            let mut code = 0
+            while true {
+              self.cursor.advance()
+              guard self.cursor.peek() is Some(ch) else { break }
+              if ch == '}' {
+                break
+              }
+              let d = digit_value(ch)
+              digits += 1
+              if d >= 16 {
+                let at = self.cursor.position()
+                return fail_in_string(
+                  InvalidUnicodeEscape(ExpectedHexDigitOrCloseBrace),
+                  span(at, at + 1),
+                )
+              }
+              if digits <= 6 {
+                code = code * 16 + d
+              }
+            }
+            if self.cursor.peek() != Some('}') {
+              let at = self.cursor.position()
+              return fail_in_string(
+                InvalidUnicodeEscape(ExpectedHexDigitOrCloseBrace),
+                span(at - 1, at),
+              )
+            }
+            self.cursor.advance()
+            if digits < 1 || digits > 6 {
+              return fail_in_string(
+                InvalidUnicodeEscape(InvalidNumberOfHexDigits),
+                span(slash, self.cursor.position()),
+              )
+            }
+            if code >= 0x110000 || (code >= 0xD800 && code < 0xE000) {
+              return fail_in_string(
+                InvalidUnicodeEscape(InvalidCodepoint),
+                span(slash, self.cursor.position()),
+              )
+            }
+          }
+          Some(_) =>
+            return fail_in_string(BadStringEscape, span(slash, slash + 1))
+          None => return fail_in_string(BadStringEscape, span(slash, slash))
+        }
+      }
+      Some(_) => self.cursor.advance()
+    }
+  }
 }
 
 ///|
