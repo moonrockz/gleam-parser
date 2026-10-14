@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser"
+
+import {
+  "moonrockz/gleam-parser/diagnostic",
+  "moonrockz/gleam-parser/scanner",
+  "moonrockz/gleam-parser/span",
+}
+
+// Values
+pub fn diagnostic_description(String) -> String?
+
+pub fn version() -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+pub using @diagnostic {type Diagnostic}
+
+pub using @diagnostic {type Label}
+
+pub using @span {type Position}
+
+pub using @diagnostic {type Severity}
+
+pub using @scanner {type SourceText}
+
+pub using @span {type SrcSpan}
+
+// Traits

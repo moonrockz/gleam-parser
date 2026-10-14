@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Compute next version from conventional commits"
+set -euo pipefail
+
+exec moon run -q --target wasm scripts/release.mbtx -- version

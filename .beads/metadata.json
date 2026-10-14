@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "gleam_parser",
+  "project_id": "2b2092f3-913d-4046-9e28-8a93a9d52f60"
+}

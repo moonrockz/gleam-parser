@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/core/builtin",
+  "moonrockz/gleam-parser/span",
+}
+
+import {
+  "moonrockz/expect",
+  "moonrockz/gleam-parser/lawkit",
+  "moonbitlang/core/quickcheck",
+} for "test"

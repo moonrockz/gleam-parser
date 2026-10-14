@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  # Pinned MoonBit toolchain (moon/moonc/core). Bump deliberately; see AGENTS.md.
+  MOONBIT_VERSION: "0.10.15+943464bfa"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hustcer/setup-moonbit@v1
+        with:
+          version: ${{ env.MOONBIT_VERSION }}
+          core-version: ${{ env.MOONBIT_VERSION }}
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: moon update
+
+      - name: Check formatting
+        run: |
+          moon fmt
+          moon fmt scripts/*.mbtx
+          git diff --exit-code -- '*.mbt' '*.mbtx' || (echo "::error::moon fmt produced changes — run 'moon fmt' locally and commit" && exit 1)
+
+      - name: Check code
+        run: moon check
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hustcer/setup-moonbit@v1
+        with:
+          version: ${{ env.MOONBIT_VERSION }}
+          core-version: ${{ env.MOONBIT_VERSION }}
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: moon update
+
+      - name: Run unit tests
+        run: mise run test:unit
+
+      - name: Run BDD features
+        run: mise run test:bdd
+
+      - name: Run script tests
+        run: mise run test:scripts
+
+      - name: Run cookbook tests
+        run: mise run test:docs
+
+  targets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hustcer/setup-moonbit@v1
+        with:
+          version: ${{ env.MOONBIT_VERSION }}
+          core-version: ${{ env.MOONBIT_VERSION }}
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: moon update
+
+      - name: Test the library on every supported target
+        run: mise run test:targets
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hustcer/setup-moonbit@v1
+        with:
+          version: ${{ env.MOONBIT_VERSION }}
+          core-version: ${{ env.MOONBIT_VERSION }}
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: moon update
+
+      - name: Calculate coverage (warn on push, gate on PR)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            mise run coverage:ci-gate
+          else
+            mise run coverage:ci-warn
+          fi
+
+  ci-ok:
+    name: ci-ok
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - lint
+      - unit-tests
+      - targets
+      - coverage
+    steps:
+      - name: Check that every job passed or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          failed="$(jq -r 'to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | "\(.key): \(.value.result)"' <<<"$NEEDS")"
+          if [ -n "$failed" ]; then
+            echo "::error::Some CI jobs did not pass"
+            echo "$failed"
+            exit 1
+          fi
+          echo "All CI jobs passed or were skipped."
