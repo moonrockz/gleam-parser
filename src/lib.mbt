@@ -19,3 +19,14 @@ pub using @span {type SrcSpan, type Position}
 ///|
 /// Source text with byte, UTF-16 and line/column lookups.
 pub using @scanner {type SourceText}
+
+///|
+/// Diagnostics: severity, labels and the problem record.
+pub using @diagnostic {type Severity, type Label, type Diagnostic}
+
+///|
+/// The one-line description of a diagnostic code (`GL-SCAN-001`, …), or
+/// `None` for an unknown code. The table is in AGENTS.md > Diagnostics.
+pub fn diagnostic_description(code : String) -> String? {
+  @diagnostic.description(code)
+}
