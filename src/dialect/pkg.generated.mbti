@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/dialect"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct Dialect {
+  name : String
+  keywords : ArrayView[String]
+  attributes : ArrayView[String]
+  targets : ArrayView[String]
+  deprecations : ArrayView[Rule]
+} derive(Eq, @debug.Debug)
+pub fn Dialect::gleam_1_19() -> Self
+pub fn Dialect::knows_attribute(Self, String) -> Bool
+pub fn Dialect::knows_target(Self, String) -> Bool
+pub fn Dialect::warns(Self, Rule) -> Bool
+
+pub(all) enum Rule {
+  DeprecatedListPrepend
+  DeprecatedListPattern
+  DeprecatedListCatchAllPattern
+  DeprecatedListSpreadAsVariablePattern
+  DeprecatedRecordSpreadPattern
+  DeprecatedEmptyClauseGuard
+  DeprecatedTargetShorthand
+} derive(Eq, Hash, @debug.Debug)
+pub fn Rule::all() -> Array[Self]
+pub fn Rule::name(Self) -> String
+
+// Type aliases
+
+// Traits

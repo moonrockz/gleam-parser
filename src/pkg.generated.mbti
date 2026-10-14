@@ -4,7 +4,10 @@ package "moonrockz/gleam-parser"
 import {
   "moonbitlang/core/bigint",
   "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/diagnostic",
+  "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
 }
@@ -20,6 +23,8 @@ pub fn decode_parsed(Json) -> @ast.Parsed raise @ast.DecodeError
 
 pub fn diagnostic_description(String) -> String?
 
+pub fn encode_diagnostics(ArrayView[@diagnostic.Diagnostic]) -> Json
+
 pub fn encode_expr(@ast.Expr) -> Json
 
 pub fn encode_oracle_output(@ast.OracleOutput) -> Json
@@ -29,6 +34,14 @@ pub fn encode_parsed(@ast.Parsed) -> Json
 pub fn parse_float_value(String) -> Double?
 
 pub fn parse_int_value(String) -> @bigint.BigInt?
+
+pub fn parse_module(@scanner.TokenStream, dialect? : @dialect.Dialect) -> @parser.ParseResult
+
+pub fn parse_text(String, dialect? : @dialect.Dialect) -> @parser.ParseResult
+
+pub fn render_plain(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
+
+pub fn render_terminal(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
 
 pub fn tokenize(@scanner.SourceText) -> @scanner.TokenStream
 
@@ -79,9 +92,15 @@ pub using @ast {type DecodeError}
 
 pub using @ast {type Definition}
 
+pub using @cst {type DefinitionCst}
+
+pub using @cst {type DefinitionKind}
+
 pub using @ast {type Deprecation}
 
 pub using @diagnostic {type Diagnostic}
+
+pub using @dialect {type Dialect}
 
 pub using @ast {type Documentation}
 
@@ -99,6 +118,8 @@ pub using @ast {type Import}
 
 pub using @ast {type ImportAlias}
 
+pub using @parser {type IncorrectNamePosition}
+
 pub using @ast {type IntOperator}
 
 pub using @scanner {type Keyword}
@@ -111,9 +132,19 @@ pub using @ast {type Module}
 
 pub using @ast {type ModuleConstant}
 
+pub using @cst {type ModuleCst}
+
 pub using @ast {type ModuleExtra}
 
 pub using @ast {type OracleOutput}
+
+pub using @parser {type ParseError}
+
+pub using @parser {type ParseErrorDetails}
+
+pub using @parser {type ParseErrorType}
+
+pub using @parser {type ParseResult}
 
 pub using @ast {type Parsed}
 
@@ -130,6 +161,8 @@ pub using @ast {type RecordConstructor}
 pub using @ast {type RecordConstructorArg}
 
 pub using @ast {type RecordUpdateArg}
+
+pub using @dialect {type Rule}
 
 pub using @diagnostic {type Severity}
 

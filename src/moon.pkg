@@ -4,6 +4,10 @@ import {
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/cst",
+  "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/report",
 }
 
 import {

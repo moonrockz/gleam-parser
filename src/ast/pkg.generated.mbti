@@ -170,6 +170,7 @@ pub(all) enum BitArraySize {
   BinaryOperator(location~ : @span.SrcSpan, operator~ : IntOperator, left~ : BitArraySize, right~ : BitArraySize)
   Block(location~ : @span.SrcSpan, inner~ : BitArraySize)
 } derive(Eq, @debug.Debug)
+pub fn BitArraySize::location(Self) -> @span.SrcSpan
 
 pub(all) struct CallArg[A] {
   label : String?
@@ -195,6 +196,7 @@ pub(all) enum ClauseGuard {
   FieldAccess(label_location~ : @span.SrcSpan, index~ : UInt64?, label~ : String, container~ : ClauseGuard)
   Constant(Constant)
 } derive(Eq, @debug.Debug)
+pub fn ClauseGuard::location(Self) -> @span.SrcSpan
 
 pub(all) enum Constant {
   Int(location~ : @span.SrcSpan, value~ : String, int_value~ : @bigint.BigInt)
@@ -209,6 +211,7 @@ pub(all) enum Constant {
   BinaryOperator(location~ : @span.SrcSpan, operator_start~ : Int, operator~ : BinOp, left~ : Constant, right~ : Constant)
   Todo(location~ : @span.SrcSpan, message~ : Constant?)
 } derive(Eq, @debug.Debug)
+pub fn Constant::location(Self) -> @span.SrcSpan
 
 pub(all) struct CustomType {
   location : @span.SrcSpan
@@ -232,6 +235,7 @@ pub(all) enum Definition {
   Import(Import)
   ModuleConstant(ModuleConstant)
 } derive(Eq, @debug.Debug)
+pub fn Definition::location(Self) -> @span.SrcSpan
 
 pub(all) enum Deprecation {
   NotDeprecated
@@ -266,6 +270,7 @@ pub(all) enum Expr {
   NegateBool(location~ : @span.SrcSpan, value~ : Expr)
   NegateInt(location~ : @span.SrcSpan, value~ : Expr)
 } derive(Eq, @debug.Debug)
+pub fn Expr::location(Self) -> @span.SrcSpan
 
 pub(all) struct External {
   module_ : String
@@ -379,6 +384,7 @@ pub(all) enum Pattern {
   BitArray(location~ : @span.SrcSpan, segments~ : ArrayView[BitArraySegment[Pattern]])
   StringPrefix(location~ : @span.SrcSpan, left_location~ : @span.SrcSpan, left_side_assignment~ : StringPrefixLeftSideAssignment?, right_location~ : @span.SrcSpan, left_side_string~ : String, right_side_assignment~ : AssignName)
 } derive(Eq, @debug.Debug)
+pub fn Pattern::location(Self) -> @span.SrcSpan
 
 pub(all) enum Publicity {
   Public
@@ -424,6 +430,7 @@ pub(all) enum Statement {
   Use(Use)
   Assert(Assert)
 } derive(Eq, @debug.Debug)
+pub fn Statement::location(Self) -> @span.SrcSpan
 
 pub(all) struct StringPrefixLeftSideAssignment {
   name : String
@@ -473,6 +480,7 @@ pub(all) enum TypeAst {
   Tuple(TypeAstTuple)
   Hole(TypeAstHole)
 } derive(Eq, @debug.Debug)
+pub fn TypeAst::location(Self) -> @span.SrcSpan
 
 pub(all) struct TypeAstConstructor {
   location : @span.SrcSpan

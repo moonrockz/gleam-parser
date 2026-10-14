@@ -22,13 +22,31 @@ pub fn gen_constant(Int, @splitmix.RandomState) -> @ast.Constant
 
 pub fn gen_expr(Int, @splitmix.RandomState) -> @ast.Expr
 
+pub fn gen_module(Int, @splitmix.RandomState) -> String
+
 pub fn gen_parsed(Int, @splitmix.RandomState) -> @ast.Parsed
 
 pub fn gen_pattern(Int, @splitmix.RandomState) -> @ast.Pattern
 
 pub fn gen_type_ast(Int, @splitmix.RandomState) -> @ast.TypeAst
 
+pub fn nested(Construct, Int) -> String
+
 pub fn small_module() -> String
+
+pub fn text_constant(Int, @splitmix.RandomState) -> String
+
+pub fn text_definition(Int, @splitmix.RandomState) -> String
+
+pub fn text_expr(Int, @splitmix.RandomState) -> String
+
+pub fn text_pattern(Int, @splitmix.RandomState) -> String
+
+pub fn text_statement(Int, @splitmix.RandomState) -> String
+
+pub fn text_statements(Int, @splitmix.RandomState) -> String
+
+pub fn text_type(Int, @splitmix.RandomState) -> String
 
 pub fn token_pieces() -> Array[String]
 
@@ -39,10 +57,29 @@ pub fn units(Array[Int]) -> String
 // Errors
 
 // Types and methods
+pub(all) enum Construct {
+  List
+  Tuple
+  Block
+  Call
+  FnBody
+  Case
+  PatternList
+  TypeTuple
+  ConstantList
+  Negation
+} derive(Eq, Hash, @debug.Debug)
+pub fn Construct::all() -> Array[Self]
+
 pub(all) struct GleamAst(@ast.Parsed) derive(@debug.Debug)
 pub fn GleamAst::parsed(Self) -> @ast.Parsed
 pub impl @quickcheck.Arbitrary for GleamAst
 pub impl @shrink.Shrink for GleamAst
+
+pub(all) struct GleamModule(String) derive(@debug.Debug)
+pub fn GleamModule::text(Self) -> String
+pub impl @quickcheck.Arbitrary for GleamModule
+pub impl @shrink.Shrink for GleamModule
 
 pub(all) struct GleamText(Array[String]) derive(@debug.Debug)
 pub fn GleamText::text(Self) -> String

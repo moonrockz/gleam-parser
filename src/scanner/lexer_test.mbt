@@ -175,11 +175,9 @@ test "visually similar characters name the ascii character" {
     .expect(error_kinds("a\u{00A0}b"))
     .to_equal(["VisuallySimilarInvalidCharacter"])
     e
-    .expect(s.diagnostics[0].hint)
+    .expect(s.diagnostics[0].text)
     .to_equal(
-      Some(
-        "This looks like ascii space, but it is actually the unicode non-breaking\nspace.",
-      ),
+      "This looks like ascii space, but it is actually the unicode non-breaking\nspace.",
     )
     e.expect(s.diagnostics[0].span).to_equal(@span.SrcSpan::new(1, 1))
     e.expect(kinds("a\u{00A0}b")).to_equal([Name("a"), Error, Name("b")])
@@ -187,11 +185,9 @@ test "visually similar characters name the ascii character" {
     .expect(error_kinds("\u{201C}"))
     .to_equal(["VisuallySimilarInvalidCharacter"])
     e
-    .expect(stream("\u{FF08}").diagnostics[0].hint)
+    .expect(stream("\u{FF08}").diagnostics[0].text)
     .to_equal(
-      Some(
-        "This looks like ascii left parenthesis, but it is actually the unicode\nfullwidth left parenthesis.",
-      ),
+      "This looks like ascii left parenthesis, but it is actually the unicode\nfullwidth left parenthesis.",
     )
   })
 }

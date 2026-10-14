@@ -75,3 +75,28 @@ test "the kind defaults to the empty string" {
   )
   @expect.expect(d.kind).to_equal("")
 }
+
+///|
+test "a diagnostic carries the compiler's body text; the default is empty" {
+  let plain = @diagnostic.Diagnostic::new(
+    code="GL-PARSE-001",
+    severity=Error,
+    title="Syntax error",
+    message="I was not expecting this",
+    span=@span.SrcSpan::new(0, 1),
+  )
+  let with_text = @diagnostic.Diagnostic::new(
+    code="GL-PARSE-001",
+    severity=Error,
+    title="Syntax error",
+    message="I was not expecting this",
+    span=@span.SrcSpan::new(0, 1),
+    text="Found an Int, expected one of: \n- `=`",
+    hint=Some("Try removing it?"),
+  )
+  @expect.expect_all(e => {
+    e.expect(plain.text).to_equal("")
+    e.expect(with_text.text).to_equal("Found an Int, expected one of: \n- `=`")
+    e.expect(with_text.hint).to_equal(Some("Try removing it?"))
+  })
+}
