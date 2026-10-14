@@ -1,0 +1,479 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/ast"
+
+import {
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/span",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) struct Arg {
+  names : ArgNames
+  location : @span.SrcSpan
+  annotation : TypeAst?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ArgNames {
+  Discard(name~ : String, location~ : @span.SrcSpan)
+  LabelledDiscard(label~ : String, label_location~ : @span.SrcSpan, name~ : String, name_location~ : @span.SrcSpan)
+  Named(name~ : String, location~ : @span.SrcSpan)
+  NamedLabelled(label~ : String, label_location~ : @span.SrcSpan, name~ : String, name_location~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Assert {
+  location : @span.SrcSpan
+  value : Expr
+  message : Expr?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum AssignName {
+  Variable(String)
+  Discard(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Assignment {
+  location : @span.SrcSpan
+  value : Expr
+  pattern : Pattern
+  kind : AssignmentKind
+  annotation : TypeAst?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum AssignmentKind {
+  Let
+  Generated
+  Assert(location~ : @span.SrcSpan, assert_keyword_start~ : Int, message~ : Expr?)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum BinOp {
+  And
+  Or
+  Eq
+  NotEq
+  LtInt
+  LtEqInt
+  LtFloat
+  LtEqFloat
+  GtEqInt
+  GtInt
+  GtEqFloat
+  GtFloat
+  AddInt
+  AddFloat
+  SubInt
+  SubFloat
+  MultInt
+  MultFloat
+  DivInt
+  DivFloat
+  RemainderInt
+  Concatenate
+} derive(Eq, Hash, @debug.Debug)
+pub fn BinOp::all() -> Array[Self]
+pub fn BinOp::name(Self) -> String
+pub fn BinOp::of(String) -> Self?
+
+pub(all) enum BitArrayOption[V] {
+  Bytes(location~ : @span.SrcSpan)
+  Int(location~ : @span.SrcSpan)
+  Float(location~ : @span.SrcSpan)
+  Bits(location~ : @span.SrcSpan)
+  Utf8(location~ : @span.SrcSpan)
+  Utf16(location~ : @span.SrcSpan)
+  Utf32(location~ : @span.SrcSpan)
+  Utf8Codepoint(location~ : @span.SrcSpan)
+  Utf16Codepoint(location~ : @span.SrcSpan)
+  Utf32Codepoint(location~ : @span.SrcSpan)
+  Signed(location~ : @span.SrcSpan)
+  Unsigned(location~ : @span.SrcSpan)
+  Big(location~ : @span.SrcSpan)
+  Little(location~ : @span.SrcSpan)
+  Native(location~ : @span.SrcSpan)
+  Size(location~ : @span.SrcSpan, value~ : V, short_form~ : Bool)
+  Unit(location~ : @span.SrcSpan, value~ : Int)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct BitArraySegment[V] {
+  location : @span.SrcSpan
+  value : V
+  options : ArrayView[BitArrayOption[V]]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum BitArraySize {
+  Int(location~ : @span.SrcSpan, value~ : String, int_value~ : @bigint.BigInt)
+  Variable(location~ : @span.SrcSpan, name~ : String)
+  BinaryOperator(location~ : @span.SrcSpan, operator~ : IntOperator, left~ : BitArraySize, right~ : BitArraySize)
+  Block(location~ : @span.SrcSpan, inner~ : BitArraySize)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CallArg[A] {
+  label : String?
+  location : @span.SrcSpan
+  value : A
+  implicit : ImplicitCallArgOrigin?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Clause {
+  location : @span.SrcSpan
+  pattern : ArrayView[Pattern]
+  alternative_patterns : ArrayView[ArrayView[Pattern]]
+  guard_ : ClauseGuard?
+  then : Expr
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ClauseGuard {
+  Block(location~ : @span.SrcSpan, value~ : ClauseGuard)
+  BinaryOperator(location~ : @span.SrcSpan, operator~ : BinOp, operator_start~ : Int, left~ : ClauseGuard, right~ : ClauseGuard)
+  Not(location~ : @span.SrcSpan, expression~ : ClauseGuard)
+  Var(location~ : @span.SrcSpan, name~ : String)
+  TupleIndex(location~ : @span.SrcSpan, index~ : Int, tuple~ : ClauseGuard)
+  FieldAccess(label_location~ : @span.SrcSpan, index~ : Int?, label~ : String, container~ : ClauseGuard)
+  Constant(Constant)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Constant {
+  Int(location~ : @span.SrcSpan, value~ : String, int_value~ : @bigint.BigInt)
+  Float(location~ : @span.SrcSpan, value~ : String, float_value~ : Double)
+  String(location~ : @span.SrcSpan, value~ : String)
+  Tuple(location~ : @span.SrcSpan, elements~ : ArrayView[Constant])
+  List(location~ : @span.SrcSpan, elements~ : ArrayView[Constant], tail~ : Constant?)
+  Record(location~ : @span.SrcSpan, arguments_start_position~ : Int, module_~ : SpannedString?, name~ : String, arguments~ : ArrayView[CallArg[Constant]]?)
+  RecordUpdate(location~ : @span.SrcSpan, constructor_location~ : @span.SrcSpan, module_~ : SpannedString?, name~ : String, record~ : RecordBeingUpdated[Constant], arguments~ : ArrayView[RecordUpdateArg[Constant]])
+  BitArray(location~ : @span.SrcSpan, segments~ : ArrayView[BitArraySegment[Constant]])
+  Var(location~ : @span.SrcSpan, module~ : SpannedString?, name~ : String)
+  BinaryOperator(location~ : @span.SrcSpan, operator_start~ : Int, operator~ : BinOp, left~ : Constant, right~ : Constant)
+  Todo(location~ : @span.SrcSpan, message~ : Constant?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct CustomType {
+  location : @span.SrcSpan
+  end_position : Int
+  name : String
+  name_location : @span.SrcSpan
+  publicity : Publicity
+  constructors : ArrayView[RecordConstructor]
+  documentation : Documentation?
+  deprecation : Deprecation
+  opaque_ : Bool
+  parameters : ArrayView[SpannedString]
+  external_erlang : External?
+  external_javascript : External?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Definition {
+  Function(Function)
+  TypeAlias(TypeAlias)
+  CustomType(CustomType)
+  Import(Import)
+  ModuleConstant(ModuleConstant)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Deprecation {
+  NotDeprecated
+  Deprecated(message~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Documentation {
+  start : Int
+  text : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Expr {
+  Int(location~ : @span.SrcSpan, value~ : String, int_value~ : @bigint.BigInt)
+  Float(location~ : @span.SrcSpan, value~ : String, float_value~ : Double)
+  String(location~ : @span.SrcSpan, value~ : String)
+  Block(location~ : @span.SrcSpan, statements~ : ArrayView[Statement])
+  Var(location~ : @span.SrcSpan, name~ : String)
+  Fn(location~ : @span.SrcSpan, kind~ : FunctionLiteralKind, end_of_head_byte_index~ : Int, arguments~ : ArrayView[Arg], body~ : ArrayView[Statement], return_annotation~ : TypeAst?)
+  List(location~ : @span.SrcSpan, elements~ : ArrayView[Expr], tail~ : Expr?)
+  Call(location~ : @span.SrcSpan, fun~ : Expr, arguments~ : ArrayView[CallArg[Expr]], open_parenthesis~ : Int)
+  BinOp(location~ : @span.SrcSpan, operator~ : BinOp, operator_start~ : Int, left~ : Expr, right~ : Expr)
+  Pipeline(expressions~ : ArrayView[Expr])
+  Case(location~ : @span.SrcSpan, subjects~ : ArrayView[Expr], clauses~ : ArrayView[Clause]?)
+  FieldAccess(location~ : @span.SrcSpan, label_location~ : @span.SrcSpan, label~ : String, container~ : Expr)
+  Tuple(location~ : @span.SrcSpan, elements~ : ArrayView[Expr])
+  TupleIndex(location~ : @span.SrcSpan, index~ : Int, tuple~ : Expr)
+  Todo(kind~ : TodoKind, location~ : @span.SrcSpan, message~ : Expr?)
+  Panic(location~ : @span.SrcSpan, message~ : Expr?)
+  Echo(location~ : @span.SrcSpan, keyword_end~ : Int, expression~ : Expr?, message~ : Expr?)
+  BitArray(location~ : @span.SrcSpan, segments~ : ArrayView[BitArraySegment[Expr]])
+  RecordUpdate(location~ : @span.SrcSpan, spread_start~ : Int, constructor_~ : Expr, record~ : RecordBeingUpdated[Expr], arguments~ : ArrayView[RecordUpdateArg[Expr]])
+  NegateBool(location~ : @span.SrcSpan, value~ : Expr)
+  NegateInt(location~ : @span.SrcSpan, value~ : Expr)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct External {
+  module_ : String
+  function : String
+  location : @span.SrcSpan
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Function {
+  location : @span.SrcSpan
+  body_start : Int?
+  end_position : Int
+  name : SpannedString?
+  arguments : ArrayView[Arg]
+  body : ArrayView[Statement]
+  publicity : Publicity
+  deprecation : Deprecation
+  return_annotation : TypeAst?
+  documentation : Documentation?
+  external_erlang : External?
+  external_javascript : External?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum FunctionLiteralKind {
+  Capture(hole~ : @span.SrcSpan)
+  Anonymous(head~ : @span.SrcSpan)
+  Use(location~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ImplicitCallArgOrigin {
+  Use
+  Pipe
+  PatternFieldSpread
+  IncorrectArityUse
+  RecordUpdate
+} derive(Eq, Hash, @debug.Debug)
+pub fn ImplicitCallArgOrigin::name(Self) -> String
+pub fn ImplicitCallArgOrigin::of(String) -> Self?
+
+pub(all) struct Import {
+  documentation : String?
+  location : @span.SrcSpan
+  module_location : @span.SrcSpan
+  module_ : String
+  as_name : ImportAlias?
+  unqualified_values : ArrayView[UnqualifiedImport]
+  unqualified_types : ArrayView[UnqualifiedImport]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ImportAlias {
+  name : AssignName
+  location : @span.SrcSpan
+} derive(Eq, @debug.Debug)
+
+pub(all) enum IntOperator {
+  Add
+  Subtract
+  Multiply
+  Divide
+  Remainder
+} derive(Eq, Hash, @debug.Debug)
+pub fn IntOperator::name(Self) -> String
+pub fn IntOperator::of(String) -> Self?
+
+pub(all) struct Module {
+  definitions : ArrayView[TargetedDefinition]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ModuleConstant {
+  documentation : Documentation?
+  location : @span.SrcSpan
+  publicity : Publicity
+  name : String
+  name_location : @span.SrcSpan
+  annotation : TypeAst?
+  value : Constant
+  deprecation : Deprecation
+} derive(Eq, @debug.Debug)
+
+pub(all) struct ModuleExtra {
+  module_comments : ArrayView[@span.SrcSpan]
+  doc_comments : ArrayView[@span.SrcSpan]
+  comments : ArrayView[@span.SrcSpan]
+  empty_lines : ArrayView[Int]
+  new_lines : ArrayView[Int]
+  trailing_commas : ArrayView[Int]
+} derive(Eq, @debug.Debug)
+pub fn ModuleExtra::empty() -> Self
+
+pub(all) struct Parsed {
+  module_ : Module
+  extra : ModuleExtra
+  warnings : ArrayView[Warning]
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Pattern {
+  Int(location~ : @span.SrcSpan, value~ : String, int_value~ : @bigint.BigInt)
+  Float(location~ : @span.SrcSpan, value~ : String, float_value~ : Double)
+  String(location~ : @span.SrcSpan, value~ : String)
+  Variable(location~ : @span.SrcSpan, name~ : String)
+  BitArraySize(BitArraySize)
+  Assign(name~ : String, location~ : @span.SrcSpan, pattern~ : Pattern)
+  Discard(name~ : String, location~ : @span.SrcSpan)
+  List(location~ : @span.SrcSpan, elements~ : ArrayView[Pattern], tail~ : TailPattern?)
+  Constructor(location~ : @span.SrcSpan, name_location~ : @span.SrcSpan, name~ : String, arguments~ : ArrayView[CallArg[Pattern]], module_~ : SpannedString?, spread~ : @span.SrcSpan?)
+  Tuple(location~ : @span.SrcSpan, elements~ : ArrayView[Pattern])
+  BitArray(location~ : @span.SrcSpan, segments~ : ArrayView[BitArraySegment[Pattern]])
+  StringPrefix(location~ : @span.SrcSpan, left_location~ : @span.SrcSpan, left_side_assignment~ : StringPrefixLeftSideAssignment?, right_location~ : @span.SrcSpan, left_side_string~ : String, right_side_assignment~ : AssignName)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Publicity {
+  Public
+  Private
+  Internal(attribute_location~ : @span.SrcSpan?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RecordBeingUpdated[A] {
+  base : A
+  location : @span.SrcSpan
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RecordConstructor {
+  location : @span.SrcSpan
+  name_location : @span.SrcSpan
+  name : String
+  arguments : ArrayView[RecordConstructorArg]
+  documentation : Documentation?
+  deprecation : Deprecation
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RecordConstructorArg {
+  label : SpannedString?
+  ast : TypeAst
+  location : @span.SrcSpan
+  doc : Documentation?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RecordUpdateArg[A] {
+  label : String
+  location : @span.SrcSpan
+  value : A
+} derive(Eq, @debug.Debug)
+
+pub(all) struct SpannedString {
+  location : @span.SrcSpan
+  name : String
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Statement {
+  Expression(Expr)
+  Assignment(Assignment)
+  Use(Use)
+  Assert(Assert)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct StringPrefixLeftSideAssignment {
+  name : String
+  name_start_position : Int
+  location : @span.SrcSpan
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TailPattern {
+  location : @span.SrcSpan
+  pattern : Pattern
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Target {
+  Erlang
+  JavaScript
+} derive(Eq, Hash, @debug.Debug)
+pub fn Target::name(Self) -> String
+pub fn Target::of(String) -> Self?
+
+pub(all) struct TargetedDefinition {
+  definition : Definition
+  target : Target?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TodoKind {
+  Keyword
+  EmptyFunction(function_location~ : @span.SrcSpan)
+  IncompleteUse
+  EmptyBlock
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TypeAlias {
+  location : @span.SrcSpan
+  alias_ : String
+  name_location : @span.SrcSpan
+  parameters : ArrayView[SpannedString]
+  type_ast : TypeAst
+  publicity : Publicity
+  documentation : Documentation?
+  deprecation : Deprecation
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TypeAst {
+  Constructor(TypeAstConstructor)
+  Fn(TypeAstFn)
+  Var(TypeAstVar)
+  Tuple(TypeAstTuple)
+  Hole(TypeAstHole)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TypeAstConstructor {
+  location : @span.SrcSpan
+  name : TypeAstConstructorName
+  arguments : ArrayView[TypeAst]
+  start_parentheses : Int?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TypeAstConstructorName {
+  Qualified(module_~ : String, module_location~ : @span.SrcSpan, dot_location~ : Int, name~ : SpannedString?)
+  Unqualified(name~ : String, location~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TypeAstFn {
+  location : @span.SrcSpan
+  arguments : ArrayView[TypeAst]
+  return_ : TypeAst
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TypeAstHole {
+  location : @span.SrcSpan
+  name : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TypeAstTuple {
+  location : @span.SrcSpan
+  elements : ArrayView[TypeAst]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TypeAstVar {
+  location : @span.SrcSpan
+  name : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct UnqualifiedImport {
+  location : @span.SrcSpan
+  name : String
+  name_position : Int
+  as_name : String?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Use {
+  call : Expr
+  location : @span.SrcSpan
+  right_hand_side_location : @span.SrcSpan
+  assignments_location : @span.SrcSpan
+  assignments : ArrayView[UseAssignment]
+} derive(Eq, @debug.Debug)
+
+pub(all) struct UseAssignment {
+  location : @span.SrcSpan
+  pattern : Pattern
+  annotation : TypeAst?
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Warning {
+  DeprecatedListPrepend(location~ : @span.SrcSpan)
+  DeprecatedListPattern(location~ : @span.SrcSpan)
+  DeprecatedListCatchAllPattern(location~ : @span.SrcSpan)
+  DeprecatedListSpreadAsVariablePattern(location~ : @span.SrcSpan, name~ : String)
+  DeprecatedRecordSpreadPattern(location~ : @span.SrcSpan)
+  DeprecatedEmptyClauseGuard(location~ : @span.SrcSpan)
+  DeprecatedTargetShorthand(target~ : Target, location~ : @span.SrcSpan)
+  DetachedDocComment(location~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
