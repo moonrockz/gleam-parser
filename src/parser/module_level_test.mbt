@@ -274,3 +274,24 @@ test "the parse result is the oracle's Parsed shape" {
     e.expect(p.extra.new_lines).to_equal([11][:])
   })
 }
+
+///|
+test "a lexical error the lexer reaches while reading a bad @deprecated comes first" {
+  // The compiler's expect_one/expect_string consume a token when they fail,
+  // so its lexer reaches the `;`.
+  let r = @parser.parse_text("@deprecated a b ;\nfn f() {\n  1\n}\n")
+  @expect.expect(kinds(r)[0]).to_equal("GL-SCAN-001 UnrecognizedToken")
+}
+
+///|
+test "a skipped definition keeps its doc comments; the next definition gets only its own" {
+  let r = @parser.parse_text(
+    "/// doc c\nconst = 1\n/// doc g\nfn g() {\n  1\n}\n",
+  )
+  guard r.module_.definitions is [{ definition: Function(g), .. }] else {
+    fail("definitions \{@debug.to_string(r.module_.definitions)}")
+  }
+  @expect.expect(g.documentation).to_equal(
+    Some({ start: 23, text: " doc g\n", }),
+  )
+}

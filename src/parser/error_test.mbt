@@ -225,3 +225,14 @@ test "warnings become GL-PARSE-002 and GL-PARSE-003 diagnostics with the compile
     )
   })
 }
+
+///|
+test "the pythonic import error writes the literal word item, as the compiler does" {
+  let d = @parser.ParseErrorType::IncorrectImportModuleSeparator(
+    module_="gleam",
+    item="io",
+  ).details()
+  @expect.expect(d.text).to_equal(
+    "Perhaps you meant one of:\n\n    import gleam/io\n    import gleam.{item}",
+  )
+}

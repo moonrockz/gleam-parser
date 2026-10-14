@@ -15,19 +15,34 @@ fn first_lexical_error(
 }
 
 ///|
+/// Run a snippet parse and keep its error as a value, so a lexical error
+/// the lexer reached can be reported first.
+fn[A] attempt_parse(f : () -> A? raise ParseError) -> Result[A?, ParseError] {
+  try f() catch {
+    e => Err(e)
+  } noraise {
+    v => Ok(v)
+  }
+}
+
+///|
 /// The compiler's `ensure_no_errors_or_remaining_input` for a snippet: a
 /// lexical error first, then a missing result (`missing`), then leftover
 /// tokens.
 fn[A] Parser::finish_snippet(
   self : Parser,
   stream : @scanner.TokenStream,
-  result : A?,
+  result : Result[A?, ParseError],
   missing : ParseErrorType,
 ) -> A raise ParseError {
   if first_lexical_error(stream, self.farthest) is Some(d) {
     parse_error(LexError(d), d.span)
   }
-  guard result is Some(value) else { parse_error(missing, sp(0, 0)) }
+  let parsed = match result {
+    Ok(v) => v
+    Err(e) => raise e
+  }
+  guard parsed is Some(value) else { parse_error(missing, sp(0, 0)) }
   match self.next_token() {
     Some(t) =>
       parse_error(
@@ -54,7 +69,7 @@ fn[A] Parser::finish_snippet(
 pub fn parse_type_text(text : String) -> @ast.TypeAst raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
-  let result = p.parse_type()
+  let result = attempt_parse(() => p.parse_type())
   p.finish_snippet(stream, result, ExpectedType)
 }
 
@@ -63,7 +78,7 @@ pub fn parse_type_text(text : String) -> @ast.TypeAst raise ParseError {
 pub fn parse_pattern_text(text : String) -> @ast.Pattern raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
-  let result = p.parse_pattern()
+  let result = attempt_parse(() => p.parse_pattern())
   p.finish_snippet(stream, result, ExpectedPattern)
 }
 
@@ -73,7 +88,7 @@ pub fn parse_pattern_text(text : String) -> @ast.Pattern raise ParseError {
 pub fn parse_constant_text(text : String) -> @ast.Constant raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
-  let result = p.parse_const_value()
+  let result = attempt_parse(() => p.parse_const_value())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
 
@@ -90,7 +105,7 @@ pub fn parse_constant_text(text : String) -> @ast.Constant raise ParseError {
 pub fn parse_expression_text(text : String) -> @ast.Expr raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
-  let result = p.parse_expression()
+  let result = attempt_parse(() => p.parse_expression())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
 
@@ -102,6 +117,6 @@ pub fn parse_statements_text(
 ) -> ArrayView[@ast.Statement] raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
-  let result = p.parse_statement_sequence().map(r => r.0[:])
+  let result = attempt_parse(() => p.parse_statement_sequence().map(r => r.0[:]))
   p.finish_snippet(stream, result, ExpectedExpr)
 }

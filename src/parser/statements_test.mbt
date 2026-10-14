@@ -62,3 +62,10 @@ test "statement errors" {
     e.expect(stmt_err("")).to_equal(("ExpectedExpr", sp(0, 0)))
   })
 }
+
+///|
+test "a snippet parser reports a lexical error before the parse error that follows it" {
+  // Compiler snapshot `semicolons`: "Remove this semicolon" at 1:8 (the
+  // scanner gives the compiler's zero-width span for `;`).
+  @expect.expect(stmt_err("{ 2 + 3; - -5; }")).to_equal(("LexError", sp(7, 7)))
+}

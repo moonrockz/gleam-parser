@@ -166,6 +166,15 @@ fn Parser::recover(
   cst_definitions.push(
     @cst.DefinitionCst::new(kind=Skipped, name=None, tokens=self.tokens[from:i]),
   )
+  // Doc comments inside the skipped run belong to the skipped definition,
+  // not to the next one.
+  if i > from {
+    let run_end = self.tokens[i - 1].span.end
+    while self.doc_head < self.doc_comments.length() &&
+          self.doc_comments[self.doc_head].0.start < run_end {
+      self.doc_head += 1
+    }
+  }
   self.seek(i)
 }
 
@@ -409,18 +418,21 @@ fn Parser::parse_deprecated_attribute(
   end : Int32,
   attributes : Attributes,
 ) -> Int32 raise ParseError {
-  if self.maybe_one(LeftParen) is None {
-    parse_error(ExpectedDeprecationMessage, sp(start, end))
+  // As the compiler, `expect_one` and `expect_string` consume a token when
+  // they fail (its lexer then reads one token further); the error is
+  // replaced by `ExpectedDeprecationMessage`.
+  let _ = try self.expect_one(LeftParen) catch {
+    _ => parse_error(ExpectedDeprecationMessage, sp(start, end))
+  } noraise {
+    v => v
   }
   if attributes.deprecated is Deprecated(..) {
     parse_error(DuplicateAttribute, sp(start, end))
   }
-  let message = match self.token0 {
-    Some({ kind: String(value), .. }) => {
-      self.advance()
-      value
-    }
+  let (_, message, _) = try self.expect_string() catch {
     _ => parse_error(ExpectedDeprecationMessage, sp(start, end))
+  } noraise {
+    v => v
   }
   let (_, close) = self.expect_one(RightParen)
   attributes.deprecated = Deprecated(message~)

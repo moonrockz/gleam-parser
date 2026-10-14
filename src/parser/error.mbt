@@ -574,7 +574,7 @@ pub fn ParseErrorType::details(self : ParseErrorType) -> ParseErrorDetails {
           "Perhaps you meant one of:",
           "",
           "    import \{module_}/\{item}",
-          "    import \{module_}.{\{item}}",
+          "    import \{module_}.{item}",
         ].join("\n"),
         "I was expecting either `/` or `.{` here.",
       )
