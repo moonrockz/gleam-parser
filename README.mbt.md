@@ -5,8 +5,9 @@ language in MoonBit. One expected user is
 [morphir-moonbit](https://github.com/finos/morphir-moonbit), as a frontend
 that reads Gleam and a backend that writes it.
 
-Status: the scanner is done. The AST will mirror the Gleam compiler's
-untyped AST at v1.19.2; the parity oracle is the compiler itself.
+Status: scanner, AST, parser, CST and diagnostics are done. The AST mirrors
+the Gleam compiler's untyped AST at v1.19.2; the parity oracle is the
+compiler itself.
 
 Done:
 
@@ -20,11 +21,27 @@ Done:
   `gleam-core` writes the same JSON, and `tests/fixtures/ast` prove byte
   equality.
 
+- **Parser** (`parse_text`, `parse_module`): a recursive-descent port of the
+  compiler's `parse.rs`; on every fixture the canonical JSON equals the
+  compiler's byte for byte, and the first error has the compiler's kind and
+  span. A definition that does not parse is reported and skipped; the rest
+  of the file is parsed.
+- **CST** (`ParseResult.cst`): every token grouped per definition;
+  `ModuleCst::to_source()` is the text byte for byte, also with errors.
+- **Dialect** (`Dialect::gleam_1_19()`): what the parser accepts.
+- **Report** (`render_plain`, `render_terminal`, `encode_diagnostics`): the
+  compiler's diagnostic layout, with colours, or as JSON.
+
+```moonbit
+test {
+  let r = @gleam.parse_text("import gleam/io\n\npub fn main() {\n  io.println(\"hi\")\n}\n")
+  inspect(r.module_.definitions.length(), content="2")
+  inspect(r.has_errors(), content="false")
+}
+```
+
 Planned, in order:
 
-- **Parser**: tokens to AST, concrete syntax tree (CST) and diagnostics with
-  the compiler's wording; a definition that does not parse is reported and
-  the rest of the file is parsed.
 - **Syntax tree**: a read-only node model with six traversal styles.
 - **Printer and formatter**: Gleam source from an AST, `gleam format` parity.
 

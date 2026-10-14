@@ -170,7 +170,9 @@ pub fn decode_expr(json : Json) -> Expr raise DecodeError {
 }
 
 ///|
-/// The parser: a module from tokens, with recovery per definition.
+/// The parser: a module from tokens, with recovery per definition. A
+/// `ParseResult` holds the AST (`module_`), `extra`, `warnings`, the `cst`
+/// and the `diagnostics`; `ParseError` is what the snippet parsers raise.
 pub using @parser {
   type ParseResult,
   type ParseError,
@@ -180,11 +182,14 @@ pub using @parser {
 }
 
 ///|
-/// Dialects: what the parser accepts.
+/// Dialects: what the parser accepts (`Dialect::gleam_1_19()` is the
+/// default) and the deprecation `Rule`s it warns about.
 pub using @dialect {type Dialect, type Rule}
 
 ///|
-/// The CST: every token per definition.
+/// The CST: every token grouped per definition (`ModuleCst::to_source()`
+/// is the text byte for byte; a `Skipped` definition is a run the parser
+/// reported and skipped).
 pub using @cst {type ModuleCst, type DefinitionCst, type DefinitionKind}
 
 ///|
@@ -194,7 +199,15 @@ pub fn parse_module(stream : TokenStream, dialect? : Dialect) -> ParseResult {
 }
 
 ///|
-/// Parse `text` into a module.
+/// Parse Gleam source text into a module, with recovery per definition.
+///
+/// ```mbt check
+/// test {
+///   let r = @gleam.parse_text("pub fn main() {\n  io.println(\"hi\")\n}\n")
+///   inspect(r.module_.definitions.length(), content="1")
+///   inspect(r.has_errors(), content="false")
+/// }
+/// ```
 pub fn parse_text(text : String, dialect? : Dialect) -> ParseResult {
   @parser.parse_text(text, dialect?)
 }

@@ -24,8 +24,15 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   diagnostic (`kind` = the `LexicalErrorType` variant) plus one `Error`
   token from the token start to the end of the error, at least one
   character, or to the closing quote inside a string; scanning continues.
-- **Parser** — a recursive-descent port of the compiler's `parse.rs`, with
-  recovery per definition.
+- **Parser** — a recursive-descent port of the compiler's `parse.rs`
+  (`src/parser`), one file per concern, over the compiler's two-token
+  lookahead. A scanner `Error` token is a hole in the stream, as a lexical
+  error is in the compiler. Recovery per definition: a syntax error is
+  reported, the parser skips to the next definition start (`import`,
+  `const`, `pub`, `fn`, `type`, `opaque` or `@` in column 1) and goes on;
+  the skipped tokens are a `Skipped` CST definition. `ParseResult` holds
+  `module_`, `extra`, `warnings`, `cst` and `diagnostics`;
+  `ParseResult::parsed()` is the oracle's `Parsed`. See "Parser contract".
 - **AST** — a mirror of the compiler's untyped AST at v1.19.2 (`src/ast`),
   without analysis-only fields (see `docs/ast-json.md`), with a canonical
   JSON encoder and decoder. The parity oracle `tools/gleam-ast-oracle`
@@ -33,7 +40,16 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   `rust-toolchain.toml`) writes the same JSON; `mise run oracle:build`
   builds it, `mise run fixtures:record` records `tests/fixtures/ast/*.json`;
   CI never runs cargo.
-- **CST** — every token and definition, with trivia.
+- **CST** — every token grouped per definition (`src/cst`);
+  `ModuleCst::to_source()` is the text byte for byte. `trivia_extra`
+  derives the comment, line-end and empty-line positions of `ModuleExtra`
+  from trivia; the parser adds the trailing commas (recorded where the
+  compiler's `series_of` records them, so `[1, ..rest]` has one).
+- **Dialect** — `Dialect::gleam_1_19()` (`src/dialect`): the reserved words,
+  attributes, targets and deprecation rules the parser accepts.
+- **Report** — `render_plain`, `render_terminal`, `encode_diagnostics`
+  (`src/report`): the compiler's layout (codespan-reporting 0.13.1 rich
+  display), then the text and `Hint: `.
 - **Syntax tree** (v0.2) — read-only node model and traversal.
 - **Printer and formatter** (v0.3) — Gleam source with `gleam format` parity.
 
@@ -52,6 +68,43 @@ diff the files above between the tags; apply the changes to `src/ast`,
 `src/scanner`, `src/parser` and `docs/ast-json.md`; run
 `mise run corpus:goldens`, `mise run test:parity`, `mise run parity:ratchet`.
 
+### Parser contract
+
+- The AST the parser builds equals the compiler's for the same text
+  (`tests/features/parser.feature` compares the canonical JSON of every
+  fixture with the oracle's, byte for byte). Keep the port close to
+  `parse.rs`: the same functions, the same spans, the same error kinds at
+  the same spans.
+- The first error diagnostic of a file is the compiler's first error. Order
+  rule: a lexical error that the compiler's lexer reached before the parser
+  stopped (its start is before the end of the farthest token the parser
+  loaded) comes first; then diagnostics by position; `UnexpectedEof` keeps
+  the compiler's raw span `0..0` and sorts at the end of the text (the
+  renderer shows it at the last byte, as `error.rs` does).
+- Doc comments follow `take_documentation`: the `///` lines before a
+  definition's start (its `pub`, `fn`, `import` module name, `const` name,
+  variant name, field label) join with `\n` after each line; a regular
+  comment between a doc comment and the definition detaches it (warning
+  `GL-PARSE-003`); a doc comment inside a body is taken by the next
+  definition; a trailing doc comment with no definition is ignored.
+- Two depth limits keep every target stack-safe, both `GL-PARSE-004`
+  (`TooMuchNesting`): syntactic nesting stops at `@parser.max_nesting`
+  (100; wasm overflows at about 140 nested lists) while parsing, and a
+  definition whose JSON would be deeper than `@ast.max_depth`
+  (`@parser.json_depth(d) + @parser.definition_root_depth > 150`) is
+  reported and dropped. `src/parser/depth.mbt` mirrors
+  `src/ast/encode.mbt` step for step; the laws in
+  `src/parser/nesting_law_test.mbt` check the limit against the decoder.
+  The compiler has no such limit (known difference).
+- Snippet parsers for tests and tools: `parse_expression_text`,
+  `parse_statements_text`, `parse_pattern_text`, `parse_type_text`,
+  `parse_constant_text` (the compiler's test interfaces; they raise
+  `ParseError`).
+- A new fixture: write `tests/fixtures/ast/<name>.gleam`, run `mise run
+  fixtures:record`, add it to `tests/features/parser.feature` and to
+  `tests/fixtures/ast/README.md`. An error fixture is checked on its first
+  error only.
+
 ### Architecture Summary
 
 ```
@@ -63,7 +116,11 @@ moonrockz/gleam-parser
 │   ├── diagnostic/       # Severity, Label, Diagnostic, the code table
 │   ├── scanner/          # SourceText; lexer (port of lexer.rs); tokens, trivia, lexical diagnostics
 │   ├── lawkit/           # Property-test generators and helpers (public test support)
-│   ├── ast/ cst/ parser/ dialect/ report/   # plans 3 and 4
+│   ├── ast/              # Compiler-mirror AST; canonical JSON encode/decode; max_depth
+│   ├── cst/              # ModuleCst, DefinitionCst (tokens per definition); trivia_extra
+│   ├── dialect/          # Dialect::gleam_1_19(): attributes, targets, deprecation rules
+│   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; depth
+│   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
 │   └── syntax/ printer/  # v0.2, v0.3
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests
 │   ├── bdd/              # MoonSpec step definitions for tests/features
@@ -81,9 +138,14 @@ moonrockz/gleam-parser
 Every `Diagnostic` has a `code`, a `kind` (the compiler's error variant, for
 example `UnrecognizedToken`; empty when there is none), a `severity`, a
 one-line `message`, a `span`,
-a `title` (the compiler's: "Syntax error"), `labels` (the primary label text
-at the span, plus extra labels) and an optional `hint`, with the compiler's
-wording from `parse/error.rs`.
+a `title` (the compiler's: "Syntax error", "Deprecated prepend syntax", …),
+`labels` (the extra labels only; the primary label is `span` with
+`message`), `text` (the compiler's body text, lines joined with `\n`) and
+an optional `hint` (without the `Hint: ` prefix; the renderer adds it), with
+the compiler's wording from `parse/error.rs` and `warning.rs`. The renderer
+(`src/report`) follows codespan-reporting 0.13.1: tab width 4, every code
+point width 1 (the compiler uses East Asian widths), lines split at `\n`
+only; terminal colours are close to the compiler's, not an oracle.
 
 | Code | Meaning |
 |------|---------|
@@ -240,8 +302,11 @@ inputs.
   fragments, edge characters in literal and comment forms, cuts of a small
   module; shrinks) and `GleamTokens` (valid token sequences with their kind
   names), `GleamAst` (random ASTs with every node kind, for the JSON
-  round-trip laws); later plans add `GleamModule`, `Nesting`, `Commented`
-  and `Spaced`. Keep generated depth
+  round-trip laws), `GleamModule` (valid modules: every definition kind,
+  attribute, expression, statement, pattern, guard and type form, no
+  deprecated syntax; shrinks by dropping a definition) and
+  `Construct`/`nested(construct, depth)` (each nesting construct at any
+  depth); later plans add `Commented` and `Spaced`. Keep generated depth
   bounded by `size`, so generators do not overflow the stack on wasm.
 - **Valid input fails loudly.** A generator of valid input makes the law fail
   on any diagnostic, never skip the case. Generate arbitrary text only for
@@ -313,7 +378,7 @@ squash merge, put the footer in the squash commit body
 (`gh pr merge --squash --body $'…\n\nBREAKING CHANGE: …'`).
 `mise run release:prepare` warns about breaking commits without the footer.
 
-Scopes (examples): `scanner`, `parser`, `ast`, `cst`, `span`, `diagnostic`, `ci`, `build`.
+Scopes (examples): `scanner`, `parser`, `ast`, `cst`, `dialect`, `report`, `span`, `diagnostic`, `ci`, `build`.
 
 ## Mise Tasks
 
