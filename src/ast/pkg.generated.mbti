@@ -10,6 +10,28 @@ import {
 // Values
 pub fn canonical(Json) -> String
 
+pub fn decode_clause_guard(Json) -> ClauseGuard raise DecodeError
+
+pub fn decode_constant(Json) -> Constant raise DecodeError
+
+pub fn decode_definition(Json) -> Definition raise DecodeError
+
+pub fn decode_expr(Json) -> Expr raise DecodeError
+
+pub fn decode_extra(Json) -> ModuleExtra raise DecodeError
+
+pub fn decode_module(Json) -> Module raise DecodeError
+
+pub fn decode_parsed(Json) -> Parsed raise DecodeError
+
+pub fn decode_pattern(Json) -> Pattern raise DecodeError
+
+pub fn decode_statement(Json) -> Statement raise DecodeError
+
+pub fn decode_type_ast(Json) -> TypeAst raise DecodeError
+
+pub fn decode_warning(Json) -> Warning raise DecodeError
+
 pub fn encode_clause_guard(ClauseGuard) -> Json
 
 pub fn encode_constant(Constant) -> Json
@@ -39,6 +61,9 @@ pub fn encode_type_ast(TypeAst) -> Json
 pub fn encode_warning(Warning) -> Json
 
 // Errors
+pub(all) suberror DecodeError {
+  DecodeError(path~ : String, message~ : String)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
 pub(all) struct Arg {
