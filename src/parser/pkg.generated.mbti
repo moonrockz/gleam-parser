@@ -4,13 +4,33 @@ package "moonrockz/gleam-parser/parser"
 import {
   "moonbitlang/core/debug",
   "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/diagnostic",
+  "moonrockz/gleam-parser/dialect",
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
 }
 
 // Values
+pub let definition_root_depth : Int
+
+pub fn json_depth(@ast.Definition) -> Int
+
 pub let max_nesting : Int
+
+pub fn parse_constant_text(String) -> @ast.Constant raise ParseError
+
+pub fn parse_expression_text(String) -> @ast.Expr raise ParseError
+
+pub fn parse_module(@scanner.TokenStream, dialect? : @dialect.Dialect) -> ParseResult
+
+pub fn parse_pattern_text(String) -> @ast.Pattern raise ParseError
+
+pub fn parse_statements_text(String) -> ArrayView[@ast.Statement] raise ParseError
+
+pub fn parse_text(String, dialect? : @dialect.Dialect) -> ParseResult
+
+pub fn parse_type_text(String) -> @ast.TypeAst raise ParseError
 
 pub fn token_text(@scanner.TokenKind) -> String
 
@@ -106,6 +126,16 @@ pub(all) enum ParseErrorType {
 } derive(Eq, @debug.Debug)
 pub fn ParseErrorType::details(Self) -> ParseErrorDetails
 pub fn ParseErrorType::kind(Self) -> String
+
+pub(all) struct ParseResult {
+  module_ : @ast.Module
+  extra : @ast.ModuleExtra
+  warnings : ArrayView[@ast.Warning]
+  cst : @cst.ModuleCst
+  diagnostics : ArrayView[@diagnostic.Diagnostic]
+} derive(Eq, @debug.Debug)
+pub fn ParseResult::has_errors(Self) -> Bool
+pub fn ParseResult::parsed(Self) -> @ast.Parsed
 
 // Type aliases
 

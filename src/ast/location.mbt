@@ -33,14 +33,18 @@ pub fn Expr::location(self : Expr) -> @span.SrcSpan {
 }
 
 ///|
-/// The span of a pattern. A `BitArraySize` pattern has its size's span.
+/// The span of a pattern. A `BitArraySize` pattern has its size's span; an
+/// `Assign` (`pattern as name`) runs from its inner pattern's start to the
+/// name's end (its `location` field is the name's span), as
+/// `Pattern::location` does in the compiler.
 pub fn Pattern::location(self : Pattern) -> @span.SrcSpan {
   match self {
+    Assign(location~, pattern~, ..) =>
+      @span.SrcSpan::new(pattern.location().start, location.end)
     Int(location~, ..)
     | Float(location~, ..)
     | String(location~, ..)
     | Variable(location~, ..)
-    | Assign(location~, ..)
     | Discard(location~, ..)
     | List(location~, ..)
     | Constructor(location~, ..)

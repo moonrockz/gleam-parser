@@ -85,7 +85,7 @@ fn Parser::parse_function(
     }
     None => (None, [], rpar_e, rpar_e)
   }
-  let publicity = self.publicity(public, attributes.internal)
+  let publicity = publicity(public, attributes.internal)
   Some(
     Function({
       documentation,
@@ -107,8 +107,7 @@ fn Parser::parse_function(
 ///|
 /// `Public`, `Private` or `Internal`; `@internal` on a private definition
 /// is `RedundantInternalAttribute` at the attribute.
-fn Parser::publicity(
-  self : Parser,
+fn publicity(
   public : Bool,
   internal : @span.SrcSpan?,
 ) -> @ast.Publicity raise ParseError {

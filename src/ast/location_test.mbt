@@ -37,3 +37,10 @@ test "location of every node kind that has no location field is derived" {
     e.expect(a.location()).to_equal(sp(0, 1))
   })
 }
+
+///|
+test "an assign pattern's location runs from its inner pattern to the name" {
+  let inner : @ast.Pattern = Variable(location=sp(0, 1), name="x")
+  let assign : @ast.Pattern = Assign(name="y", location=sp(5, 6), pattern=inner)
+  @expect.expect(assign.location()).to_equal(sp(0, 6))
+}

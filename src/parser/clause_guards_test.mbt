@@ -42,7 +42,8 @@ test "guards: operators, not, field access, tuple index, module constant, block"
         left=Constant(Record(name="Const", module_=Some(_), ..)),
         right=Block(location=bl, value=Constant(Int(..))),
         ..
-      )
+      ),
+      ..
     ) else {
     fail("guard \{@debug.to_string(g)}")
   }

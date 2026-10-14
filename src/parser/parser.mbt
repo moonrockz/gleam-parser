@@ -2,8 +2,10 @@
 /// Deepest syntactic nesting the parser enters (brackets, blocks, `case`,
 /// `fn`, nested patterns, types and constants). Deeper text is a
 /// `GL-PARSE-004` error (`TooMuchNesting`), never a stack overflow, on
-/// every target. The Gleam compiler has no such limit.
-pub let max_nesting : Int32 = 150
+/// every target: wasm overflows at about 140 nested lists, so the limit is
+/// 100. The JSON depth limit (`@ast.max_depth`) rejects most constructs
+/// before this one. The Gleam compiler has no such limit.
+pub let max_nesting : Int32 = 100
 
 ///|
 fn sp(start : Int32, end : Int32) -> @span.SrcSpan {
@@ -23,10 +25,10 @@ fn[A] parse_error(
 /// `internal` holds the span of `@internal` when present.
 priv struct Attributes {
   mut target : @ast.Target?
-  deprecated : @ast.Deprecation
+  mut deprecated : @ast.Deprecation
   mut external_erlang : @ast.External?
   mut external_javascript : @ast.External?
-  internal : @span.SrcSpan?
+  mut internal : @span.SrcSpan?
 }
 
 ///|

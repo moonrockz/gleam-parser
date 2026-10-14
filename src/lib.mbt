@@ -168,3 +168,33 @@ pub fn encode_expr(e : Expr) -> Json {
 pub fn decode_expr(json : Json) -> Expr raise DecodeError {
   @ast.decode_expr(json)
 }
+
+///|
+/// The parser: a module from tokens, with recovery per definition.
+pub using @parser {
+  type ParseResult,
+  type ParseError,
+  type ParseErrorType,
+  type IncorrectNamePosition,
+  type ParseErrorDetails,
+}
+
+///|
+/// Dialects: what the parser accepts.
+pub using @dialect {type Dialect, type Rule}
+
+///|
+/// The CST: every token per definition.
+pub using @cst {type ModuleCst, type DefinitionCst, type DefinitionKind}
+
+///|
+/// Parse a token stream into a module (see `@parser.parse_module`).
+pub fn parse_module(stream : TokenStream, dialect? : Dialect) -> ParseResult {
+  @parser.parse_module(stream, dialect?)
+}
+
+///|
+/// Parse `text` into a module.
+pub fn parse_text(text : String, dialect? : Dialect) -> ParseResult {
+  @parser.parse_text(text, dialect?)
+}

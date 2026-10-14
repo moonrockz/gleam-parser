@@ -1,9 +1,4 @@
 ///|
-fn Parser::from_text(text : String, dialect : @dialect.Dialect) -> Parser {
-  Parser::new(@scanner.tokenize_text(text), dialect)
-}
-
-///|
 /// The first lexical error the compiler's lexer would have reached before
 /// the parser stopped: a scanner error diagnostic that starts before the
 /// farthest token loaded.
