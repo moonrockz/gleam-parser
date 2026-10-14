@@ -148,23 +148,21 @@ pub fn LexicalErrorType::hints(self : LexicalErrorType) -> Array[String] {
 
 ///|
 /// The diagnostic for a lexical error at `location`, in the compiler's shape:
-/// title "Syntax error", the label as the message and the primary label,
-/// the hints joined with line feeds.
+/// title "Syntax error", the label as the message, the compiler's extra
+/// lines (`to_parse_error_info`) as the text. The compiler puts its hints
+/// for lexical errors in those lines, so `hint` is `None`.
 pub fn lexical_diagnostic(
   error : LexicalErrorType,
   location : @span.SrcSpan,
 ) -> @diagnostic.Diagnostic {
-  let label = error.label()
-  let hints = error.hints()
   @diagnostic.Diagnostic::new(
     code="GL-SCAN-001",
     kind=error.kind(),
     severity=Error,
     title="Syntax error",
-    message=label,
+    message=error.label(),
     span=location,
-    labels=[@diagnostic.Label::{ span: location, text: label, }],
-    hint=if hints.is_empty() { None } else { Some(hints.join("\n")) },
+    text=error.hints().join("\n"),
   )
 }
 

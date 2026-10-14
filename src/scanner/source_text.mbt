@@ -158,3 +158,13 @@ pub fn SourceText::position_of(
     @span.Position::new(line + 1, k - self.line_bounds[line] + 1)
   })
 }
+
+///|
+/// The text of a byte span, or `None` when an end of the span is not a code
+/// point boundary of the text.
+pub fn SourceText::slice(self : SourceText, span : @span.SrcSpan) -> String? {
+  match (self.utf16_offset_of(span.start), self.utf16_offset_of(span.end)) {
+    (Some(a), Some(b)) if a <= b => Some(self.text[a:b].to_owned())
+    _ => None
+  }
+}

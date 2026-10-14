@@ -2,3 +2,5 @@
 # byte for byte; never convert their line endings.
 tests/rejection/**/*.gleam -text
 tests/rejection/messages/**/*.txt -text
+# AST fixtures are compared with the oracle byte for byte (one holds CRLF).
+tests/fixtures/ast/*.gleam -text

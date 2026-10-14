@@ -108,3 +108,17 @@ test "a text that ends with a line break has an empty last line" {
     e.expect(st.position_of(2)).to_equal(pos(2, 1))
   })
 }
+
+///|
+test "slice gives the text of a byte span" {
+  let st = @scanner.SourceText::new("let é = \"𝄞\"\nx")
+  @expect.expect_all(e => {
+    e.expect(st.slice(@span.SrcSpan::new(0, 3))).to_equal(Some("let"))
+    e.expect(st.slice(@span.SrcSpan::new(4, 6))).to_equal(Some("é"))
+    e.expect(st.slice(@span.SrcSpan::new(9, 15))).to_equal(Some("\"𝄞\""))
+    e.expect(st.slice(@span.SrcSpan::new(4, 5))).to_equal(None)
+    e.expect(st.slice(@span.SrcSpan::new(16, 17))).to_equal(Some("x"))
+    e.expect(st.slice(@span.SrcSpan::new(17, 17))).to_equal(Some(""))
+    e.expect(st.slice(@span.SrcSpan::new(17, 18))).to_equal(None)
+  })
+}

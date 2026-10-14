@@ -25,9 +25,16 @@ pub(all) struct Diagnostic {
   kind : String
   severity : Severity
   title : String
+  /// The compiler's primary label text, shown under `span`.
   message : String
   span : @span.SrcSpan
+  /// The compiler's extra labels (secondary labels); the primary label is
+  /// `span` with `message`.
   labels : ArrayView[Label]
+  /// The compiler's body text, printed after the source excerpt; empty
+  /// when there is none. Lines are joined with `\n`.
+  text : String
+  /// The compiler's hint, without the `Hint: ` prefix the renderer adds.
   hint : String?
 } derive(Eq, Debug)
 
@@ -53,9 +60,10 @@ pub fn Diagnostic::new(
   span~ : @span.SrcSpan,
   kind~ : String = "",
   labels~ : Array[Label] = [],
+  text~ : String = "",
   hint~ : String? = None,
 ) -> Diagnostic {
-  { code, kind, severity, title, message, span, labels: labels[:], hint, }
+  { code, kind, severity, title, message, span, labels: labels[:], text, hint, }
 }
 
 ///|

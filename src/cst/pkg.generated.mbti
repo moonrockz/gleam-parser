@@ -1,0 +1,45 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/cst"
+
+import {
+  "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/scanner",
+  "moonrockz/gleam-parser/span",
+}
+
+// Values
+pub fn trivia_extra(@scanner.TokenStream) -> @ast.ModuleExtra
+
+// Errors
+
+// Types and methods
+pub(all) struct DefinitionCst {
+  kind : DefinitionKind
+  name : String?
+  tokens : ArrayView[@scanner.Token]
+  span : @span.SrcSpan
+} derive(Eq, @debug.Debug)
+pub fn DefinitionCst::new(kind~ : DefinitionKind, name~ : String?, tokens~ : ArrayView[@scanner.Token]) -> Self
+pub fn DefinitionCst::to_source(Self) -> String
+
+pub(all) enum DefinitionKind {
+  Import
+  Constant
+  Function
+  CustomType
+  TypeAlias
+  Skipped
+} derive(Eq, Hash, @debug.Debug)
+
+pub(all) struct ModuleCst {
+  tokens : ArrayView[@scanner.Token]
+  trivia : ArrayView[@scanner.Trivia]
+  definitions : ArrayView[DefinitionCst]
+} derive(Eq, @debug.Debug)
+pub fn ModuleCst::new(@scanner.TokenStream, Array[DefinitionCst]) -> Self
+pub fn ModuleCst::to_source(Self) -> String
+
+// Type aliases
+
+// Traits
