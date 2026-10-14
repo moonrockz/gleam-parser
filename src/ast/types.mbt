@@ -375,7 +375,8 @@ pub(all) enum Expr {
     container~ : Expr
   )
   Tuple(location~ : @span.SrcSpan, elements~ : ArrayView[Expr])
-  TupleIndex(location~ : @span.SrcSpan, index~ : Int32, tuple~ : Expr)
+  /// `index` is the compiler's `u64`.
+  TupleIndex(location~ : @span.SrcSpan, index~ : UInt64, tuple~ : Expr)
   Todo(kind~ : TodoKind, location~ : @span.SrcSpan, message~ : Expr?)
   Panic(location~ : @span.SrcSpan, message~ : Expr?)
   Echo(
@@ -562,10 +563,10 @@ pub(all) enum ClauseGuard {
   )
   Not(location~ : @span.SrcSpan, expression~ : ClauseGuard)
   Var(location~ : @span.SrcSpan, name~ : String)
-  TupleIndex(location~ : @span.SrcSpan, index~ : Int32, tuple~ : ClauseGuard)
+  TupleIndex(location~ : @span.SrcSpan, index~ : UInt64, tuple~ : ClauseGuard)
   FieldAccess(
     label_location~ : @span.SrcSpan,
-    index~ : Int32?,
+    index~ : UInt64?,
     label~ : String,
     container~ : ClauseGuard
   )

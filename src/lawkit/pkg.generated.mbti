@@ -14,6 +14,10 @@ pub fn broken_pieces() -> Array[String]
 
 pub fn edge_chars() -> Array[String]
 
+pub fn gen_bit_array_options(Int, @splitmix.RandomState) -> ArrayView[@ast.BitArrayOption[@ast.Expr]]
+
+pub fn gen_clause_guard(Int, @splitmix.RandomState) -> @ast.ClauseGuard
+
 pub fn gen_constant(Int, @splitmix.RandomState) -> @ast.Constant
 
 pub fn gen_expr(Int, @splitmix.RandomState) -> @ast.Expr

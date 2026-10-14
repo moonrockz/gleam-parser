@@ -10,10 +10,41 @@ pub(all) suberror DecodeError {
 } derive(Eq, Debug)
 
 ///|
+/// The deepest JSON nesting the decoder reads: deeper input raises a
+/// `DecodeError` instead of overflowing the stack (wasm has a small one).
+/// Each AST level is at least one JSON level, so this bounds the AST depth
+/// a decoded module can have; the parser keeps generated ASTs within it.
+pub let max_depth : Int32 = 150
+
+///|
 priv enum Path {
   Root
   Key(Path, String)
   Index(Path, Int32)
+}
+
+///|
+/// The number of steps from the root.
+fn Path::depth(self : Path) -> Int32 {
+  let mut n = 0
+  let mut p = self
+  while true {
+    match p {
+      Root => break
+      Key(parent, _) | Index(parent, _) => {
+        n += 1
+        p = parent
+      }
+    }
+  }
+  n
+}
+
+///|
+fn check_depth(path : Path) -> Unit raise DecodeError {
+  if path.depth() > max_depth {
+    fail(path, "nesting deeper than \{max_depth} levels")
+  }
 }
 
 ///|
@@ -76,7 +107,11 @@ fn[T] dec_field(
 ) -> T raise DecodeError {
   let m = dec_object(j, path)
   match m.get(key) {
-    Some(v) => f(v, Key(path, key))
+    Some(v) => {
+      let child = Key(path, key)
+      check_depth(child)
+      f(v, child)
+    }
     None => fail(Key(path, key), "missing field")
   }
 }
@@ -99,6 +134,29 @@ fn dec_int(j : Json, path : Path) -> Int32 raise DecodeError {
       }
       i
     }
+    other => fail(path, "expected a number, found \{json_kind(other)}")
+  }
+}
+
+///|
+/// A `u64` of the compiler: exact digits from `repr` when the number is
+/// too big for a `Double`, else the `Double` itself.
+fn dec_uint64(j : Json, path : Path) -> UInt64 raise DecodeError {
+  match j {
+    Number(d, repr~) =>
+      match repr {
+        Some(digits) =>
+          @string.parse_uint64(digits) catch {
+            _ =>
+              fail(path, "expected an unsigned 64-bit integer, found \{digits}")
+          }
+        None => {
+          if d < 0.0 || d != d.floor() || d >= 18446744073709551616.0 {
+            fail(path, "expected an unsigned 64-bit integer, found \{d}")
+          }
+          d.to_uint64()
+        }
+      }
     other => fail(path, "expected a number, found \{json_kind(other)}")
   }
 }
@@ -134,7 +192,9 @@ fn[T] dec_array(
     Array(items) => {
       let out : Array[T] = []
       for i, item in items {
-        out.push(f(item, Index(path, i)))
+        let child = Index(path, i)
+        check_depth(child)
+        out.push(f(item, child))
       }
       out[:]
     }
@@ -914,7 +974,7 @@ fn dec_expr(j : Json, path : Path) -> Expr raise DecodeError {
     "tuple_index" =>
       TupleIndex(
         location=dec_field(j, path, "location", dec_span),
-        index=dec_field(j, path, "index", dec_int),
+        index=dec_field(j, path, "index", dec_uint64),
         tuple=dec_field(j, path, "tuple", dec_expr),
       )
     "todo" =>
@@ -1027,13 +1087,15 @@ fn dec_clause_guard(j : Json, path : Path) -> ClauseGuard raise DecodeError {
     "tuple_index" =>
       TupleIndex(
         location=dec_field(j, path, "location", dec_span),
-        index=dec_field(j, path, "index", dec_int),
+        index=dec_field(j, path, "index", dec_uint64),
         tuple=dec_field(j, path, "tuple", dec_clause_guard),
       )
     "field_access" =>
       FieldAccess(
         label_location=dec_field(j, path, "label_location", dec_span),
-        index=dec_field(j, path, "index", (v, p) => dec_nullable(v, p, dec_int)),
+        index=dec_field(j, path, "index", (v, p) => {
+          dec_nullable(v, p, dec_uint64)
+        }),
         label=dec_field(j, path, "label", dec_string),
         container=dec_field(j, path, "container", dec_clause_guard),
       )

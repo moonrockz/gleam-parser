@@ -418,7 +418,7 @@ pub fn gen_constant(size : Int32, rs : @splitmix.RandomState) -> @ast.Constant {
 }
 
 ///|
-fn gen_clause_guard(
+pub fn gen_clause_guard(
   size : Int32,
   rs : @splitmix.RandomState,
 ) -> @ast.ClauseGuard {
@@ -439,13 +439,13 @@ fn gen_clause_guard(
     5 =>
       TupleIndex(
         location=ast_span(rs),
-        index=ast_pick(rs, 5),
+        index=ast_pick(rs, 5).to_uint64(),
         tuple=gen_clause_guard(s, rs),
       )
     _ =>
       FieldAccess(
         label_location=ast_span(rs),
-        index=ast_opt(rs, () => ast_pick(rs, 5)),
+        index=ast_opt(rs, () => ast_pick(rs, 5).to_uint64()),
         label=ast_name(rs),
         container=gen_clause_guard(s, rs),
       )
@@ -589,7 +589,7 @@ pub fn gen_expr(size : Int32, rs : @splitmix.RandomState) -> @ast.Expr {
     13 =>
       TupleIndex(
         location=ast_span(rs),
-        index=ast_pick(rs, 5),
+        index=ast_pick(rs, 5).to_uint64(),
         tuple=gen_expr(s, rs),
       )
     14 =>
@@ -790,4 +790,14 @@ pub impl @quickcheck.Shrink for GleamAst with fn shrink(self) {
     ignore(fewer.remove(i))
     GleamAst({ ..p, module_: { definitions: fewer[:], }, })
   }).iter()
+}
+
+///|
+/// The options of one random expression bit-array segment, for coverage
+/// tests of `BitArrayOption`.
+pub fn gen_bit_array_options(
+  size : Int32,
+  rs : @splitmix.RandomState,
+) -> ArrayView[@ast.BitArrayOption[@ast.Expr]] {
+  gen_segment(size, rs, () => gen_expr(size / 2, rs)).options
 }

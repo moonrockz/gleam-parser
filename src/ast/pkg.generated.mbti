@@ -64,6 +64,8 @@ pub fn encode_type_ast(TypeAst) -> Json
 
 pub fn encode_warning(Warning) -> Json
 
+pub let max_depth : Int
+
 // Errors
 pub(all) suberror DecodeError {
   DecodeError(path~ : String, message~ : String)
@@ -189,8 +191,8 @@ pub(all) enum ClauseGuard {
   BinaryOperator(location~ : @span.SrcSpan, operator~ : BinOp, operator_start~ : Int, left~ : ClauseGuard, right~ : ClauseGuard)
   Not(location~ : @span.SrcSpan, expression~ : ClauseGuard)
   Var(location~ : @span.SrcSpan, name~ : String)
-  TupleIndex(location~ : @span.SrcSpan, index~ : Int, tuple~ : ClauseGuard)
-  FieldAccess(label_location~ : @span.SrcSpan, index~ : Int?, label~ : String, container~ : ClauseGuard)
+  TupleIndex(location~ : @span.SrcSpan, index~ : UInt64, tuple~ : ClauseGuard)
+  FieldAccess(label_location~ : @span.SrcSpan, index~ : UInt64?, label~ : String, container~ : ClauseGuard)
   Constant(Constant)
 } derive(Eq, @debug.Debug)
 
@@ -255,7 +257,7 @@ pub(all) enum Expr {
   Case(location~ : @span.SrcSpan, subjects~ : ArrayView[Expr], clauses~ : ArrayView[Clause]?)
   FieldAccess(location~ : @span.SrcSpan, label_location~ : @span.SrcSpan, label~ : String, container~ : Expr)
   Tuple(location~ : @span.SrcSpan, elements~ : ArrayView[Expr])
-  TupleIndex(location~ : @span.SrcSpan, index~ : Int, tuple~ : Expr)
+  TupleIndex(location~ : @span.SrcSpan, index~ : UInt64, tuple~ : Expr)
   Todo(kind~ : TodoKind, location~ : @span.SrcSpan, message~ : Expr?)
   Panic(location~ : @span.SrcSpan, message~ : Expr?)
   Echo(location~ : @span.SrcSpan, keyword_end~ : Int, expression~ : Expr?, message~ : Expr?)

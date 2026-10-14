@@ -123,6 +123,12 @@ step when you add a code.
   `assignment_kind`.
 - `decode_*` after `encode_*` gives an equal value; `encode` of a decoded
   fixture gives the fixture's bytes (`tests/features/ast_json.feature`).
+- The compiler's `u64` indexes are `UInt64` and are written with exact
+  digits. The codec recurses: the decoder stops with `DecodeError` past
+  `@ast.max_depth` (150) nested JSON levels, which keeps wasm from a stack
+  overflow; the parser must keep the ASTs it builds within that depth (a
+  deeper file is a `TOO MUCH NESTING` error, a known difference from the
+  compiler).
 - To change the schema: change `src/ast/encode.mbt`, `src/ast/decode.mbt`,
   `tools/gleam-ast-oracle/src/encode.rs` and `docs/ast-json.md` together,
   then `mise run fixtures:record` and commit the fixtures.

@@ -1,6 +1,7 @@
-// Canonical JSON for the AST: the schema of docs/ast-json.md. Objects are
-// built with `obj`, which sorts keys, so `Json::stringify()` is canonical.
-// The Rust oracle (tools/gleam-ast-oracle) writes the same bytes.
+// Canonical JSON for the AST: the schema of docs/ast-json.md. `canonical`
+// writes objects with their keys in code-unit order (MoonBit's `Map` keeps
+// insertion order and its `String` compare is length-first, so neither is
+// used). The Rust oracle (tools/gleam-ast-oracle) writes the same bytes.
 
 ///|
 /// An object; `canonical` sorts the keys when it writes.
@@ -11,6 +12,13 @@ fn obj(fields : Array[(String, Json)]) -> Json {
 ///|
 fn num(n : Int32) -> Json {
   Json::number(n.to_double())
+}
+
+///|
+/// A `u64` of the compiler, written with its exact digits (a `Double`
+/// alone loses precision above 2^53).
+fn num64(u : UInt64) -> Json {
+  Json::number(u.to_double(), repr=u.to_string())
 }
 
 ///|
@@ -48,9 +56,12 @@ fn write_canonical(sb : StringBuilder, json : Json) -> Unit {
     Null => sb.write_string("null")
     True => sb.write_string("true")
     False => sb.write_string("false")
-    Number(d, ..) =>
-      // Only byte offsets, indices and small values are numbers.
-      if d == d.floor() && d.abs() < 9007199254740992.0 {
+    Number(d, repr~) =>
+      // Byte offsets and small values fit a Double; a `u64` carries its
+      // exact digits in `repr`.
+      if repr is Some(digits) {
+        sb.write_string(digits)
+      } else if d == d.floor() && d.abs() < 9007199254740992.0 {
         sb.write_string(d.to_int64().to_string())
       } else {
         sb.write_string(d.to_string())
@@ -684,7 +695,7 @@ pub fn encode_expr(e : Expr) -> Json {
       obj([
         ("kind", str("tuple_index")),
         ("location", encode_span(location)),
-        ("index", num(index)),
+        ("index", num64(index)),
         ("tuple", encode_expr(tuple)),
       ])
     Todo(kind~, location~, message~) =>
@@ -786,14 +797,14 @@ pub fn encode_clause_guard(g : ClauseGuard) -> Json {
       obj([
         ("kind", str("tuple_index")),
         ("location", encode_span(location)),
-        ("index", num(index)),
+        ("index", num64(index)),
         ("tuple", encode_clause_guard(tuple)),
       ])
     FieldAccess(label_location~, index~, label~, container~) =>
       obj([
         ("kind", str("field_access")),
         ("label_location", encode_span(label_location)),
-        ("index", opt(index, num)),
+        ("index", opt(index, num64)),
         ("label", str(label)),
         ("container", encode_clause_guard(container)),
       ])

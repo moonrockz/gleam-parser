@@ -11,7 +11,13 @@ byte equality of this text.
   line feed from the oracle.
 - Strings escape `"`, `\`, and control characters below U+0020 (`\n`, `\t`,
   `\r`, `\b`, `\f`, else `\u00xx` lower case); everything else is raw UTF-8.
-- Numbers are integers (byte offsets, indices, `unit` values).
+- Numbers are integers (byte offsets, indices, `unit` values). A `u64`
+  (`tuple_index.index`, a guard's `index`) is written with its exact digits;
+  `decode_*` reads the digits, so values above 2^53 keep their precision.
+- The decoder reads at most `@ast.max_depth` (150) nested JSON levels and
+  raises `DecodeError` ("nesting deeper than 150 levels") past that, so deep
+  input is an error, not a stack overflow (wasm has a small stack). The
+  parser keeps the ASTs it builds within this depth.
 
 ## Value shapes
 

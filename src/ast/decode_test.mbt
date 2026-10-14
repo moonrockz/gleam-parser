@@ -121,3 +121,79 @@ test "a parsed module decodes with its extra and warnings" {
     )
   })
 }
+
+///|
+test "tuple and guard indexes are 64-bit like the compiler's u64" {
+  let sp = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+  for index in [4294967296UL, 18446744073709551615UL, 0UL] {
+    let e : @ast.Expr = TupleIndex(
+      location=sp(0, 5),
+      index~,
+      tuple=Var(location=sp(0, 1), name="t"),
+    )
+    let text = @ast.canonical(@ast.encode_expr(e))
+    @expect.expect_all(x => {
+      x.expect(text).to_contain("\"index\":\{index}")
+      x.expect(@ast.decode_expr(parse(text))).to_equal(e)
+    })
+    let g : @ast.ClauseGuard = TupleIndex(
+      location=sp(0, 5),
+      index~,
+      tuple=Var(location=sp(0, 1), name="t"),
+    )
+    @expect.expect(
+      @ast.decode_clause_guard(
+        parse(@ast.canonical(@ast.encode_clause_guard(g))),
+      ),
+    ).to_equal(g)
+    let f : @ast.ClauseGuard = FieldAccess(
+      label_location=sp(2, 3),
+      index=Some(index),
+      label="a",
+      container=Var(location=sp(0, 1), name="t"),
+    )
+    @expect.expect(
+      @ast.decode_clause_guard(
+        parse(@ast.canonical(@ast.encode_clause_guard(f))),
+      ),
+    ).to_equal(f)
+  }
+}
+
+///|
+fn chain(n : Int32) -> @ast.Expr {
+  let sp = @span.SrcSpan::new(0, 1)
+  let mut e : @ast.Expr = Int(
+    location=sp,
+    value="1",
+    int_value=BigInt::from_int(1),
+  )
+  for _ in 0..<n {
+    e = BinOp(
+      location=sp,
+      operator=AddInt,
+      operator_start=0,
+      left=e,
+      right=Int(location=sp, value="1", int_value=BigInt::from_int(1)),
+    )
+  }
+  e
+}
+
+///|
+test "decoding stops with an error past the nesting limit, on every target" {
+  // A chain of n operators nests n JSON levels, plus the leaf's own keys.
+  let ok = @ast.decode_expr(
+    parse(@ast.canonical(@ast.encode_expr(chain(@ast.max_depth - 4)))),
+  )
+  @expect.expect(ok).to_equal(chain(@ast.max_depth - 4))
+  let deep = @ast.canonical(@ast.encode_expr(chain(@ast.max_depth + 1)))
+  let got = try {
+    @ast.decode_expr(parse(deep)) |> ignore
+    "no error"
+  } catch {
+    @ast.DecodeError(message~, ..) => message
+    _ => "other"
+  }
+  @expect.expect(got).to_equal("nesting deeper than \{@ast.max_depth} levels")
+}

@@ -84,3 +84,107 @@ test "law: canonical text parses as JSON with sorted keys at every level" {
     seed=2042,
   )
 }
+
+///|
+/// Per-family laws: a whole module halves `size` at every level, so the
+/// laws above rarely reach deep kinds (guards, bit array options); these
+/// start at each family with the full size.
+test "law: expressions round-trip through JSON" {
+  @quickcheck.check(
+    (seed : Int32) => {
+      let rs = @splitmix.RandomState(seed=seed.to_uint64())
+      let e = @lawkit.gen_expr(8, rs)
+      try
+        @ast.decode_expr(@json.parse(@ast.canonical(@ast.encode_expr(e))))
+      catch {
+        _ => false
+      } noraise {
+        back => back == e
+      }
+    },
+    count=300,
+    seed=2043,
+  )
+}
+
+///|
+test "law: patterns round-trip through JSON" {
+  @quickcheck.check(
+    (seed : Int32) => {
+      let rs = @splitmix.RandomState(seed=seed.to_uint64())
+      let p = @lawkit.gen_pattern(8, rs)
+      try
+        @ast.decode_pattern(@json.parse(@ast.canonical(@ast.encode_pattern(p))))
+      catch {
+        _ => false
+      } noraise {
+        back => back == p
+      }
+    },
+    count=300,
+    seed=2044,
+  )
+}
+
+///|
+test "law: constants round-trip through JSON" {
+  @quickcheck.check(
+    (seed : Int32) => {
+      let rs = @splitmix.RandomState(seed=seed.to_uint64())
+      let c = @lawkit.gen_constant(8, rs)
+      try
+        @ast.decode_constant(
+          @json.parse(@ast.canonical(@ast.encode_constant(c))),
+        )
+      catch {
+        _ => false
+      } noraise {
+        back => back == c
+      }
+    },
+    count=300,
+    seed=2045,
+  )
+}
+
+///|
+test "law: clause guards round-trip through JSON" {
+  @quickcheck.check(
+    (seed : Int32) => {
+      let rs = @splitmix.RandomState(seed=seed.to_uint64())
+      let g = @lawkit.gen_clause_guard(8, rs)
+      try
+        @ast.decode_clause_guard(
+          @json.parse(@ast.canonical(@ast.encode_clause_guard(g))),
+        )
+      catch {
+        _ => false
+      } noraise {
+        back => back == g
+      }
+    },
+    count=300,
+    seed=2046,
+  )
+}
+
+///|
+test "law: type annotations round-trip through JSON" {
+  @quickcheck.check(
+    (seed : Int32) => {
+      let rs = @splitmix.RandomState(seed=seed.to_uint64())
+      let t = @lawkit.gen_type_ast(8, rs)
+      try
+        @ast.decode_type_ast(
+          @json.parse(@ast.canonical(@ast.encode_type_ast(t))),
+        )
+      catch {
+        _ => false
+      } noraise {
+        back => back == t
+      }
+    },
+    count=300,
+    seed=2047,
+  )
+}
