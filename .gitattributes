@@ -1,0 +1,4 @@
+# Rejection fixtures are hashed byte for byte, and message snapshots are compared
+# byte for byte; never convert their line endings.
+tests/rejection/**/*.gleam -text
+tests/rejection/messages/**/*.txt -text

@@ -1,0 +1,29 @@
+.DS_Store
+_build/
+target/
+.mooncakes/
+.moonagent/
+.worktrees/
+__pycache__/
+*.py[cod]
+.venv/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
+.beads/issues.jsonl
+
+# Local AI-assisted working area (specs, plans, scratch). Never committed.
+.dev/
+
+# Gleam parity corpus (fetched by mise run corpus:fetch)
+.corpus/
+
+# Rust oracle build output
+tools/gleam-ast-oracle/target/
+
+# superpowers execution ledgers
+.superpowers/
