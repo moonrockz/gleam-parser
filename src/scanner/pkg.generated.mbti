@@ -11,6 +11,10 @@ import {
 // Values
 pub fn lexical_diagnostic(LexicalErrorType, @span.SrcSpan) -> @diagnostic.Diagnostic
 
+pub fn parse_float_value(String) -> Double?
+
+pub fn parse_int_value(String) -> @bigint.BigInt?
+
 // Errors
 
 // Types and methods
