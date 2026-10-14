@@ -1,0 +1,24 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/report"
+
+import {
+  "moonrockz/gleam-parser/diagnostic",
+  "moonrockz/gleam-parser/scanner",
+}
+
+// Values
+pub fn encode_diagnostic(@diagnostic.Diagnostic) -> Json
+
+pub fn encode_diagnostics(ArrayView[@diagnostic.Diagnostic]) -> Json
+
+pub fn render_plain(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
+
+pub fn render_terminal(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

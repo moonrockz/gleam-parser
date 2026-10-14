@@ -23,6 +23,8 @@ pub fn decode_parsed(Json) -> @ast.Parsed raise @ast.DecodeError
 
 pub fn diagnostic_description(String) -> String?
 
+pub fn encode_diagnostics(ArrayView[@diagnostic.Diagnostic]) -> Json
+
 pub fn encode_expr(@ast.Expr) -> Json
 
 pub fn encode_oracle_output(@ast.OracleOutput) -> Json
@@ -36,6 +38,10 @@ pub fn parse_int_value(String) -> @bigint.BigInt?
 pub fn parse_module(@scanner.TokenStream, dialect? : @dialect.Dialect) -> @parser.ParseResult
 
 pub fn parse_text(String, dialect? : @dialect.Dialect) -> @parser.ParseResult
+
+pub fn render_plain(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
+
+pub fn render_terminal(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
 
 pub fn tokenize(@scanner.SourceText) -> @scanner.TokenStream
 

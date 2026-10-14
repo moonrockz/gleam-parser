@@ -198,3 +198,29 @@ pub fn parse_module(stream : TokenStream, dialect? : Dialect) -> ParseResult {
 pub fn parse_text(text : String, dialect? : Dialect) -> ParseResult {
   @parser.parse_text(text, dialect?)
 }
+
+///|
+/// Render a diagnostic as the Gleam compiler prints it (no colours).
+pub fn render_plain(
+  d : Diagnostic,
+  source : SourceText,
+  path : String,
+) -> String {
+  @report.render_plain(d, source, path)
+}
+
+///|
+/// Render a diagnostic with ANSI colours.
+pub fn render_terminal(
+  d : Diagnostic,
+  source : SourceText,
+  path : String,
+) -> String {
+  @report.render_terminal(d, source, path)
+}
+
+///|
+/// Diagnostics as JSON (gleam-parser's own shape).
+pub fn encode_diagnostics(ds : ArrayView[Diagnostic]) -> Json {
+  @report.encode_diagnostics(ds)
+}

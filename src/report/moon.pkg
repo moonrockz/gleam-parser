@@ -1,0 +1,16 @@
+import {
+  "moonbitlang/core/builtin",
+  "moonbitlang/core/string",
+  "moonbitlang/core/cmp",
+  "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/scanner",
+  "moonrockz/gleam-parser/diagnostic",
+}
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/json",
+  "moonbitlang/core/quickcheck",
+  "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/lawkit",
+} for "test"

@@ -7,6 +7,7 @@ import {
   "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/dialect",
   "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/report",
 }
 
 import {
