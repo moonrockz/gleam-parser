@@ -81,3 +81,32 @@ pub fn parse_constant_text(text : String) -> @ast.Constant raise ParseError {
   let result = p.parse_const_value()
   p.finish_snippet(stream, result, ExpectedExpr)
 }
+
+///|
+/// Parse `text` as one expression (a pipeline or an operator chain counts
+/// as one); a missing expression is `ExpectedExpr` at `0..0`.
+///
+/// ```mbt check
+/// test {
+///   let e = @parser.parse_expression_text("1 + 2")
+///   debug_inspect(e.location(), content="{ start: 0, end: 5 }")
+/// }
+/// ```
+pub fn parse_expression_text(text : String) -> @ast.Expr raise ParseError {
+  let stream = @scanner.tokenize_text(text)
+  let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
+  let result = p.parse_expression()
+  p.finish_snippet(stream, result, ExpectedExpr)
+}
+
+///|
+/// Parse `text` as a statement sequence (a function body without braces),
+/// the compiler's `parse_statement_sequence` test interface.
+pub fn parse_statements_text(
+  text : String,
+) -> ArrayView[@ast.Statement] raise ParseError {
+  let stream = @scanner.tokenize_text(text)
+  let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
+  let result = p.parse_statement_sequence().map(r => r.0[:])
+  p.finish_snippet(stream, result, ExpectedExpr)
+}

@@ -23,10 +23,10 @@ fn[A] parse_error(
 /// `internal` holds the span of `@internal` when present.
 priv struct Attributes {
   mut target : @ast.Target?
-  mut deprecated : @ast.Deprecation
+  deprecated : @ast.Deprecation
   mut external_erlang : @ast.External?
   mut external_javascript : @ast.External?
-  mut internal : @span.SrcSpan?
+  internal : @span.SrcSpan?
 }
 
 ///|
