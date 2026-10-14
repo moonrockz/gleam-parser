@@ -750,7 +750,7 @@ pub(all) enum Constant {
     location~ : @span.SrcSpan,
     segments~ : ArrayView[BitArraySegment[Constant]]
   )
-  Var(location~ : @span.SrcSpan, module~ : SpannedString?, name~ : String)
+  Var(location~ : @span.SrcSpan, module_~ : SpannedString?, name~ : String)
   BinaryOperator(
     location~ : @span.SrcSpan,
     operator_start~ : Int32,

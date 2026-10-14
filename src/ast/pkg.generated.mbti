@@ -8,6 +8,35 @@ import {
 }
 
 // Values
+pub fn canonical(Json) -> String
+
+pub fn encode_clause_guard(ClauseGuard) -> Json
+
+pub fn encode_constant(Constant) -> Json
+
+pub fn encode_definition(Definition) -> Json
+
+pub fn encode_expr(Expr) -> Json
+
+pub fn encode_extra(ModuleExtra) -> Json
+
+pub fn encode_module(Module) -> Json
+
+pub fn encode_parsed(Parsed) -> Json
+
+pub fn encode_pattern(Pattern) -> Json
+
+pub fn encode_publicity(Publicity) -> Json
+
+pub fn encode_span(@span.SrcSpan) -> Json
+
+pub fn encode_statement(Statement) -> Json
+
+pub fn encode_targeted_definition(TargetedDefinition) -> Json
+
+pub fn encode_type_ast(TypeAst) -> Json
+
+pub fn encode_warning(Warning) -> Json
 
 // Errors
 
@@ -145,7 +174,7 @@ pub(all) enum Constant {
   Record(location~ : @span.SrcSpan, arguments_start_position~ : Int, module_~ : SpannedString?, name~ : String, arguments~ : ArrayView[CallArg[Constant]]?)
   RecordUpdate(location~ : @span.SrcSpan, constructor_location~ : @span.SrcSpan, module_~ : SpannedString?, name~ : String, record~ : RecordBeingUpdated[Constant], arguments~ : ArrayView[RecordUpdateArg[Constant]])
   BitArray(location~ : @span.SrcSpan, segments~ : ArrayView[BitArraySegment[Constant]])
-  Var(location~ : @span.SrcSpan, module~ : SpannedString?, name~ : String)
+  Var(location~ : @span.SrcSpan, module_~ : SpannedString?, name~ : String)
   BinaryOperator(location~ : @span.SrcSpan, operator_start~ : Int, operator~ : BinOp, left~ : Constant, right~ : Constant)
   Todo(location~ : @span.SrcSpan, message~ : Constant?)
 } derive(Eq, @debug.Debug)
