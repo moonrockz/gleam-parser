@@ -9,13 +9,32 @@ import {
 }
 
 // Values
+pub fn broken_pieces() -> Array[String]
+
 pub fn edge_chars() -> Array[String]
+
+pub fn small_module() -> String
+
+pub fn token_pieces() -> Array[String]
+
+pub fn token_table() -> Array[(String, String)]
 
 pub fn units(Array[Int]) -> String
 
 // Errors
 
 // Types and methods
+pub(all) struct GleamText(Array[String]) derive(@debug.Debug)
+pub fn GleamText::text(Self) -> String
+pub impl @quickcheck.Arbitrary for GleamText
+pub impl @shrink.Shrink for GleamText
+
+pub(all) struct GleamTokens(Array[(String, String)]) derive(@debug.Debug)
+pub fn GleamTokens::expected(Self) -> Array[String]
+pub fn GleamTokens::text(Self) -> String
+pub impl @quickcheck.Arbitrary for GleamTokens
+pub impl @shrink.Shrink for GleamTokens
+
 pub struct Units(String) derive(@debug.Debug)
 pub fn Units::text(Self) -> String
 pub impl @quickcheck.Arbitrary for Units

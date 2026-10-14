@@ -30,3 +30,42 @@ pub using @diagnostic {type Severity, type Label, type Diagnostic}
 pub fn diagnostic_description(code : String) -> String? {
   @diagnostic.description(code)
 }
+
+///|
+/// The scanner: tokens, trivia and lexical errors.
+pub using @scanner {
+  type TokenStream,
+  type Token,
+  type TokenKind,
+  type Keyword,
+  type Trivia,
+  type Comment,
+  type CommentKind,
+  type LexicalErrorType,
+  type UnicodeEscapeError,
+}
+
+///|
+/// Scan `source` into tokens with trivia and diagnostics. The scan is
+/// lossless: `TokenStream::to_source()` is the text.
+pub fn tokenize(source : SourceText) -> TokenStream {
+  @scanner.tokenize(source)
+}
+
+///|
+/// `tokenize` of a `SourceText` built from `text`.
+pub fn tokenize_text(text : String) -> TokenStream {
+  @scanner.tokenize_text(text)
+}
+
+///|
+/// The number an `Int` literal denotes (sign, radix prefix, `_` separators).
+pub fn parse_int_value(value : String) -> BigInt? {
+  @scanner.parse_int_value(value)
+}
+
+///|
+/// The number a `Float` literal denotes (`1.`, `1.e3`, `1.0e-3`, `_`).
+pub fn parse_float_value(value : String) -> Double? {
+  @scanner.parse_float_value(value)
+}

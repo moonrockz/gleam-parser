@@ -1,10 +1,18 @@
 import {
   "moonbitlang/core/builtin",
+  "moonbitlang/core/string",
   "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/diagnostic",
 }
 
 import {
   "moonrockz/expect",
   "moonrockz/gleam-parser/lawkit",
   "moonbitlang/core/quickcheck",
+  "moonbitlang/core/debug",
 } for "test"
+
+import {
+  "moonrockz/expect",
+  "moonrockz/gleam-parser/lawkit",
+} for "wbtest"

@@ -12,9 +12,18 @@ library for the [Gleam](https://gleam.run) programming language. One expected
 user is [morphir-moonbit](https://github.com/finos/morphir-moonbit). It gives,
 in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
 
-- **Scanner** — lossless tokenization. Each token's `trivia_before`, `lexeme`
-  and `trivia_after` rebuild the source; spans are UTF-8 byte offsets, as in
-  the Gleam compiler.
+- **Scanner** — lossless tokenization (`tokenize`, a port of the compiler's
+  `lexer.rs`). All trivia before a token is its `trivia_before`; the trivia
+  after the last token is its `trivia_after`; with no token it is
+  `TokenStream.trivia`. Lexemes and trivia rebuild the source; spans are
+  UTF-8 byte offsets, as in the Gleam compiler; `\r\n` and a lone `\r` are
+  one line break. A comment's `span` includes the slashes and
+  `Comment::content_span()` is the compiler's span (after them). A string
+  token's value keeps escapes as written with `\r\n` and `\r` as `\n` (the
+  compiler's `Token::String`). A lexical error is a `GL-SCAN-001`
+  diagnostic (`kind` = the `LexicalErrorType` variant) plus one `Error`
+  token from the token start to the end of the error, at least one
+  character, or to the closing quote inside a string; scanning continues.
 - **Parser** — a recursive-descent port of the compiler's `parse.rs`, with
   recovery per definition.
 - **AST** — a mirror of the compiler's untyped AST at v1.19.2, with a
@@ -47,7 +56,7 @@ moonrockz/gleam-parser
 │   ├── lib.mbt           # Package entry point; re-exports; version()
 │   ├── span/             # SrcSpan (UTF-8 byte offsets), Position (1-based line and column)
 │   ├── diagnostic/       # Severity, Label, Diagnostic, the code table
-│   ├── scanner/          # SourceText; lexer (plan 2)
+│   ├── scanner/          # SourceText; lexer (port of lexer.rs); tokens, trivia, lexical diagnostics
 │   ├── lawkit/           # Property-test generators and helpers (public test support)
 │   ├── ast/ cst/ parser/ dialect/ report/   # plans 3 and 4
 │   └── syntax/ printer/  # v0.2, v0.3
@@ -64,7 +73,9 @@ moonrockz/gleam-parser
 
 ### Diagnostics
 
-Every `Diagnostic` has a `code`, a `severity`, a one-line `message`, a `span`,
+Every `Diagnostic` has a `code`, a `kind` (the compiler's error variant, for
+example `UnrecognizedToken`; empty when there is none), a `severity`, a
+one-line `message`, a `span`,
 a `title` (the compiler's: "Syntax error"), `labels` (the primary label text
 at the span, plus extra labels) and an optional `hint`, with the compiler's
 wording from `parse/error.rs`.
@@ -184,8 +195,11 @@ inputs.
 - **Generators.** Wrap the value in a newtype and implement
   `@quickcheck.Arbitrary` (and `@quickcheck.Shrink`). Shared generators are
   `pub` types in `src/lawkit`: `Units` (any UTF-16 text: surrogates, `\r`,
-  CRLF, BOM) and `edge_chars()`; later plans add `GleamModule`,
-  `GleamText`, `Nesting`, `Commented` and `Spaced`. Keep generated depth
+  CRLF, BOM), `edge_chars()`, `GleamText` (any text: token pieces, broken
+  fragments, edge characters in literal and comment forms, cuts of a small
+  module; shrinks) and `GleamTokens` (valid token sequences with their kind
+  names); later plans add `GleamModule`, `Nesting`, `Commented` and
+  `Spaced`. Keep generated depth
   bounded by `size`, so generators do not overflow the stack on wasm.
 - **Valid input fails loudly.** A generator of valid input makes the law fail
   on any diagnostic, never skip the case. Generate arbitrary text only for

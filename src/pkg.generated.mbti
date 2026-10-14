@@ -2,6 +2,7 @@
 package "moonrockz/gleam-parser"
 
 import {
+  "moonbitlang/core/bigint",
   "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
@@ -10,6 +11,14 @@ import {
 // Values
 pub fn diagnostic_description(String) -> String?
 
+pub fn parse_float_value(String) -> Double?
+
+pub fn parse_int_value(String) -> @bigint.BigInt?
+
+pub fn tokenize(@scanner.SourceText) -> @scanner.TokenStream
+
+pub fn tokenize_text(String) -> @scanner.TokenStream
+
 pub fn version() -> String
 
 // Errors
@@ -17,9 +26,17 @@ pub fn version() -> String
 // Types and methods
 
 // Type aliases
+pub using @scanner {type Comment}
+
+pub using @scanner {type CommentKind}
+
 pub using @diagnostic {type Diagnostic}
 
+pub using @scanner {type Keyword}
+
 pub using @diagnostic {type Label}
+
+pub using @scanner {type LexicalErrorType}
 
 pub using @span {type Position}
 
@@ -28,5 +45,15 @@ pub using @diagnostic {type Severity}
 pub using @scanner {type SourceText}
 
 pub using @span {type SrcSpan}
+
+pub using @scanner {type Token}
+
+pub using @scanner {type TokenKind}
+
+pub using @scanner {type TokenStream}
+
+pub using @scanner {type Trivia}
+
+pub using @scanner {type UnicodeEscapeError}
 
 // Traits

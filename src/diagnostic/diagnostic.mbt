@@ -20,6 +20,9 @@ pub(all) struct Label {
 /// `code` is one of `codes()`.
 pub(all) struct Diagnostic {
   code : String
+  /// The compiler's error variant for this problem, for example
+  /// `UnrecognizedToken` or `ExpectedEqual`; empty when there is none.
+  kind : String
   severity : Severity
   title : String
   message : String
@@ -48,10 +51,11 @@ pub fn Diagnostic::new(
   title~ : String,
   message~ : String,
   span~ : @span.SrcSpan,
+  kind~ : String = "",
   labels~ : Array[Label] = [],
   hint~ : String? = None,
 ) -> Diagnostic {
-  { code, severity, title, message, span, labels: labels[:], hint, }
+  { code, kind, severity, title, message, span, labels: labels[:], hint, }
 }
 
 ///|

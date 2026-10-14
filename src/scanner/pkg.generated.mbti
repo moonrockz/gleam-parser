@@ -2,14 +2,87 @@
 package "moonrockz/gleam-parser/scanner"
 
 import {
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/span",
 }
 
 // Values
+pub fn lexical_diagnostic(LexicalErrorType, @span.SrcSpan) -> @diagnostic.Diagnostic
+
+pub fn parse_float_value(String) -> Double?
+
+pub fn parse_int_value(String) -> @bigint.BigInt?
+
+pub fn tokenize(SourceText) -> TokenStream
+
+pub fn tokenize_text(String) -> TokenStream
+
+pub fn wrap(String) -> String
 
 // Errors
 
 // Types and methods
+pub(all) struct Comment {
+  kind : CommentKind
+  content : String
+  span : @span.SrcSpan
+} derive(Eq, @debug.Debug)
+pub fn Comment::content_span(Self) -> @span.SrcSpan
+
+pub(all) enum CommentKind {
+  Regular
+  Doc
+  Module
+} derive(Eq, Hash, @debug.Debug)
+pub fn CommentKind::prefix_length(Self) -> Int
+
+pub(all) enum Keyword {
+  As
+  Assert
+  Auto
+  Case
+  Const
+  Delegate
+  Derive
+  Echo
+  Else
+  Fn
+  If
+  Implement
+  Import
+  Let
+  Macro
+  Opaque
+  Panic
+  Pub
+  Test
+  Todo
+  Type
+  Use
+} derive(Eq, Hash, @debug.Debug)
+pub fn Keyword::of(String) -> Self?
+pub fn Keyword::text(Self) -> String
+
+pub(all) enum LexicalErrorType {
+  BadStringEscape
+  InvalidUnicodeEscape(UnicodeEscapeError)
+  DigitOutOfRadix
+  NumTrailingUnderscore
+  RadixIntNoValue
+  MissingExponent
+  UnexpectedStringEnd
+  UnrecognizedToken(Char)
+  InvalidTripleEqual
+  MergeConflictIndicator
+  UnsupportedProceduralOperator
+  VisuallySimilarInvalidCharacter(name~ : String, correct~ : String)
+} derive(Eq, @debug.Debug)
+pub fn LexicalErrorType::hints(Self) -> Array[String]
+pub fn LexicalErrorType::kind(Self) -> String
+pub fn LexicalErrorType::label(Self) -> String
+
 pub struct SourceText {
   // private fields
 }
@@ -20,6 +93,91 @@ pub fn SourceText::new(String) -> Self
 pub fn SourceText::position_of(Self, Int) -> @span.Position?
 pub fn SourceText::text(Self) -> String
 pub fn SourceText::utf16_offset_of(Self, Int) -> Int?
+
+pub(all) struct Token {
+  kind : TokenKind
+  lexeme : String
+  span : @span.SrcSpan
+  trivia_before : ArrayView[Trivia]
+  trivia_after : ArrayView[Trivia]
+} derive(Eq, @debug.Debug)
+pub fn Token::to_source(Self) -> String
+
+pub(all) enum TokenKind {
+  Name(String)
+  UpName(String)
+  DiscardName(String)
+  Int(value~ : String, int_value~ : @bigint.BigInt)
+  Float(value~ : String, float_value~ : Double)
+  String(String)
+  LeftParen
+  RightParen
+  LeftSquare
+  RightSquare
+  LeftBrace
+  RightBrace
+  Plus
+  Minus
+  Star
+  Slash
+  Less
+  Greater
+  LessEqual
+  GreaterEqual
+  Percent
+  PlusDot
+  MinusDot
+  StarDot
+  SlashDot
+  LessDot
+  GreaterDot
+  LessEqualDot
+  GreaterEqualDot
+  Concatenate
+  Colon
+  Comma
+  Hash
+  Bang
+  Equal
+  EqualEqual
+  NotEqual
+  Vbar
+  VbarVbar
+  AmperAmper
+  LtLt
+  GtGt
+  Pipe
+  Dot
+  RArrow
+  LArrow
+  DotDot
+  At
+  Keyword(Keyword)
+  Error
+} derive(Eq, @debug.Debug)
+
+pub(all) struct TokenStream {
+  tokens : ArrayView[Token]
+  trivia : ArrayView[Trivia]
+  diagnostics : ArrayView[@diagnostic.Diagnostic]
+} derive(Eq, @debug.Debug)
+pub fn TokenStream::has_errors(Self) -> Bool
+pub fn TokenStream::to_source(Self) -> String
+
+pub(all) enum Trivia {
+  Whitespace(String, @span.SrcSpan)
+  Newline(String, @span.SrcSpan)
+  Comment(Comment)
+} derive(Eq, @debug.Debug)
+pub fn Trivia::span(Self) -> @span.SrcSpan
+pub fn Trivia::text(Self) -> String
+
+pub(all) enum UnicodeEscapeError {
+  MissingOpeningBrace
+  ExpectedHexDigitOrCloseBrace
+  InvalidNumberOfHexDigits
+  InvalidCodepoint
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 
