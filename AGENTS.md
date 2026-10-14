@@ -26,8 +26,13 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   character, or to the closing quote inside a string; scanning continues.
 - **Parser** — a recursive-descent port of the compiler's `parse.rs`, with
   recovery per definition.
-- **AST** — a mirror of the compiler's untyped AST at v1.19.2, with a
-  canonical JSON encoder and decoder.
+- **AST** — a mirror of the compiler's untyped AST at v1.19.2 (`src/ast`),
+  without analysis-only fields (see `docs/ast-json.md`), with a canonical
+  JSON encoder and decoder. The parity oracle `tools/gleam-ast-oracle`
+  (Rust, `gleam-core` v1.19.2, Rust 1.98.1 pinned by its
+  `rust-toolchain.toml`) writes the same JSON; `mise run oracle:build`
+  builds it, `mise run fixtures:record` records `tests/fixtures/ast/*.json`;
+  CI never runs cargo.
 - **CST** — every token and definition, with trivia.
 - **Syntax tree** (v0.2) — read-only node model and traversal.
 - **Printer and formatter** (v0.3) — Gleam source with `gleam format` parity.
@@ -91,6 +96,36 @@ wording from `parse/error.rs`.
 `src/diagnostic/codes.mbt` holds these descriptions (`description(code)`,
 re-exported as `diagnostic_description`). Keep this table and that file in
 step when you add a code.
+
+### AST and JSON contract
+
+- `src/ast` keeps every field of the compiler's untyped types except the
+  analysis-only ones: `type_`, `return_type`, `typed_parameters`,
+  `implementations`, `purity`, `compiled_case`, `constructor`
+  (`Inferred`/`ValueConstructor`), `names`, `unused_definition_positions`,
+  `origin`, `field_map`, `record_constructor`, `definition_location`,
+  `extra_information`, and `Module.name`/`Module.documentation` (empty at
+  parse time; `ModuleExtra.module_comments` holds the module docs). Variants
+  the parser never builds are not mirrored: `Pattern::Invalid`,
+  `ClauseGuard::Invalid`, `ClauseGuard::ModuleSelect`, `Constant::Invalid`.
+- Field names are the compiler's in snake_case; a name that is a MoonBit
+  keyword gets a trailing underscore (`module_`, `guard_`, `opaque_`,
+  `alias_`, `constructor_`). Type names drop the `Untyped` prefix
+  (`UntypedExpr` is `Expr`). Every list is an `ArrayView`.
+- `@ast.canonical(json)` writes keys in code-unit order with serde_json's
+  escaping (MoonBit's `String` compare is length-first, so it is not used).
+  `SrcSpan` is `{"end":n,"start":n}`; `BigInt` is a decimal string; `Float`
+  writes `value` only (`float_value` is derived with `parse_float_value`);
+  payload-free enums (`Target`, `BinOp`, `IntOperator`,
+  `ImplicitCallArgOrigin`) are snake_case strings; enums with payload are
+  objects with `kind`; `Expr::Fn.kind`, `Expr::Todo.kind` and
+  `Assignment.kind` are written as `fn_kind`, `todo_kind`,
+  `assignment_kind`.
+- `decode_*` after `encode_*` gives an equal value; `encode` of a decoded
+  fixture gives the fixture's bytes (`tests/features/ast_json.feature`).
+- To change the schema: change `src/ast/encode.mbt`, `src/ast/decode.mbt`,
+  `tools/gleam-ast-oracle/src/encode.rs` and `docs/ast-json.md` together,
+  then `mise run fixtures:record` and commit the fixtures.
 
 ### Positions
 
@@ -198,8 +233,9 @@ inputs.
   CRLF, BOM), `edge_chars()`, `GleamText` (any text: token pieces, broken
   fragments, edge characters in literal and comment forms, cuts of a small
   module; shrinks) and `GleamTokens` (valid token sequences with their kind
-  names); later plans add `GleamModule`, `Nesting`, `Commented` and
-  `Spaced`. Keep generated depth
+  names), `GleamAst` (random ASTs with every node kind, for the JSON
+  round-trip laws); later plans add `GleamModule`, `Nesting`, `Commented`
+  and `Spaced`. Keep generated depth
   bounded by `size`, so generators do not overflow the stack on wasm.
 - **Valid input fails loudly.** A generator of valid input makes the law fail
   on any diagnostic, never skip the case. Generate arbitrary text only for
@@ -290,6 +326,8 @@ All operations use **file-based mise tasks** in `mise-tasks/`. Do not add inline
 | `test:docs` | Cookbook articles |
 | `test:targets` | Check and test the library on wasm, wasm-gc, js and native |
 | `test` | unit + bdd + scripts + docs |
+| `oracle:build` | Build the Rust AST oracle (`tools/gleam-ast-oracle`; needs cargo; local only) |
+| `fixtures:record` | Record the oracle's JSON for `tests/fixtures/ast/*.gleam` (needs `oracle:build`) |
 | `coverage:ci-gate`, `coverage:ci-warn` | Coverage threshold (80) |
 | `release:prepare`, `release:version`, `release:plan`, `release:notes`, `release:refresh`, `release:status`, `release:credentials`, `release:publish` | Release process (see Release Process) |
 
@@ -321,6 +359,7 @@ Project tooling logic is written in MoonBit, not bash, `jq` or `awk`.
 | `scripts/release.mbtx` | `release:prepare`, `release:version`, `release:plan`, `release:notes`, `release:refresh`, `release:status` | Release pull request, next version, release decision in CI, release notes, pull request body, release health check |
 | `scripts/publish.mbtx` | `release:publish` | Publish to mooncakes.io; a release tag must match `moon.mod`'s version; an already published version (a second run for the tag) succeeds |
 | `scripts/hooks_install.mbtx` | `hooks:install` | Install lefthook hooks |
+| `scripts/fixtures.mbtx` | `fixtures:record` | Run the oracle over the AST fixtures and write their `.json` |
 
 ## Tooling
 

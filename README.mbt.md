@@ -15,14 +15,16 @@ Done:
   byte; spans are UTF-8 byte offsets as in the compiler; a lexical error is
   a `GL-SCAN-001` diagnostic with the compiler's message plus an `Error`
   token, and scanning goes on.
+- **AST and JSON**: the compiler's untyped AST (v1.19.2) with a canonical
+  JSON encoder and decoder (`docs/ast-json.md`); a Rust oracle on
+  `gleam-core` writes the same JSON, and `tests/fixtures/ast` prove byte
+  equality.
 
 Planned, in order:
 
 - **Parser**: tokens to AST, concrete syntax tree (CST) and diagnostics with
   the compiler's wording; a definition that does not parse is reported and
   the rest of the file is parsed.
-- **AST and JSON**: the compiler's untyped AST, with a canonical JSON encoder
-  and decoder.
 - **Syntax tree**: a read-only node model with six traversal styles.
 - **Printer and formatter**: Gleam source from an AST, `gleam format` parity.
 

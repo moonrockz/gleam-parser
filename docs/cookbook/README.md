@@ -8,3 +8,4 @@ article prefixes its top-level names (`gs_`, …).
 |---|---|
 | [getting-started.mbt.md](getting-started.mbt.md) | Add gleam-parser to a project and read its version |
 | [tokens.mbt.md](tokens.mbt.md) | Scan source into tokens and read a token's position |
+| [ast-json.mbt.md](ast-json.mbt.md) | Encode and decode the AST as canonical JSON |
