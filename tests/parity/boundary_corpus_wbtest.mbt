@@ -54,15 +54,18 @@ fn crlf_text(text : String) -> String {
 }
 
 ///|
-/// Whether byte span `s` lies inside `source` and both ends are code point
-/// boundaries. The compiler marks the end of the text with `end: 0`
-/// (`UnexpectedEof` is `0..0`; `InvalidModuleTypePattern` at the end of a
-/// file is `start..0`, as `parse.rs` takes the end of the inner
-/// `UnexpectedEof`), and the parser keeps those spans, so `end == 0` with an
-/// in-bounds start counts as in bounds.
-fn span_in_bounds(source : @gleam.SourceText, s : @gleam.SrcSpan) -> Bool {
+/// Whether the span of `d` lies inside `source` and both ends are code point
+/// boundaries. The compiler marks the end of the text with `end: 0`:
+/// `UnexpectedEof` is `0..0`, and `InvalidModuleTypePattern` at the end of
+/// a file is `start..0` (`parse.rs` takes the end of the inner
+/// `UnexpectedEof`). The parser keeps those spans, so only that kind may
+/// have an end before its start.
+fn span_in_bounds(source : @gleam.SourceText, d : @gleam.Diagnostic) -> Bool {
+  let s = d.span
+  let ordered = s.start <= s.end ||
+    (s.end == 0 && d.kind == "InvalidModuleTypePattern")
   0 <= s.start &&
-  (s.start <= s.end || s.end == 0) &&
+  ordered &&
   s.end <= source.byte_length() &&
   source.position_of(s.start) is Some(_) &&
   source.position_of(s.end) is Some(_)
@@ -80,14 +83,14 @@ fn prefix_problems(label : String, text : String) -> Array[String] {
   if stream.to_source() != text {
     problems.push("\{label}: the token stream does not rebuild the text")
   }
-  if !stream.diagnostics.iter().all(d => span_in_bounds(source, d.span)) {
+  if !stream.diagnostics.iter().all(d => span_in_bounds(source, d)) {
     problems.push("\{label}: a scanner diagnostic outside the source")
   }
   let result = @gleam.parse_module(stream)
   if result.cst.to_source() != text {
     problems.push("\{label}: the CST does not rebuild the text")
   }
-  if !result.diagnostics.iter().all(d => span_in_bounds(source, d.span)) {
+  if !result.diagnostics.iter().all(d => span_in_bounds(source, d)) {
     problems.push("\{label}: a parser diagnostic outside the source")
   }
   for d in result.diagnostics {
@@ -140,12 +143,12 @@ fn prefix_cuts(boundaries : Array[Int32]) -> Array[Int32] {
 }
 
 ///|
-/// The text up to byte offset `cut` (a code point boundary).
-fn prefix(source : @gleam.SourceText, cut : Int32) -> String {
-  match source.utf16_offset_of(cut) {
-    Some(units) => source.text().view(end_offset=units).to_owned()
-    None => source.text()
-  }
+/// The text up to byte offset `cut`, or `None` when `cut` is not a code
+/// point boundary (a token span that is not on a boundary is a scanner bug).
+fn prefix(source : @gleam.SourceText, cut : Int32) -> String? {
+  source
+  .utf16_offset_of(cut)
+  .map(units => source.text().view(end_offset=units).to_owned())
 }
 
 ///|
@@ -194,9 +197,12 @@ test "boundary laws over the corpus" {
         }
         let st = @gleam.SourceText::new(text)
         for cut in prefix_cuts(token_boundaries(text)) {
-          problems.append(
-            prefix_problems("\{key} (prefix \{cut})", prefix(st, cut)),
-          )
+          match prefix(st, cut) {
+            Some(p) =>
+              problems.append(prefix_problems("\{key} (prefix \{cut})", p))
+            None =>
+              problems.push("\{key}: cut \{cut} is not a code point boundary")
+          }
           prefixes = prefixes + 1
         }
         files = files + 1
@@ -210,4 +216,47 @@ test "boundary laws over the corpus" {
       }
     }
   }
+}
+
+///|
+test "span_in_bounds allows end 0 only for the compiler's EOF spans" {
+  let source = @gleam.SourceText::new("pub fn f() {\n  1\n}\n")
+  fn diag(kind : String, start : Int32, end : Int32) -> @gleam.Diagnostic {
+    @gleam.Diagnostic::new(
+      code="GL-PARSE-001",
+      severity=Error,
+      title="Syntax error",
+      message="m",
+      span={ start, end, },
+      kind~,
+    )
+  }
+
+  @expect.expect_all(s => {
+    s.expect(span_in_bounds(source, diag("UnexpectedEof", 0, 0))).to_be_true()
+    s.expect(span_in_bounds(source, diag("UnexpectedEof", 5, 0))).to_be_false()
+    s
+    .expect(span_in_bounds(source, diag("InvalidModuleTypePattern", 5, 0)))
+    .to_be_true()
+    s
+    .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 0)))
+    .to_be_false()
+    s
+    .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 4)))
+    .to_be_false()
+    s.expect(span_in_bounds(source, diag("UnexpectedToken", 5, 6))).to_be_true()
+    s
+    .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 99)))
+    .to_be_false()
+  })
+}
+
+///|
+test "prefix refuses a cut inside a character" {
+  let source = @gleam.SourceText::new("é x")
+  @expect.expect_all(s => {
+    s.expect(prefix(source, 2)).to_equal(Some("é"))
+    s.expect(prefix(source, 1)).to_equal(None)
+    s.expect(prefix(source, 4)).to_equal(Some("é x"))
+  })
 }

@@ -7,18 +7,38 @@ Feature: Gleam parity scoreboard
     Given the lock text:
       """
       # comment
-      pkg_b@1.0.0/src/b.gleam 22 PARSE_ERROR
+      pkg_b@1.0.0/src/b.gleam 22 PARSE_ERROR:UnexpectedEof:-:0:0
       pkg_a@1.0.0/src/long/name.gleam 33 cc
       pkg_a@1.0.0/src/a.gleam 11 aa
       """
     When I read and write the lock
     Then the lock text is:
       """
-      # <corpus key> <source sha256> <canonical oracle JSON sha256 | PARSE_ERROR>
+      # <corpus key> <source sha256> <canonical oracle JSON sha256 | PARSE_ERROR:<kind>:<lexical kind or ->:<start>:<end>>
       pkg_a@1.0.0/src/a.gleam 11 aa
       pkg_a@1.0.0/src/long/name.gleam 33 cc
-      pkg_b@1.0.0/src/b.gleam 22 PARSE_ERROR
+      pkg_b@1.0.0/src/b.gleam 22 PARSE_ERROR:UnexpectedEof:-:0:0
       """
+
+  Scenario: A lexical error golden keeps the lexical kind
+    Given the lock text:
+      """
+      pkg_a@1.0.0/src/a.gleam 11 PARSE_ERROR:LexError:UnexpectedStringEnd:10:14
+      """
+    When I read and write the lock
+    Then the lock text is:
+      """
+      # <corpus key> <source sha256> <canonical oracle JSON sha256 | PARSE_ERROR:<kind>:<lexical kind or ->:<start>:<end>>
+      pkg_a@1.0.0/src/a.gleam 11 PARSE_ERROR:LexError:UnexpectedStringEnd:10:14
+      """
+
+  Scenario: Reject a PARSE_ERROR golden without the error identity
+    Given the lock text:
+      """
+      pkg_a@1.0.0/src/a.gleam 11 PARSE_ERROR
+      """
+    When I read and write the lock
+    Then reading the lock fails
 
   Scenario: Reject a malformed lock line
     Given the lock text:

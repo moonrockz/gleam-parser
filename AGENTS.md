@@ -460,8 +460,11 @@ published packages (233 files under `src/` and `test/`).
   link or the tag is not `v<version>`. `manifest.json` pins each tag archive
   (SHA-1) and each `.gleam` file (SHA-256).
 - `tests/corpus/goldens.lock` holds, per file, the SHA-256 of the canonical
-  oracle JSON (or `PARSE_ERROR`). Only hashes are committed; the raw oracle
-  output stays local in `.dev/out/goldens/raw/`.
+  oracle JSON, or, for a file the compiler rejects, its first error as
+  `PARSE_ERROR:<kind>:<lexical kind or ->:<start>:<end>` (such a file matches
+  when gleam-parser's first error has that kind, lexical kind and location).
+  Only hashes are committed; the raw oracle output stays local in
+  `.dev/out/goldens/raw/`.
 - `mise run test:parity` prints the scoreboard: files, tokenized (no lexical
   error), parsed (no error diagnostic), matched (the canonical JSON of
   `ParseResult::parsed()` hashes to the golden). It fails when a count drops

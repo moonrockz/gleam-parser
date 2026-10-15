@@ -2,7 +2,7 @@
 /// Golden result for one corpus file.
 priv enum Golden {
   Hash(String)
-  ParseError
+  ParseError(String, String?, Int32, Int32)
 }
 
 ///|
@@ -17,7 +17,37 @@ priv struct LockEntry {
 let parse_error_marker : String = "PARSE_ERROR"
 
 ///|
-let lock_header : String = "# <corpus key> <source sha256> <canonical oracle JSON sha256 | PARSE_ERROR>"
+let lock_header : String = "# <corpus key> <source sha256> <canonical oracle JSON sha256 | PARSE_ERROR:<kind>:<lexical kind or ->:<start>:<end>>"
+
+///|
+/// The lock form of a golden: the hash, or
+/// `PARSE_ERROR:<kind>:<lexical kind or ->:<start>:<end>`.
+fn format_golden(golden : Golden) -> String {
+  match golden {
+    Hash(h) => h
+    ParseError(kind, lexical, start, end) =>
+      "\{parse_error_marker}:\{kind}:\{lexical.unwrap_or("-")}:\{start}:\{end}"
+  }
+}
+
+///|
+/// Read a golden from its lock form; a bare `PARSE_ERROR` is malformed.
+fn parse_golden(text : String) -> Golden raise {
+  if !text.has_prefix(parse_error_marker) {
+    return Hash(text)
+  }
+  let parts = text.split(":").map(p => p.to_owned()).collect()
+  guard parts is [_, kind, lexical, start, end] && kind != "" && lexical != "" else {
+    fail("goldens.lock: malformed PARSE_ERROR golden: \{text}")
+  }
+  let lexical_kind = if lexical == "-" { None } else { Some(lexical) }
+  ParseError(
+    kind,
+    lexical_kind,
+    @string.parse_int(start),
+    @string.parse_int(end),
+  )
+}
 
 ///|
 /// Parse the lock text: one `<key> <source-sha256> <golden-sha256|PARSE_ERROR>` per line.
@@ -36,12 +66,7 @@ fn parse_lock(text : String) -> Array[LockEntry] raise {
     guard fields is [key, source_sha256, golden] else {
       fail("goldens.lock: malformed line: \{line}")
     }
-    let golden = if golden == parse_error_marker {
-      ParseError
-    } else {
-      Hash(golden)
-    }
-    entries.push({ key, source_sha256, golden, })
+    entries.push({ key, source_sha256, golden: parse_golden(golden), })
   }
   entries
 }
@@ -54,11 +79,7 @@ fn format_lock(entries : Array[LockEntry]) -> String {
   let sb = StringBuilder()
   sb.write_string(lock_header + "\n")
   for e in sorted {
-    let golden = match e.golden {
-      Hash(h) => h
-      ParseError => parse_error_marker
-    }
-    sb.write_string("\{e.key} \{e.source_sha256} \{golden}\n")
+    sb.write_string("\{e.key} \{e.source_sha256} \{format_golden(e.golden)}\n")
   }
   sb.to_string()
 }

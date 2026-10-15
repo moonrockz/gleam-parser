@@ -1,4 +1,4 @@
-# <corpus key> <source sha256> <canonical oracle JSON sha256 | PARSE_ERROR>
+# <corpus key> <source sha256> <canonical oracle JSON sha256 | PARSE_ERROR:<kind>:<lexical kind or ->:<start>:<end>>
 birdie@2.0.2/src/birdie.gleam e764c9e0adeb3a79aa6eda559d3940526b6920d34ce1be4357f931470c0f980f e18ce0309492967284e0b714bee09111f509e9bbeb553bde5aa0512a2a7a8f3a
 birdie@2.0.2/src/birdie/internal/analyser.gleam 125464f3bd789102ad8a7d3f4dae8b465d9880243394b0a80bb456ece256b2a3 e07a79883821ea61bd83db1a80691afa6d9344f353c109a4e034ecf393315375
 birdie@2.0.2/src/birdie/internal/cli.gleam ac496b1779b99a998a9ba550dfa17005e760b4c8f6a7aba4eeeb829b3c16cd68 283380a3000508f3efbfa8dd63d29109bdb849fbc63d6639d01f842d3445899f

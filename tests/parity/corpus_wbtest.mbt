@@ -99,7 +99,13 @@ fn write_lock() -> Unit raise {
     let golden = if @fs.path_exists("\{raw}.json") {
       Hash(golden_hash(@json.parse(@fs.read_file_to_string("\{raw}.json"))))
     } else if @fs.path_exists("\{raw}.error") {
-      ParseError
+      guard @gleam.decode_oracle_output(
+          @json.parse(@fs.read_file_to_string("\{raw}.error")),
+        )
+        is Error(kind~, lexical_kind~, location~) else {
+        fail("\{raw}.error is not an oracle error")
+      }
+      ParseError(kind, lexical_kind, location.start, location.end)
     } else {
       fail("missing oracle output for \{key}; run mise run corpus:goldens")
     }
@@ -128,23 +134,6 @@ let max_reported_mismatches : Int32 = 20
 let reports_dir : String = "../_build/reports/parity"
 
 ///|
-/// The oracle's error for a rejected corpus file, from the raw goldens, when
-/// present locally.
-fn raw_error(key : String) -> @gleam.OracleOutput? {
-  let raw = "\{raw_goldens_dir}/\{key}.error"
-  if !@fs.path_exists(raw) {
-    return None
-  }
-  try
-    @gleam.decode_oracle_output(@json.parse(@fs.read_file_to_string(raw)))
-  catch {
-    _ => None
-  } noraise {
-    out => Some(out)
-  }
-}
-
-///|
 /// Whether gleam-parser's first error is the oracle's: the same kind, lexical
 /// kind and location (the rule of `tests/features/parser.feature`).
 fn first_error_matches(
@@ -161,6 +150,25 @@ fn first_error_matches(
     (d.kind, None)
   }
   actual_kind == kind && actual_lexical == lexical_kind && d.span == location
+}
+
+///|
+/// Whether gleam-parser's result matches a golden: the same canonical JSON
+/// hash, or (for a file the oracle rejects) the oracle's first error. A hash
+/// match counts even when gleam-parser also reported warnings.
+fn golden_matches(
+  golden : Golden,
+  result : @gleam.ParseResult,
+  actual : Json,
+) -> Bool {
+  match golden {
+    Hash(h) => golden_hash(actual) == h
+    ParseError(kind, lexical_kind, start, end) =>
+      first_error_matches(
+        result,
+        Error(kind~, lexical_kind~, location={ start, end, }),
+      )
+  }
 }
 
 ///|
@@ -222,16 +230,7 @@ fn score() -> Array[FileReport] raise {
     let result = @gleam.parse_module(stream)
     let parsed = !result.has_errors()
     let actual = @gleam.encode_parsed(result.parsed())
-    // A hash match counts even when gleam-parser also reported warnings.
-    let matched = match entry.golden {
-      Hash(h) => golden_hash(actual) == h
-      ParseError =>
-        result.has_errors() &&
-        (match raw_error(entry.key) {
-          Some(oracle) => first_error_matches(result, oracle)
-          None => true
-        })
-    }
+    let matched = golden_matches(entry.golden, result, actual)
     let source = @gleam.SourceText::new(text)
     let diagnostic = result.diagnostics
       .get(0)
@@ -387,6 +386,55 @@ test "first_error_matches compares kind, lexical kind and location" {
       first_error_matches(
         @gleam.parse_text("pub fn f() { 1 }\n"),
         Error(kind=d.kind, lexical_kind=None, location=d.span),
+      ),
+    )
+    .to_be_false()
+  })
+}
+
+///|
+test "a PARSE_ERROR golden matches only the oracle's first error" {
+  let text = "pub fn f() {\n  1 +\n}\n"
+  let result = @gleam.parse_text(text)
+  guard result.diagnostics.filter(d => d.is_error()).get(0) is Some(d) else {
+    fail("expected an error")
+  }
+  let actual = @gleam.encode_parsed(result.parsed())
+  @expect.expect_all(s => {
+    s
+    .expect(
+      golden_matches(
+        ParseError(d.kind, None, d.span.start, d.span.end),
+        result,
+        actual,
+      ),
+    )
+    .to_be_true()
+    s
+    .expect(
+      golden_matches(ParseError("UnexpectedEof", None, 0, 0), result, actual),
+    )
+    .to_be_false()
+    s
+    .expect(
+      golden_matches(
+        ParseError(d.kind, Some("X"), d.span.start, d.span.end),
+        result,
+        actual,
+      ),
+    )
+    .to_be_false()
+    s
+    .expect(golden_matches(Hash(golden_hash(actual)), result, actual))
+    .to_be_true()
+    s.expect(golden_matches(Hash("00"), result, actual)).to_be_false()
+    let ok = @gleam.parse_text("pub fn f() {\n  1\n}\n")
+    s
+    .expect(
+      golden_matches(
+        ParseError(d.kind, None, 0, 1),
+        ok,
+        @gleam.encode_parsed(ok.parsed()),
       ),
     )
     .to_be_false()

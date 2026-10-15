@@ -58,3 +58,6 @@ Feature: Gleam parity corpus
     When I write and read the manifest
     Then the manifest entry is unchanged
     And the manifest names Gleam "1.19.2"
+
+  Scenario: A failed download names the tag override
+    Then the download failure message for "wibble@1.0.0" at "https://github.com/a/b/archive/refs/tags/v1.0.0.zip" is "wibble@1.0.0: cannot download https://github.com/a/b/archive/refs/tags/v1.0.0.zip; if the tag is not v1.0.0, add github.com/owner/repo#tag to packages.txt"

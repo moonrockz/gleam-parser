@@ -178,6 +178,13 @@ fn repository_link(
 }
 
 ///|
+/// The message for a zipball that does not download: the usual cause is a
+/// tag that is not `v<version>`, which packages.txt can override.
+fn download_failure_message(pkg : Pkg, zipball : String) -> String {
+  "\{pkg.coordinate()}: cannot download \{zipball}; if the tag is not v\{pkg.version}, add github.com/owner/repo#tag to packages.txt"
+}
+
+///|
 fn zipball_url(repository : String, tag : String) -> String {
   "\{repository}/archive/refs/tags/\{tag}.zip"
 }
@@ -307,7 +314,10 @@ async fn package_files(dir : String) -> Array[(String, String)] {
 async fn download(corpus : String, entry : PackageEntry) -> Unit {
   let zip = "\{corpus}/_zips/\{entry.pkg.coordinate()}.zip"
   @fs.mkdir("\{corpus}/_zips", recursive=true, allow_exist=true)
-  run_or_exit("curl", ["-fsSL", "-o", zip, entry.zipball])
+  if @process.run("curl", ["-fsSL", "-o", zip, entry.zipball]) != 0 {
+    eprintln(download_failure_message(entry.pkg, entry.zipball))
+    @sys.exit(1)
+  }
   let sha1 = hex(@crypto.sha1(@fs.read_file(zip).binary()))
   if entry.zip_sha1 != "" && sha1 != entry.zip_sha1 {
     eprintln(
@@ -517,6 +527,15 @@ impl @moonspec.World for CorpusWorld with fn configure(self, setup) {
   setup.then1("looking fails with {string}", fn(message : String) raise {
     @expect.expect(self.link).to_equal(Err(message))
   })
+  setup.then3(
+    "the download failure message for {string} at {string} is {string}",
+    fn(coordinate : String, zipball : String, expected : String) raise {
+      guard parse_package_line(coordinate) is Some(pkg) else {
+        fail("bad coordinate")
+      }
+      @expect.expect(download_failure_message(pkg, zipball)).to_equal(expected)
+    },
+  )
   setup.then3("the zipball of {string} at {string} is {string}", fn(
     repository : String,
     tag : String,
