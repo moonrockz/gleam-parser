@@ -1,6 +1,9 @@
 ///|
-fn parser_of(text : String) -> Parser {
-  Parser::new(@scanner.tokenize_text(text), @dialect.Dialect::gleam_1_19())
+fn parser_of(text : String, budget~ : Int32 = 100) -> Parser {
+  Parser::new(@scanner.tokenize_text(text), {
+    ..@config.Config::default(),
+    fuel: @fuel.Budget::new(budget).unwrap(),
+  })
 }
 
 ///|
@@ -96,16 +99,33 @@ test "expect helpers give the compiler's errors" {
 }
 
 ///|
-test "nesting past the limit is TooMuchNesting at the current token" {
-  let p = parser_of("x")
-  for _ in 0..<max_nesting {
-    p.enter()
-  }
-  let r = attempt(() => p.enter())
-  guard r is Err(ParseError(error=TooMuchNesting, location~)) else {
+test "nesting past the budget is TooMuchNesting at the current token, naming the operations" {
+  let p = parser_of("x", budget=2)
+  let r : Result[Unit, ParseError] = attempt(() => {
+    p.nested(op_expression, () => {
+      p.nested(op_expression, () => {
+        p.nested(op_pattern, () => {
+          raise ParseError(
+            error=ExpectedExpr,
+            location=@span.SrcSpan::new(9, 9),
+          )
+        })
+      })
+    })
+  })
+  // budget 2: the third nested entry fails
+  guard r is Err(ParseError(error=TooMuchNesting(budget~, spent~), location~)) else {
     fail("expected TooMuchNesting")
   }
-  @expect.expect(location).to_equal(@span.SrcSpan::new(0, 1))
+  @expect.expect_all(e => {
+    e.expect(budget.units()).to_equal(2)
+    e
+    .expect(spent)
+    .to_equal([{ operation: @fuel.Operation::new("expression"), levels: 2, }])
+    e.expect(location).to_equal(@span.SrcSpan::new(0, 1))
+    // the fuel is back at the full budget after the error
+    e.expect(p.fuel.val.left()).to_equal(2)
+  })
 }
 
 ///|

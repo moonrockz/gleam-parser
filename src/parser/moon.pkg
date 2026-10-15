@@ -6,6 +6,8 @@ import {
   "moonrockz/gleam-parser/ast",
   "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/fuel",
+  "moonrockz/gleam-parser/config",
 }
 
 import {
@@ -14,6 +16,8 @@ import {
   "moonbitlang/core/json",
   "moonrockz/gleam-parser/lawkit",
   "moonbitlang/core/quickcheck",
+  "moonrockz/gleam-parser/fuel",
+  "moonrockz/gleam-parser/config",
 } for "test"
 
 import {
@@ -21,4 +25,6 @@ import {
   "moonbitlang/core/debug",
   "moonrockz/gleam-parser/lawkit",
   "moonbitlang/core/quickcheck",
+  "moonrockz/gleam-parser/fuel",
+  "moonrockz/gleam-parser/config",
 } for "wbtest"

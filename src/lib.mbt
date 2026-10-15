@@ -222,12 +222,13 @@ pub using @cst {type ModuleCst, type DefinitionCst, type DefinitionKind}
 
 ///|
 /// Parse a token stream into a module (see `@parser.parse_module`).
-pub fn parse_module(stream : TokenStream, dialect? : Dialect) -> ParseResult {
-  @parser.parse_module(stream, dialect?)
+pub fn parse_module(stream : TokenStream, config? : Config) -> ParseResult {
+  @parser.parse_module(stream, config?)
 }
 
 ///|
 /// Parse Gleam source text into a module, with recovery per definition.
+/// `config` sets the dialect and the fuel budget; see `Config`.
 ///
 /// ```mbt check
 /// test {
@@ -236,8 +237,8 @@ pub fn parse_module(stream : TokenStream, dialect? : Dialect) -> ParseResult {
 ///   inspect(r.has_errors(), content="false")
 /// }
 /// ```
-pub fn parse_text(text : String, dialect? : Dialect) -> ParseResult {
-  @parser.parse_text(text, dialect?)
+pub fn parse_text(text : String, config? : Config) -> ParseResult {
+  @parser.parse_text(text, config?)
 }
 
 ///|

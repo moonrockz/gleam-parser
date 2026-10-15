@@ -4,29 +4,28 @@ package "moonrockz/gleam-parser/parser"
 import {
   "moonbitlang/core/debug",
   "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/config",
   "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/diagnostic",
-  "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/fuel",
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
 }
 
 // Values
-pub let max_nesting : Int
+pub fn parse_constant_text(String, config? : @config.Config) -> @ast.Constant raise ParseError
 
-pub fn parse_constant_text(String) -> @ast.Constant raise ParseError
+pub fn parse_expression_text(String, config? : @config.Config) -> @ast.Expr raise ParseError
 
-pub fn parse_expression_text(String) -> @ast.Expr raise ParseError
+pub fn parse_module(@scanner.TokenStream, config? : @config.Config) -> ParseResult
 
-pub fn parse_module(@scanner.TokenStream, dialect? : @dialect.Dialect) -> ParseResult
+pub fn parse_pattern_text(String, config? : @config.Config) -> @ast.Pattern raise ParseError
 
-pub fn parse_pattern_text(String) -> @ast.Pattern raise ParseError
+pub fn parse_statements_text(String, config? : @config.Config) -> ArrayView[@ast.Statement] raise ParseError
 
-pub fn parse_statements_text(String) -> ArrayView[@ast.Statement] raise ParseError
+pub fn parse_text(String, config? : @config.Config) -> ParseResult
 
-pub fn parse_text(String, dialect? : @dialect.Dialect) -> ParseResult
-
-pub fn parse_type_text(String) -> @ast.TypeAst raise ParseError
+pub fn parse_type_text(String, config? : @config.Config) -> @ast.TypeAst raise ParseError
 
 pub fn token_text(@scanner.TokenKind) -> String
 
@@ -118,7 +117,7 @@ pub(all) enum ParseErrorType {
   TypeDefinitionAngleGenerics(name~ : String, arguments~ : ArrayView[String])
   MissingConstantAsMessage
   RecordUpdateAfterFields
-  TooMuchNesting
+  TooMuchNesting(budget~ : @fuel.Budget, spent~ : Array[@fuel.Spent])
 } derive(Eq, @debug.Debug)
 pub fn ParseErrorType::details(Self) -> ParseErrorDetails
 pub fn ParseErrorType::kind(Self) -> String

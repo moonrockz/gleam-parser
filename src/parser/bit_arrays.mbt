@@ -192,26 +192,25 @@ fn Parser::expect_bit_array_size(
 fn Parser::parse_bit_array_size_unit(
   self : Parser,
 ) -> @ast.BitArraySize raise ParseError {
-  self.enter()
-  let result : @ast.BitArraySize = match self.token0 {
-    Some({ kind: Name(name), span, .. }) => {
-      self.advance()
-      Variable(location=span, name~)
+  self.nested(op_bit_array_size, () => {
+    match self.token0 {
+      Some({ kind: Name(name), span, .. }) => {
+        self.advance()
+        Variable(location=span, name~)
+      }
+      Some({ kind: Int(value~, int_value~), span, .. }) => {
+        self.advance()
+        Int(location=span, value~, int_value~)
+      }
+      Some({ kind: LeftBrace, span, .. }) => {
+        self.advance()
+        let inner = self.expect_bit_array_size()
+        let (_, end) = self.expect_one(RightBrace)
+        Block(location=sp(span.start, end), inner~)
+      }
+      _ => self.next_token_unexpected(["A variable name or an int"])
     }
-    Some({ kind: Int(value~, int_value~), span, .. }) => {
-      self.advance()
-      Int(location=span, value~, int_value~)
-    }
-    Some({ kind: LeftBrace, span, .. }) => {
-      self.advance()
-      let inner = self.expect_bit_array_size()
-      let (_, end) = self.expect_one(RightBrace)
-      Block(location=sp(span.start, end), inner~)
-    }
-    _ => self.next_token_unexpected(["A variable name or an int"])
-  }
-  self.leave()
-  result
+  })
 }
 
 ///|

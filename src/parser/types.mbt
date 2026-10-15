@@ -19,10 +19,7 @@ fn Parser::parse_type_annotation(
 /// A type annotation without its `:`; `None` when `token0` does not start
 /// one.
 fn Parser::parse_type(self : Parser) -> @ast.TypeAst? raise ParseError {
-  self.enter()
-  let result = self.parse_type_inner()
-  self.leave()
-  result
+  self.nested(op_type, () => self.parse_type_inner())
 }
 
 ///|

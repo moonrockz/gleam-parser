@@ -39,9 +39,9 @@ pub fn parse_float_value(String) -> Double?
 
 pub fn parse_int_value(String) -> @bigint.BigInt?
 
-pub fn parse_module(@scanner.TokenStream, dialect? : @dialect.Dialect) -> @parser.ParseResult
+pub fn parse_module(@scanner.TokenStream, config? : @config.Config) -> @parser.ParseResult
 
-pub fn parse_text(String, dialect? : @dialect.Dialect) -> @parser.ParseResult
+pub fn parse_text(String, config? : @config.Config) -> @parser.ParseResult
 
 pub fn render_plain(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
 

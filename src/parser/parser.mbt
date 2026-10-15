@@ -1,12 +1,4 @@
 ///|
-/// Deepest syntactic nesting the parser enters (brackets, blocks, `case`,
-/// `fn`, nested patterns, types and constants). Deeper text is a
-/// `GL-PARSE-004` error (`TooMuchNesting`), never a stack overflow, on
-/// every target: wasm overflows at about 140 nested lists, so the limit is
-/// 100. The Gleam compiler has no such limit.
-pub let max_nesting : Int32 = 100
-
-///|
 fn sp(start : Int32, end : Int32) -> @span.SrcSpan {
   @span.SrcSpan::new(start, end)
 }
@@ -75,7 +67,7 @@ fn Attributes::set_external_for(
 /// parser sees at a lexical error; the stream goes on after it.
 priv struct Parser {
   tokens : ArrayView[@scanner.Token]
-  dialect : @dialect.Dialect
+  config : @config.Config
   /// The array index of the next token to load.
   mut index : Int32
   /// The array indexes of the slots `token0` and `token1` came from
@@ -87,7 +79,10 @@ priv struct Parser {
   /// The byte end of the farthest token loaded, `Error` tokens included:
   /// how far the compiler's lexer would have read.
   mut farthest : Int32
-  mut depth : Int32
+  /// The fuel of the current scope; `nested` swaps a spent value in for
+  /// the body and `Ref::protect` puts the outer one back, on return and on
+  /// error alike.
+  fuel : Ref[@fuel.Fuel]
   warnings : Array[@ast.Warning]
   trailing_commas : Array[Int32]
   /// Every doc comment (`///`) in order: its content span and content.
@@ -102,7 +97,7 @@ priv struct Parser {
 ///|
 fn Parser::new(
   stream : @scanner.TokenStream,
-  dialect : @dialect.Dialect,
+  config : @config.Config,
 ) -> Parser {
   let doc_comments : Array[(@span.SrcSpan, String)] = []
   let comments : Array[@span.SrcSpan] = []
@@ -125,14 +120,14 @@ fn Parser::new(
   }
   let p = {
     tokens: stream.tokens,
-    dialect,
+    config,
     index: 0,
     index0: 0,
     index1: 0,
     token0: None,
     token1: None,
     farthest: 0,
-    depth: 0,
+    fuel: { val: @fuel.Fuel::new(budget=config.fuel), },
     warnings: [],
     trailing_commas: [],
     doc_comments,
@@ -205,16 +200,19 @@ fn Parser::here(self : Parser) -> @span.SrcSpan {
 }
 
 ///|
-fn Parser::enter(self : Parser) -> Unit raise ParseError {
-  self.depth += 1
-  if self.depth > max_nesting {
-    parse_error(TooMuchNesting, self.here())
+/// Run `body` one nesting level deeper: one unit of fuel for `op`. When
+/// the budget is spent, `TooMuchNesting` at the current token. The outer
+/// fuel is back when `body` returns or raises.
+fn[A] Parser::nested(
+  self : Parser,
+  op : @fuel.Operation,
+  body : () -> A raise ParseError,
+) -> A raise ParseError {
+  let inner = self.fuel.val.spend(op) catch {
+    @fuel.FuelExhausted(budget~, spent~) =>
+      parse_error(TooMuchNesting(budget~, spent~), self.here())
   }
-}
-
-///|
-fn Parser::leave(self : Parser) -> Unit {
-  self.depth -= 1
+  self.fuel.protect(inner, body)
 }
 
 ///|
@@ -234,7 +232,7 @@ fn Parser::warn(self : Parser, w : @ast.Warning) -> Unit {
       return
     }
   }
-  if self.dialect.warns(rule) {
+  if self.config.dialect.warns(rule) {
     self.warnings.push(w)
   }
 }

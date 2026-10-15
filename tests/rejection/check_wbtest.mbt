@@ -66,9 +66,7 @@ fn verdict_key() -> String raise {
 /// gleam-parser's first error for `text`, if it rejects it (warnings do not
 /// count).
 fn first_error(text : String) -> @gleam.Diagnostic? {
-  @gleam.parse_text(text, dialect=@gleam.Dialect::gleam_1_19()).diagnostics
-  .iter()
-  .find_first(d => d.is_error())
+  @gleam.parse_text(text).diagnostics.iter().find_first(d => d.is_error())
 }
 
 ///|

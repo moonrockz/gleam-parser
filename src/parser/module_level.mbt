@@ -36,16 +36,15 @@ pub fn ParseResult::has_errors(self : ParseResult) -> Bool {
 /// Parse a token stream into a module. Recovery per definition: an error is
 /// reported, the parser skips to the next definition start (`import`,
 /// `const`, `pub`, `fn`, `type`, `opaque` or `@` in column 1) and goes on.
-/// The first error diagnostic has the compiler's kind and span.
+/// The first error diagnostic has the compiler's kind and span. `config`
+/// gives the dialect and the fuel budget (`Config::default()` when
+/// absent).
 pub fn parse_module(
   stream : @scanner.TokenStream,
-  dialect? : @dialect.Dialect,
+  config? : @config.Config,
 ) -> ParseResult {
-  let dialect = match dialect {
-    Some(d) => d
-    None => @dialect.Dialect::gleam_1_19()
-  }
-  let p = Parser::new(stream, dialect)
+  let config = config.unwrap_or(@config.Config::default())
+  let p = Parser::new(stream, config)
   let definitions : Array[@ast.TargetedDefinition] = []
   let cst_definitions : Array[@cst.DefinitionCst] = []
   let parse_diagnostics : Array[@diagnostic.Diagnostic] = []
@@ -59,7 +58,6 @@ pub fn parse_module(
 
   while p.index0 < p.tokens.length() {
     let start_index = p.index0
-    p.depth = 0
     let outcome = try p.parse_definition() catch {
       e => Err(e)
     } noraise {
@@ -123,8 +121,8 @@ pub fn parse_module(
 
 ///|
 /// `parse_module` of the tokens of `text`.
-pub fn parse_text(text : String, dialect? : @dialect.Dialect) -> ParseResult {
-  parse_module(@scanner.tokenize_text(text), dialect?)
+pub fn parse_text(text : String, config? : @config.Config) -> ParseResult {
+  parse_module(@scanner.tokenize_text(text), config?)
 }
 
 ///|
@@ -306,7 +304,7 @@ fn Parser::parse_attribute(
   attributes : Attributes,
 ) -> Int32 raise ParseError {
   let (_, name, end) = self.expect_name(Attribute)
-  if !self.dialect.knows_attribute(name) {
+  if !self.config.dialect.knows_attribute(name) {
     parse_error(UnknownAttribute, sp(start, end))
   }
   match name {
@@ -362,7 +360,7 @@ fn Parser::expect_target(
         }
         _ =>
           match @ast.Target::of(name) {
-            Some(t) if self.dialect.knows_target(name) => t
+            Some(t) if self.config.dialect.knows_target(name) => t
             _ => parse_error(UnknownTarget, span)
           }
       }
@@ -379,7 +377,7 @@ fn Parser::parse_external_attribute(
 ) -> Int32 raise ParseError {
   let (_, target_name, _) = self.expect_name(Target)
   let target : @ast.Target = match @ast.Target::of(target_name) {
-    Some(t) if self.dialect.knows_target(target_name) => t
+    Some(t) if self.config.dialect.knows_target(target_name) => t
     _ => parse_error(UnknownTarget, sp(start, end))
   }
   let _ = self.expect_one(Comma)
