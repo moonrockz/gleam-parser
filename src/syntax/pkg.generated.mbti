@@ -16,6 +16,8 @@ pub fn[A] fold(NodeRef, A, (A, NodeRef) -> (A, Control), leave? : (A, NodeRef) -
 
 pub fn kind_table() -> Array[(String, String, Array[String])]
 
+pub fn[S : EventSource, H : Handler] push_events(S, H) -> Unit
+
 pub fn[A] reduce(NodeRef, (NodeRef, ArrayView[A]) -> A) -> A
 
 pub fn[A] reduce_with_fields(NodeRef, (NodeRef, ArrayView[(PathStep, A)]) -> A) -> A
@@ -30,6 +32,37 @@ pub(all) enum Control {
   SkipChildren
   Stop
 } derive(Eq, @debug.Debug)
+
+pub struct EnterEvent {
+  category : String
+  kind : String
+  field : String?
+  start : Int
+  depth : Int
+  path : NodePath
+} derive(Eq, @debug.Debug)
+pub fn EnterEvent::new(category~ : String, kind~ : String, field~ : String?, start~ : Int, path~ : NodePath) -> Self
+
+pub(all) enum Event {
+  Enter(EnterEvent)
+  Leave(LeaveEvent)
+} derive(Eq, @debug.Debug)
+
+pub struct EventReader {
+  // private fields
+}
+pub fn EventReader::iter(Self) -> Iter[Event]
+pub fn EventReader::new(NodeRef) -> Self
+pub fn EventReader::next(Self) -> Event?
+pub fn EventReader::skip_children(Self) -> Unit
+pub impl EventSource for EventReader
+
+pub struct LeaveEvent {
+  node : NodeRef
+  depth : Int
+  path : NodePath
+} derive(Eq, @debug.Debug)
+pub fn LeaveEvent::new(node~ : NodeRef, path~ : NodePath) -> Self
 
 pub struct NodePath {
   // private fields
@@ -94,6 +127,16 @@ pub(all) struct PathStep {
 // Type aliases
 
 // Traits
+pub(open) trait EventSource {
+  fn next(Self) -> Event?
+  fn skip_children(Self) -> Unit
+}
+
+pub(open) trait Handler {
+  fn on_enter(Self, EnterEvent) -> Control = _
+  fn on_leave(Self, LeaveEvent) -> Unit = _
+}
+
 pub(open) trait Visitor {
   fn visit_definition(Self, NodeRef) -> Control = _
   fn visit_statement(Self, NodeRef) -> Control = _
