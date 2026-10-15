@@ -207,7 +207,9 @@ pub fn Config::from_env(env : Environment) -> Partial raise ConfigError {
 /// The configuration from the environment over the TOML file over the
 /// defaults. `path` is `gleam-parser.toml` by default; a missing file
 /// contributes nothing, a file that cannot be read is a `ConfigError`
-/// with `File(path)`. The only function of this package with I/O.
+/// with `File(path)` and the system's text, and a TOML error from the file
+/// names the file in front of its message. The only function of this
+/// package with I/O.
 ///
 /// ```mbt nocheck
 /// fn parse_with_config(text : String) -> @gleam.ParseResult raise {
@@ -225,9 +227,13 @@ pub fn Config::load(
   }
   let file = if @fs.path_exists(path) {
     let text = @fs.read_file_to_string(path) catch {
-      _ => bad(File(path), "cannot read the file")
+      @fs.IOError(detail) => bad(File(path), "cannot read the file: \{detail}")
     }
-    Config::from_toml(text)
+    // A TOML error from the file names the file in front of its message.
+    Config::from_toml(text) catch {
+      ConfigError(source~, message~) =>
+        raise ConfigError(source~, message="\{path}: \{message}")
+    }
   } else {
     Partial::empty()
   }
