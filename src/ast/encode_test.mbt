@@ -125,3 +125,20 @@ test "a parsed module encodes module, extra and warnings" {
     ),
   )
 }
+
+///|
+fn nested_json(n : Int32) -> Json {
+  let mut j : Json = Json::number(1.0)
+  for _ in 0..<n {
+    j = Json::array([j, Json::object({ "k": Json::string("v") })])
+  }
+  j
+}
+
+///|
+test "canonical writes a 20000-deep value on every target" {
+  let text = @ast.canonical(nested_json(20000))
+  @expect.expect(text.length()).to_equal(20000 * 12 + 1)
+  @expect.expect(text.has_prefix("[[[")).to_be_true()
+  @expect.expect(text.has_suffix("],{\"k\":\"v\"}],{\"k\":\"v\"}]")).to_be_true()
+}

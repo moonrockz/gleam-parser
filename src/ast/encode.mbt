@@ -53,20 +53,37 @@ fn arr(xs : ArrayView[Json]) -> Json {
 /// The canonical text of an encoded value: keys in sorted (byte) order at
 /// every level, no whitespace, serde_json's string escaping (`\"`, `\\`,
 /// `\b`, `\f`, `\n`, `\r`, `\t`, other controls as `\u00xx`, everything
-/// else raw). Map order is not relied on.
+/// else raw). Map order is not relied on. Writes through the step
+/// trampoline, so a value of any depth is written without recursion; the
+/// builder is local to this call.
 pub fn canonical(json : Json) -> String {
   let sb = StringBuilder()
-  write_canonical(sb, json)
+  run(write_canonical(sb, json, () => Done(())))
   sb.to_string()
 }
 
 ///|
-fn write_canonical(sb : StringBuilder, json : Json) -> Unit {
+/// Write one value, then continue with `k`. A continuation is never
+/// called here: it is returned as `More(k)` for `run` to execute.
+fn write_canonical(
+  sb : StringBuilder,
+  json : Json,
+  k : () -> Step[Unit],
+) -> Step[Unit] {
   match json {
-    Null => sb.write_string("null")
-    True => sb.write_string("true")
-    False => sb.write_string("false")
-    Number(d, repr~) =>
+    Null => {
+      sb.write_string("null")
+      More(k)
+    }
+    True => {
+      sb.write_string("true")
+      More(k)
+    }
+    False => {
+      sb.write_string("false")
+      More(k)
+    }
+    Number(d, repr~) => {
       // Byte offsets and small values fit a Double; a `u64` carries its
       // exact digits in `repr`.
       if repr is Some(digits) {
@@ -76,31 +93,71 @@ fn write_canonical(sb : StringBuilder, json : Json) -> Unit {
       } else {
         sb.write_string(d.to_string())
       }
-    String(s) => write_json_string(sb, s)
+      More(k)
+    }
+    String(s) => {
+      write_json_string(sb, s)
+      More(k)
+    }
     Array(items) => {
       sb.write_char('[')
-      for i, item in items {
-        if i > 0 {
-          sb.write_char(',')
-        }
-        write_canonical(sb, item)
-      }
-      sb.write_char(']')
+      write_items(sb, items[:], 0, () => {
+        sb.write_char(']')
+        More(k)
+      })
     }
     Object(m) => {
       let keys = m.keys().collect()
       keys.sort_by(byte_order)
       sb.write_char('{')
-      for i, key in keys {
-        if i > 0 {
-          sb.write_char(',')
-        }
-        write_json_string(sb, key)
-        sb.write_char(':')
-        write_canonical(sb, m.get(key).unwrap())
-      }
-      sb.write_char('}')
+      write_fields(sb, m, keys[:], 0, () => {
+        sb.write_char('}')
+        More(k)
+      })
     }
+  }
+}
+
+///|
+fn write_items(
+  sb : StringBuilder,
+  items : ArrayView[Json],
+  i : Int32,
+  k : () -> Step[Unit],
+) -> Step[Unit] {
+  if i == items.length() {
+    More(k)
+  } else {
+    if i > 0 {
+      sb.write_char(',')
+    }
+    More(() => {
+      write_canonical(sb, items[i], () => write_items(sb, items, i + 1, k))
+    })
+  }
+}
+
+///|
+fn write_fields(
+  sb : StringBuilder,
+  m : Map[String, Json],
+  keys : ArrayView[String],
+  i : Int32,
+  k : () -> Step[Unit],
+) -> Step[Unit] {
+  if i == keys.length() {
+    More(k)
+  } else {
+    if i > 0 {
+      sb.write_char(',')
+    }
+    write_json_string(sb, keys[i])
+    sb.write_char(':')
+    More(() => {
+      write_canonical(sb, m.get(keys[i]).unwrap(), () => {
+        write_fields(sb, m, keys, i + 1, k)
+      })
+    })
   }
 }
 
