@@ -1,0 +1,18 @@
+import {
+  "moonbitlang/core/builtin",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x/fs",
+  "moonbit-community/toml",
+  "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/fuel",
+}
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/debug",
+  "moonbitlang/x/fs",
+  "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/fuel",
+  "moonbitlang/core/quickcheck",
+} for "test"

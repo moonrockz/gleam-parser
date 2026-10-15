@@ -13,7 +13,7 @@ fn SourceTextWorld::new() -> SourceTextWorld {
 ///|
 /// Gherkin gives `\n` and `\r` as two characters each; make them real.
 fn unescape(s : String) -> String {
-  s.replace(old="\\r", new="\r").replace(old="\\n", new="\n")
+  s.replace_all(old="\\r", new="\r").replace_all(old="\\n", new="\n")
 }
 
 ///|

@@ -1,0 +1,213 @@
+///|
+/// The variables a configuration reads: the process environment, or a
+/// map (for tests and for callers that bring their own).
+pub struct Environment((String) -> String?)
+
+///|
+/// The process environment (`@env.get_env_var`), on every target.
+pub fn Environment::system() -> Environment {
+  Environment(name => @env.get_env_var(name))
+}
+
+///|
+/// A fixed set of variables.
+pub fn Environment::of(vars : Map[String, String]) -> Environment {
+  Environment(name => vars.get(name))
+}
+
+///|
+pub fn Environment::get(self : Environment, name : String) -> String? {
+  (self.0)(name)
+}
+
+///|
+/// The keys a configuration knows: the single source of their TOML and
+/// environment names and of their value parsers, so a value means the
+/// same thing from both sources.
+priv enum Key {
+  Gleam
+  Fuel
+}
+
+///|
+fn Key::all() -> Array[Key] {
+  [Gleam, Fuel]
+}
+
+///|
+fn Key::env_name(self : Key) -> String {
+  match self {
+    Gleam => "GLEAM_PARSER_GLEAM"
+    Fuel => "GLEAM_PARSER_FUEL"
+  }
+}
+
+///|
+fn Key::of_toml(name : String) -> Key? {
+  match name {
+    "gleam" => Some(Gleam)
+    "fuel" => Some(Fuel)
+    _ => None
+  }
+}
+
+///|
+fn[T] bad(source : Source, message : String) -> T raise ConfigError {
+  raise ConfigError(source~, message~)
+}
+
+///|
+fn parse_gleam(
+  text : String,
+  source : Source,
+) -> @dialect.Dialect raise ConfigError {
+  match @dialect.Dialect::from_version(text) {
+    Some(d) => d
+    None =>
+      bad(
+        source,
+        "unknown Gleam version \"\{text}\"; known: \{@dialect.Dialect::known_versions().join(", ")}",
+      )
+  }
+}
+
+///|
+fn parse_fuel(units : Int64, source : Source) -> @fuel.Budget raise ConfigError {
+  if units > 2147483647L {
+    bad(source, "must be at most 2147483647")
+  }
+  match @fuel.Budget::new(units.to_int()) {
+    Some(b) => b
+    None => bad(source, "must be at least 1")
+  }
+}
+
+///|
+/// "an integer", "a string": the TOML type name with its article.
+fn article(type_name : String) -> String {
+  match type_name {
+    "integer" | "array" => "an \{type_name}"
+    _ => "a \{type_name}"
+  }
+}
+
+///|
+/// The `[parser]` table of a `gleam-parser.toml` text: `gleam = "1.19"`,
+/// `fuel = 100`. Every key is optional. A syntax error, an unknown table
+/// or key, a value of the wrong type, a `fuel` below 1 or an unknown Gleam
+/// version is a `ConfigError` that names its source.
+///
+/// ```mbt check
+/// test {
+///   let p = @config.Config::from_toml("[parser]\nfuel = 550\n")
+///   debug_inspect(p.fuel.map(b => b.units()), content="Some(550)")
+///   inspect(p.dialect is None, content="true")
+/// }
+/// ```
+pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
+  let root = @toml.parse(text) catch { e => bad(TomlSyntax, "\{e}") }
+  let tables = match root {
+    TomlTable(m) => m
+    other =>
+      bad(TomlSyntax, "expected a table, found \{article(other.type_name())}")
+  }
+  let mut partial = Partial::empty()
+  for name, value in tables {
+    if name != "parser" {
+      bad(TomlKey(name), "unknown table")
+    }
+    let parser = match value {
+      TomlTable(m) => m
+      other =>
+        bad(
+          TomlKey(name),
+          "expected a table, found \{article(other.type_name())}",
+        )
+    }
+    for key_name, v in parser {
+      let source = TomlKey("parser.\{key_name}")
+      match Key::of_toml(key_name) {
+        None => bad(source, "unknown key")
+        Some(Gleam) =>
+          match v {
+            TomlString(s) =>
+              partial = { ..partial, dialect: Some(parse_gleam(s, source)), }
+            other =>
+              bad(
+                source,
+                "expected a string, found \{article(other.type_name())}",
+              )
+          }
+        Some(Fuel) =>
+          match v {
+            TomlInteger(n) =>
+              partial = { ..partial, fuel: Some(parse_fuel(n, source)), }
+            other =>
+              bad(
+                source,
+                "expected an integer, found \{article(other.type_name())}",
+              )
+          }
+      }
+    }
+  }
+  partial
+}
+
+///|
+/// `GLEAM_PARSER_GLEAM` and `GLEAM_PARSER_FUEL` from `env`. An unset
+/// variable leaves the field unset; an empty or bad value is a
+/// `ConfigError` that names the variable.
+pub fn Config::from_env(env : Environment) -> Partial raise ConfigError {
+  let mut partial = Partial::empty()
+  for key in Key::all() {
+    let name = key.env_name()
+    let source = EnvVar(name)
+    match env.get(name) {
+      None => ()
+      Some("") => bad(source, "empty value")
+      Some(text) =>
+        match key {
+          Gleam =>
+            partial = { ..partial, dialect: Some(parse_gleam(text, source)), }
+          Fuel => {
+            let n = @string.parse_int64(text) catch {
+              _ => bad(source, "expected an integer, found \"\{text}\"")
+            }
+            partial = { ..partial, fuel: Some(parse_fuel(n, source)), }
+          }
+        }
+    }
+  }
+  partial
+}
+
+///|
+/// The configuration from the environment over the TOML file over the
+/// defaults. `path` is `gleam-parser.toml` by default; a missing file
+/// contributes nothing, a file that cannot be read is a `ConfigError`
+/// with `File(path)`. The only function of this package with I/O.
+///
+/// ```mbt nocheck
+/// let config = @gleam.Config::load()
+///
+/// let r = @gleam.parse_text(text, config~)
+/// ```
+pub fn Config::load(
+  path~ : String = "gleam-parser.toml",
+  env? : Environment,
+) -> Config raise ConfigError {
+  let env = match env {
+    Some(e) => e
+    None => Environment::system()
+  }
+  let file = if @fs.path_exists(path) {
+    let text = @fs.read_file_to_string(path) catch {
+      _ => bad(File(path), "cannot read the file")
+    }
+    Config::from_toml(text)
+  } else {
+    Partial::empty()
+  }
+  Config::from_env(env).with_fallback(file).to_config(Config::default())
+}
