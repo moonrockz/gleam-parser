@@ -14,10 +14,11 @@ byte equality of this text.
 - Numbers are integers (byte offsets, indices, `unit` values). A `u64`
   (`tuple_index.index`, a guard's `index`) is written with its exact digits;
   `decode_*` reads the digits, so values above 2^53 keep their precision.
-- The decoder reads at most `@ast.max_depth` (150) nested JSON levels and
-  raises `DecodeError` ("nesting deeper than 150 levels") past that, so deep
-  input is an error, not a stack overflow (wasm has a small stack). The
-  parser keeps the ASTs it builds within this depth.
+- The codec does not recurse: `encode_*`, `decode_*` and `canonical` run on
+  a step trampoline, so a value of any depth is handled on every target.
+  The AST's derived `Eq` and `Debug` still recurse, and `@json.parse` has
+  its own nesting limit (`max_nesting_depth`, default 1024) and recursion;
+  neither is a limit of the codec.
 
 ## Value shapes
 
