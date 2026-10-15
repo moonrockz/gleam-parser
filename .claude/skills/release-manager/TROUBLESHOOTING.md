@@ -16,9 +16,18 @@ Cause: `prepare` switches to `origin/main` and needs a clean tree.
 Fix: commit the work on its branch, or set it aside with a WIP commit.
 
 **`git-cliff could not compute the next version`**
-Cause: git-cliff is not on the PATH (it comes from `.mise.toml`).
+Cause: git-cliff is not on the PATH (it comes from `.mise.toml`), or it
+failed on a repository that has release tags.
 Fix: `mise install`, then run the task through mise (`mise run release:prepare`).
 History: before #32 this fell back to `v0.1.0` without an error.
+
+**`Next version (0.1.0) does not match the tag pattern ^v[0-9]+...`**
+(from git-cliff, after `No releases found, using 0.1.0 as the next version`)
+Cause: the repository has no release tag yet; git-cliff's fallback has no
+`v` prefix and fails its own tag pattern.
+Fix: none needed since gleam-parser-k3m: `prepare` uses `v0.1.0` when
+`git tag --list 'v*'` is empty. On an older script, pass the version:
+`mise run release:prepare 0.1.0`.
 
 **`version X is not above the current version Y`**
 Cause: no commit since the last tag changes the version (for example only

@@ -15,6 +15,23 @@ Feature: Release tooling
       | 0    |          | v0.1.0  |
       | 127  |          | v0.1.0  |
 
+  Scenario Outline: Choose the next version for prepare
+    A repository with no release tag makes git-cliff fail ("No releases
+    found, using 0.1.0" then "does not match the tag pattern"); the first
+    release is then v0.1.0. With tags, a git-cliff failure is an error.
+
+    Given git-cliff exits with <code> and prints "<stdout>"
+    And the repository has <tags> release tags
+    Then the prepare version is "<version>"
+
+    Examples:
+      | code | stdout | tags | version                                                                                              |
+      | 0    | v0.2.0 | some | v0.2.0                                                                                               |
+      | 0    | 0.2.0  | some | 0.2.0                                                                                                |
+      | 1    |        | no   | v0.1.0                                                                                               |
+      | 1    |        | some | git-cliff could not compute the next version; run `mise run release:prepare` so mise provides git-cliff |
+      | 0    |        | some | git-cliff could not compute the next version; run `mise run release:prepare` so mise provides git-cliff |
+
   Scenario Outline: Read a version
     When I read the version "<text>"
     Then the version is "<version>"
