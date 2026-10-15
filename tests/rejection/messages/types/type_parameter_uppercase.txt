@@ -1,0 +1,9 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:14
+  │
+1 │ pub type Box(T) {
+  │              ^ I was not expecting this
+
+Found a name, expected one of: 
+- `)`
+- a name

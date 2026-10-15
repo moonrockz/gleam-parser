@@ -1,0 +1,6 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:15
+  │
+1 │ const x = 0b102
+  │               ^ This digit is too big for the specified radix
+

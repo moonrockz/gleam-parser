@@ -31,6 +31,10 @@ Done:
 - **Dialect** (`Dialect::gleam_1_19()`): what the parser accepts.
 - **Report** (`render_plain`, `render_terminal`, `encode_diagnostics`): the
   compiler's diagnostic layout, with colours, or as JSON.
+- **Parity**: on a pinned corpus of 25 published packages (233 files), all
+  233 files give the compiler's AST byte for byte (`mise run test:parity`);
+  44 rejection fixtures check the accept and reject verdicts and the first
+  error against the compiler (`mise run test:rejection`).
 
 ```moonbit
 test {
@@ -63,4 +67,6 @@ import {
 
 - `mise run check`: info, lint, format and all tests.
 - `mise run test:targets`: the library on wasm, wasm-gc, js and native.
+- `mise run test:parity` and `mise run test:rejection`: parity with the Gleam
+  compiler on the corpus and on the rejection fixtures (see `AGENTS.md`).
 - See `AGENTS.md` for conventions and `docs/cookbook/` for tested examples.

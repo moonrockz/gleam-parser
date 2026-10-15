@@ -1,0 +1,8 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:20
+  │
+1 │ pub fn f(g: fn(Int)) {
+  │                    ^ I was not expecting this
+
+Found `)`, expected one of: 
+- `->`

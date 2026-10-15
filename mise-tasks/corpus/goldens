@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Regenerate the oracle goldens for the corpus and tests/corpus/goldens.lock (needs cargo; local only)"
+#MISE depends=["corpus:fetch", "oracle:build"]
+set -euo pipefail
+
+moon run -q --target wasm scripts/goldens.mbtx -- tests/corpus/manifest.json .corpus tools/gleam-ast-oracle/target/release/gleam-ast-oracle .dev/out/goldens/raw
+GLEAM_PARITY_MODE=write-lock moon test tests/parity --target js

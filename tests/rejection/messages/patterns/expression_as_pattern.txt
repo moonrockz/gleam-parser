@@ -1,0 +1,10 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:3:7
+  │
+3 │     1 + 2 -> 3
+  │       ^ I was not expecting this
+
+Found `+`, expected one of: 
+- `->`
+
+Hint: Did you mean to wrap a multi line clause in curly braces?

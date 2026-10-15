@@ -1,0 +1,6 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:12
+  │
+1 │ const x = 0x
+  │            ^ This integer has no value
+

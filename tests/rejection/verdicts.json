@@ -1,0 +1,458 @@
+{
+  "accepted/basic.gleam": {
+    "sha256": "7c2e0997f3c79c594ef9bf7fcab49621d22d80abc580962979fa1de247ffe4f1",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "accepted/constructor_pattern_in_let.gleam": {
+    "sha256": "15be0e46cd08652ee4b626c693772985d9bb4a6832daf481e352d7d31465d958",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "accepted/crlf.gleam": {
+    "sha256": "58ad292aed66791c5a3f757b262d1fca8d5cce7784e108eef59ceb20f23003c2",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "accepted/deep_nesting_ok.gleam": {
+    "sha256": "14bfd2ffa63f38092095810a9058b03926f44037257093675c581a0c2647ec96",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "accepted/deprecated_syntax.gleam": {
+    "sha256": "473f21bb1e71cf1dd04b78170dafd7fc5a0eb8d0c45dd487e8e4cdc8fa515390",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "accepted/detached_doc_comment.gleam": {
+    "sha256": "4992a187915b265780ee01b05d6e5d053b071edf0574270f84563141be541c14",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "accepted/every_definition.gleam": {
+    "sha256": "601f737a4854bf1bd14b26174f5f2c996b194d4852d69f5dd53cae0622ef71d2",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "accepted/tabs.gleam": {
+    "sha256": "1ad5a590b0a0e3753ad7f2b92548dd5c408aa610d498d9a557f259fc5192b4e5",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "bit_arrays/not_closed.gleam": {
+    "sha256": "7066af456f5dbeacb14264b097770c70f895b569b6734877c432c2b6aadd36ed",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 23,
+        "start": 22
+      }
+    }
+  },
+  "bit_arrays/unknown_option.gleam": {
+    "sha256": "2531dc6daf30d9e82499429b58f7279ce49babfea09f42308ee9f18fdb203fad",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "InvalidBitArraySegment",
+      "lexical_kind": null,
+      "location": {
+        "end": 25,
+        "start": 19
+      }
+    }
+  },
+  "definitions/const_no_value.gleam": {
+    "sha256": "871d01e8ab1842b51b00a238f9873334b0424c143de18aaf1d6e638318f95e6b",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "NoValueAfterEqual",
+      "lexical_kind": null,
+      "location": {
+        "end": 9,
+        "start": 8
+      }
+    }
+  },
+  "definitions/deprecated_without_message.gleam": {
+    "sha256": "e247ee68e1f8f3687869c45bf2992968d1dc92ce772833a00e92537c00c26780",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "ExpectedDeprecationMessage",
+      "lexical_kind": null,
+      "location": {
+        "end": 11,
+        "start": 0
+      }
+    }
+  },
+  "definitions/external_unknown_target.gleam": {
+    "sha256": "5589b43db9e7a05f1e68fa8ca2cdb40ea71da11b1a42e19bc86167f442ad9a07",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnknownTarget",
+      "lexical_kind": null,
+      "location": {
+        "end": 9,
+        "start": 0
+      }
+    }
+  },
+  "definitions/fn_no_body.gleam": {
+    "sha256": "1d59e5829d95a875655a9521586e2c52e37742752556d966225cead77705d8aa",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "definitions/stray_token_at_top_level.gleam": {
+    "sha256": "d6e0360644c8c103c6b4ac99a66c62241ecb627ee2dfc164a08450e701fec9f4",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 20,
+        "start": 19
+      }
+    }
+  },
+  "definitions/type_lowercase_name.gleam": {
+    "sha256": "d63536e4661d288202283cf2b62eeeb62e1282823885be2f962bd4468bac737a",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "IncorrectUpName",
+      "lexical_kind": null,
+      "location": {
+        "end": 14,
+        "start": 9
+      }
+    }
+  },
+  "definitions/unknown_attribute.gleam": {
+    "sha256": "bd761b985a47b9bb5e064104db39362c3fc96a25a328969d29515f874453b7ad",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnknownAttribute",
+      "lexical_kind": null,
+      "location": {
+        "end": 7,
+        "start": 0
+      }
+    }
+  },
+  "definitions/unknown_target.gleam": {
+    "sha256": "61ec81a551e054c19baff7fed960a5ed68236637a5c548e7a9ce2a1c0f1fede4",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnknownTarget",
+      "lexical_kind": null,
+      "location": {
+        "end": 12,
+        "start": 8
+      }
+    }
+  },
+  "expressions/block_ends_with_let.gleam": {
+    "sha256": "b61ec219e615fc8161db2993c302c3e7f40858f329ac1d0591b75911cbad491e",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "expressions/call_not_closed.gleam": {
+    "sha256": "5a05c455c73a09634106daa0af8a10f3ba19f78a08d45dc7d54d2e342ff0a8ae",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 23,
+        "start": 22
+      }
+    }
+  },
+  "expressions/case_without_clauses.gleam": {
+    "sha256": "0d50776e82179acd4b530ceebc6197a8d88352b93b50e4cdadf0d7faf7fb48a2",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "expressions/case_without_subject.gleam": {
+    "sha256": "408a5776be402b1655203cc5d8979230fb055cdb01324a98bbb29dd0c799406a",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 27,
+        "start": 26
+      }
+    }
+  },
+  "expressions/double_pipe.gleam": {
+    "sha256": "c2a26b3a13fb3edf863dff8273e10ebfb38a9832591d4b9f67fd6142ff06110a",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "OpNakedRight",
+      "lexical_kind": null,
+      "location": {
+        "end": 20,
+        "start": 18
+      }
+    }
+  },
+  "expressions/operator_without_left_side.gleam": {
+    "sha256": "b672c90b2cb2ecd19556bcee58d1b6cf8f88b56c1aa42a60bf53fefb82f3463e",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 16,
+        "start": 15
+      }
+    }
+  },
+  "expressions/operator_without_right_side.gleam": {
+    "sha256": "3ab84e5a3db22505c93ad5b2bf53b0b3065bab9800407bae3ea24c1af5425ee1",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "OpNakedRight",
+      "lexical_kind": null,
+      "location": {
+        "end": 18,
+        "start": 17
+      }
+    }
+  },
+  "expressions/use_without_callback.gleam": {
+    "sha256": "e3ba9c668bc90f8da6564eeb2f3ade4f1e8f1f7218a58bee874a58705c0b9674",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 23,
+        "start": 22
+      }
+    }
+  },
+  "imports/dotted_module.gleam": {
+    "sha256": "75f27be889b42a248dbbf0bf2819028b144b55a8789ea9a8163604dede28b961",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "IncorrectImportModuleSeparator",
+      "lexical_kind": null,
+      "location": {
+        "end": 13,
+        "start": 12
+      }
+    }
+  },
+  "imports/trailing_slash.gleam": {
+    "sha256": "a10dbbfe30fc327d8637fc5591d4ce6267979b6c4918d125481e8435aa8dbcdb",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedEof",
+      "lexical_kind": null,
+      "location": {
+        "end": 0,
+        "start": 0
+      }
+    }
+  },
+  "imports/uppercase_alias.gleam": {
+    "sha256": "8781c8578971f3a20525139ed06dc6fd1f2c7f4e625b224f3304ae7deb0da699",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "IncorrectName",
+      "lexical_kind": null,
+      "location": {
+        "end": 21,
+        "start": 19
+      }
+    }
+  },
+  "literals/digit_out_of_radix.gleam": {
+    "sha256": "967bcf4182cf2658de7f0d6703a5dc98935a908ccdd0cdd3d98d61ae246d180e",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "LexError",
+      "lexical_kind": "DigitOutOfRadix",
+      "location": {
+        "end": 14,
+        "start": 14
+      }
+    }
+  },
+  "literals/radix_without_digits.gleam": {
+    "sha256": "dab5c5c7f5ef78365c9d3f828cecd51c73a81affa9f2306ea59194ce48add3e0",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "LexError",
+      "lexical_kind": "RadixIntNoValue",
+      "location": {
+        "end": 11,
+        "start": 11
+      }
+    }
+  },
+  "literals/trailing_underscore.gleam": {
+    "sha256": "75adc3f6aefdecc63154a80ae9ef4aa901fe112f61331fea55148f1b984b2db4",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "LexError",
+      "lexical_kind": "NumTrailingUnderscore",
+      "location": {
+        "end": 15,
+        "start": 15
+      }
+    }
+  },
+  "names/reserved_word_as_variable.gleam": {
+    "sha256": "fca7a85e20adb39b51ab96e125ff6b2629a4b0be801c7e75fbaa139d23e76051",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 23,
+        "start": 19
+      }
+    }
+  },
+  "nesting/too_deep.gleam": {
+    "sha256": "f218abc346def1bdb822a4acc680984281fe1d4514a57adaad373a06209cc12e",
+    "gleam-1.19.2": {
+      "accepted": true
+    }
+  },
+  "patterns/concat_variable_left.gleam": {
+    "sha256": "50bd4b9eae2221c8f0947fbd59587945c01ddb852df87554889b6ce16987345a",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "ConcatPatternVariableLeftHandSide",
+      "lexical_kind": null,
+      "location": {
+        "end": 33,
+        "start": 29
+      }
+    }
+  },
+  "patterns/expression_as_pattern.gleam": {
+    "sha256": "7e1ed0641b4130ac14d1ab688ad49dfd0f48cfc2e387f9d1f86a821b28f6a0e3",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 32,
+        "start": 31
+      }
+    }
+  },
+  "patterns/spread_not_last.gleam": {
+    "sha256": "d36d4155b33e21a47c159c8fa2b7ae7449f76e9933f9684fd6e5513ac93bee5b",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "ListPatternSpreadFollowedByElements",
+      "lexical_kind": null,
+      "location": {
+        "end": 38,
+        "start": 32
+      }
+    }
+  },
+  "strings/bad_escape.gleam": {
+    "sha256": "4dbfdaaf7cc9ab22600763d606c05785c8baf12144f163196e705bcf61d8c3e2",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "LexError",
+      "lexical_kind": "BadStringEscape",
+      "location": {
+        "end": 12,
+        "start": 11
+      }
+    }
+  },
+  "strings/bad_unicode_escape.gleam": {
+    "sha256": "7561c0df43c982b3092b3f402edde1c801280d71dc5d1836302031801aae25b0",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "LexError",
+      "lexical_kind": "InvalidUnicodeEscape.InvalidCodepoint",
+      "location": {
+        "end": 21,
+        "start": 11
+      }
+    }
+  },
+  "strings/unterminated.gleam": {
+    "sha256": "3441ec3d56cb1fe075082498dfa36ae3e2c8f5d72ecada0e6cdc66a21d2abc51",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "LexError",
+      "lexical_kind": "UnexpectedStringEnd",
+      "location": {
+        "end": 10,
+        "start": 10
+      }
+    }
+  },
+  "types/alias_without_type.gleam": {
+    "sha256": "7b71f461e71c56b05c286daa4b94d77e4ce12ee23d43104408cc2c057c8e03a0",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "ExpectedType",
+      "lexical_kind": null,
+      "location": {
+        "end": 16,
+        "start": 15
+      }
+    }
+  },
+  "types/fn_type_without_return.gleam": {
+    "sha256": "77b01fa2d749d74be268ffd2b09760e3d33ed33c402ab7e1e4d34bdd326d342e",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 20,
+        "start": 19
+      }
+    }
+  },
+  "types/tuple_type_not_closed.gleam": {
+    "sha256": "7112c322224c91726e15b2a9e796bb589a2cc3cee30b7d08a1d9add9678fa5df",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 28,
+        "start": 27
+      }
+    }
+  },
+  "types/type_parameter_uppercase.gleam": {
+    "sha256": "af41913e5fc8670babb1a20c0478299c7db28a8c78b3090990f1f3a6edacd946",
+    "gleam-1.19.2": {
+      "accepted": false,
+      "kind": "UnexpectedToken",
+      "lexical_kind": null,
+      "location": {
+        "end": 14,
+        "start": 13
+      }
+    }
+  }
+}

@@ -1,0 +1,592 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/x@0.5.5/sys",
+  "moonbitlang/x@0.5.5/crypto",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/hex",
+  "moonrockz/moonspec@0.11.0",
+  "moonrockz/expect@0.6.1",
+}
+
+///|
+/// Gleam parity corpus: build the manifest, fetch and verify pinned packages.
+///
+/// Usage:
+///   corpus.mbtx manifest <packages.txt> <gleam_version.txt> <manifest.json>
+///   corpus.mbtx fetch <manifest.json> <corpus-dir>
+///
+/// `packages.txt` lists Hex packages as `name@version`, with an optional
+/// `github.com/owner/repo#tag` when Hex has no GitHub link or the tag is not
+/// `v<version>`. The zipball is the GitHub archive of the tag; the manifest
+/// pins its SHA-1 and the SHA-256 of every `.gleam` file under `src/` and
+/// `test/`.
+
+///|
+let usage : String = "Usage: corpus.mbtx manifest <packages.txt> <gleam_version.txt> <manifest.json> | fetch <manifest.json> <corpus-dir>"
+
+///|
+let user_agent : String = "gleam-parser-corpus (https://github.com/moonrockz/gleam-parser)"
+
+///|
+/// A package to pin, with an optional repository override.
+struct Pkg {
+  name : String
+  version : String
+  /// `https://github.com/owner/repo`, when given in packages.txt.
+  repository : String?
+  /// The tag, when given in packages.txt.
+  tag : String?
+} derive(Eq, Debug)
+
+///|
+struct PackageEntry {
+  pkg : Pkg
+  repository : String
+  tag : String
+  zipball : String
+  zip_sha1 : String
+  files : Array[(String, String)]
+} derive(Eq, Debug)
+
+///|
+fn Pkg::coordinate(self : Pkg) -> String {
+  "\{self.name}@\{self.version}"
+}
+
+///|
+fn Pkg::describe(self : Pkg) -> String {
+  match (self.repository, self.tag) {
+    (Some(repo), Some(tag)) => {
+      let short = repo.replace(old="https://", new="")
+      "\{self.coordinate()} (\{short}#\{tag})"
+    }
+    _ => self.coordinate()
+  }
+}
+
+///|
+/// Parse `name@version [github.com/owner/repo#tag]` lines; blank lines and
+/// `#` comments are ignored.
+fn parse_packages(text : String) -> Result[Array[Pkg], String] {
+  let pkgs = []
+  for raw in text.split("\n") {
+    let line = raw.trim().to_owned()
+    if line == "" || line.has_prefix("#") {
+      continue
+    }
+    match parse_package_line(line) {
+      Some(pkg) => pkgs.push(pkg)
+      None =>
+        return Err(
+          "invalid package line: \{line} (expected name@version [github.com/owner/repo#tag])",
+        )
+    }
+  }
+  Ok(pkgs)
+}
+
+///|
+fn parse_package_line(line : String) -> Pkg? {
+  let words = line
+    .split(" ")
+    .filter(w => w != "")
+    .map(w => w.to_owned())
+    .collect()
+  guard words is [coordinate, .. rest] else { return None }
+  guard coordinate.split_once("@") is Some((name, version)) &&
+    name != "" &&
+    version != "" else {
+    return None
+  }
+  match rest {
+    [] =>
+      Some({
+        name: name.to_owned(),
+        version: version.to_owned(),
+        repository: None,
+        tag: None,
+      })
+    [source] => {
+      guard source.has_prefix("github.com/") &&
+        source.split_once("#") is Some((path, tag)) &&
+        tag != "" &&
+        path.split("/").count() == 3 else {
+        return None
+      }
+      Some({
+        name: name.to_owned(),
+        version: version.to_owned(),
+        repository: Some("https://\{path}"),
+        tag: Some(tag.to_owned()),
+      })
+    }
+    _ => None
+  }
+}
+
+///|
+/// The GitHub repository URL in Hex package metadata (`meta.links`), without
+/// a trailing `/` or `.git`, or `None`.
+fn hex_repository(metadata : Json) -> String? {
+  guard metadata is Object(root) &&
+    root.get("meta") is Some(Object(meta)) &&
+    meta.get("links") is Some(Object(links)) else {
+    return None
+  }
+  for key in ["Repository", "GitHub", "Github"] {
+    if links.get(key) is Some(String(url)) &&
+      url.has_prefix("https://github.com/") {
+      return Some(normalize_repository(url))
+    }
+  }
+  None
+}
+
+///|
+fn normalize_repository(url : String) -> String {
+  let trimmed = url.trim_end(chars="/").to_owned()
+  if trimmed.has_suffix(".git") {
+    trimmed.view(end_offset=trimmed.length() - 4).to_owned()
+  } else {
+    trimmed
+  }
+}
+
+///|
+/// The repository and tag of a package: its override, or the Hex link with
+/// tag `v<version>`.
+fn repository_link(
+  pkg : Pkg,
+  metadata : Json,
+) -> Result[(String, String), String] {
+  match (pkg.repository, pkg.tag) {
+    (Some(repo), Some(tag)) => Ok((repo, tag))
+    _ =>
+      match hex_repository(metadata) {
+        Some(repo) => Ok((repo, "v\{pkg.version}"))
+        None =>
+          Err(
+            "\{pkg.coordinate()}: no GitHub repository in the Hex metadata; add github.com/owner/repo#tag to packages.txt",
+          )
+      }
+  }
+}
+
+///|
+/// The message for a zipball that does not download: the usual cause is a
+/// tag that is not `v<version>`, which packages.txt can override.
+fn download_failure_message(pkg : Pkg, zipball : String) -> String {
+  "\{pkg.coordinate()}: cannot download \{zipball}; if the tag is not v\{pkg.version}, add github.com/owner/repo#tag to packages.txt"
+}
+
+///|
+fn zipball_url(repository : String, tag : String) -> String {
+  "\{repository}/archive/refs/tags/\{tag}.zip"
+}
+
+///|
+/// Lowercase hex encoding of a digest.
+fn hex(digest : FixedArray[Byte]) -> String {
+  @hex.encode(Bytes::from_array(digest))
+}
+
+///|
+fn package_dir(corpus : String, pkg : Pkg) -> String {
+  "\{corpus}/\{pkg.coordinate()}"
+}
+
+///|
+fn manifest_json(gleam_version : String, entries : Array[PackageEntry]) -> Json {
+  let pkgs = entries.map(e => {
+    let files = e.files.map(f => {
+      let (path, sha256) = f
+      let file : Json = { "path": Json(path), "sha256": Json(sha256) }
+      file
+    })
+    let entry : Json = {
+      "name": Json(e.pkg.name),
+      "version": Json(e.pkg.version),
+      "repository": Json(e.repository),
+      "tag": Json(e.tag),
+      "zipball": Json(e.zipball),
+      "sha1": Json(e.zip_sha1),
+      "files": Json::array(files),
+    }
+    entry
+  })
+  { "gleam": Json(gleam_version), "packages": Json::array(pkgs) }
+}
+
+///|
+fn parse_manifest(json : Json) -> (String, Array[PackageEntry]) raise {
+  guard json is Object(root) &&
+    root.get("gleam") is Some(String(gleam_version)) &&
+    root.get("packages") is Some(Array(items)) else {
+    fail("manifest: missing gleam version or packages array")
+  }
+  let entries = items.map(item => {
+    guard item is Object(p) &&
+      p.get("name") is Some(String(name)) &&
+      p.get("version") is Some(String(version)) &&
+      p.get("repository") is Some(String(repository)) &&
+      p.get("tag") is Some(String(tag)) &&
+      p.get("zipball") is Some(String(zipball)) &&
+      p.get("sha1") is Some(String(sha1)) &&
+      p.get("files") is Some(Array(files)) else {
+      fail("manifest: malformed package entry")
+    }
+    let files = files.map(f => {
+      guard f is Object(fo) &&
+        fo.get("path") is Some(String(path)) &&
+        fo.get("sha256") is Some(String(sha)) else {
+        fail("manifest: malformed file entry in \{name}")
+      }
+      (path, sha)
+    })
+    {
+      pkg: { name, version, repository: None, tag: None, },
+      repository,
+      tag,
+      zipball,
+      zip_sha1: sha1,
+      files,
+    }
+  })
+  (gleam_version, entries)
+}
+
+///|
+async fn run_or_exit(cmd : String, args : Array[String]) -> Unit {
+  let code = @process.run(cmd, args)
+  if code != 0 {
+    eprintln("\{cmd} failed with exit code \{code}")
+    @sys.exit(code)
+  }
+}
+
+///|
+/// Recursively list `.gleam` files under `dir`, as paths relative to `dir`,
+/// sorted. An absent `dir` gives an empty list.
+async fn gleam_files(dir : String) -> Array[String] {
+  let found = []
+  if !@fs.exists(dir) {
+    return found
+  }
+  async fn go(rel : String) -> Unit {
+    let full = if rel == "" { dir } else { "\{dir}/\{rel}" }
+    for entry in @fs.readdir(full, sort=true) {
+      let child = if rel == "" { entry } else { "\{rel}/\{entry}" }
+      match @fs.kind("\{dir}/\{child}") {
+        Directory => go(child)
+        Regular => if child.has_suffix(".gleam") { found.push(child) }
+        _ => ()
+      }
+    }
+  }
+  go("")
+  found
+}
+
+///|
+/// The corpus files of a package directory: `src/**/*.gleam` then
+/// `test/**/*.gleam`, each with its SHA-256.
+async fn package_files(dir : String) -> Array[(String, String)] {
+  let files = []
+  for top in ["src", "test"] {
+    for rel in gleam_files("\{dir}/\{top}") {
+      let path = "\{top}/\{rel}"
+      files.push(
+        (path, hex(@crypto.sha256(@fs.read_file("\{dir}/\{path}").binary()))),
+      )
+    }
+  }
+  files
+}
+
+///|
+/// Download and extract one package's `src/` and `test/` into
+/// `<corpus>/<name>@<version>/`.
+async fn download(corpus : String, entry : PackageEntry) -> Unit {
+  let zip = "\{corpus}/_zips/\{entry.pkg.coordinate()}.zip"
+  @fs.mkdir("\{corpus}/_zips", recursive=true, allow_exist=true)
+  if @process.run("curl", ["-fsSL", "-o", zip, entry.zipball]) != 0 {
+    eprintln(download_failure_message(entry.pkg, entry.zipball))
+    @sys.exit(1)
+  }
+  let sha1 = hex(@crypto.sha1(@fs.read_file(zip).binary()))
+  if entry.zip_sha1 != "" && sha1 != entry.zip_sha1 {
+    eprintln(
+      "\{entry.pkg.coordinate()}: zip sha1 \{sha1} != \{entry.zip_sha1}; run mise run corpus:manifest if the tag was re-archived",
+    )
+    @sys.exit(1)
+  }
+  let staging = "\{corpus}/_staging"
+  if @fs.exists(staging) {
+    @fs.rmdir(staging, recursive=true)
+  }
+  run_or_exit("unzip", ["-q", "-o", zip, "-d", staging])
+  guard @fs.readdir(staging) is [root] else {
+    eprintln("\{zip}: expected one root directory")
+    @sys.exit(1)
+    return
+  }
+  let target = package_dir(corpus, entry.pkg)
+  if @fs.exists(target) {
+    @fs.rmdir(target, recursive=true)
+  }
+  @fs.mkdir(target, recursive=true)
+  for top in ["src", "test"] {
+    if @fs.exists("\{staging}/\{root}/\{top}") {
+      @fs.rename("\{staging}/\{root}/\{top}", "\{target}/\{top}")
+    }
+  }
+  @fs.rmdir(staging, recursive=true)
+}
+
+///|
+/// The Hex metadata of a package (`https://hex.pm/api/packages/<name>`).
+async fn hex_metadata(pkg : Pkg) -> Json {
+  let url = "https://hex.pm/api/packages/\{pkg.name}"
+  let (code, out) = @process.collect_stdout("curl", [
+    "-fsSL",
+    "-H",
+    "User-Agent: \{user_agent}",
+    url,
+  ])
+  if code != 0 {
+    eprintln("cannot fetch \{url}")
+    @sys.exit(1)
+  }
+  out.json()
+}
+
+///|
+async fn build_manifest(
+  packages_file : String,
+  version_file : String,
+  manifest : String,
+) -> Unit {
+  let pkgs = match parse_packages(@fs.read_file(packages_file).text()) {
+    Ok(p) => p
+    Err(message) => {
+      eprintln(message)
+      @sys.exit(2)
+      return
+    }
+  }
+  let gleam_version = @fs.read_file(version_file).text().trim().to_owned()
+  let corpus = ".corpus"
+  let entries = []
+  for pkg in pkgs {
+    let metadata = if pkg.repository is Some(_) {
+      Json::null()
+    } else {
+      hex_metadata(pkg)
+    }
+    let (repository, tag) = match repository_link(pkg, metadata) {
+      Ok(link) => link
+      Err(message) => {
+        eprintln(message)
+        @sys.exit(1)
+        return
+      }
+    }
+    let zipball = zipball_url(repository, tag)
+    let entry = { pkg, repository, tag, zipball, zip_sha1: "", files: [], }
+    download(corpus, entry)
+    let zip_sha1 = hex(
+      @crypto.sha1(
+        @fs.read_file("\{corpus}/_zips/\{pkg.coordinate()}.zip").binary(),
+      ),
+    )
+    let files = package_files(package_dir(corpus, pkg))
+    if files.is_empty() {
+      eprintln("\{pkg.coordinate()}: no .gleam files under src/ or test/")
+      @sys.exit(1)
+    }
+    entries.push({ ..entry, zip_sha1, files, })
+    println("\{pkg.coordinate()}: \{files.length()} files (\{tag})")
+  }
+  @fs.write_file(
+    manifest,
+    manifest_json(gleam_version, entries).stringify(indent=2) + "\n",
+  )
+  let total = entries
+    .iter()
+    .map(e => e.files.length())
+    .fold(init=0, (a, b) => a + b)
+  println("manifest: \{entries.length()} packages, \{total} files")
+}
+
+///|
+async fn fetch(manifest : String, corpus : String) -> Unit {
+  let (_, entries) = parse_manifest(@fs.read_file(manifest).json())
+  let mut bad = 0
+  for entry in entries {
+    let dir = package_dir(corpus, entry.pkg)
+    let mut complete = true
+    for f in entry.files {
+      if !@fs.exists("\{dir}/\{f.0}") {
+        complete = false
+      }
+    }
+    if !complete {
+      download(corpus, entry)
+    }
+    for f in entry.files {
+      let (path, expected) = f
+      let full = "\{dir}/\{path}"
+      if !@fs.exists(full) {
+        eprintln("missing: \{full}")
+        bad += 1
+      } else if hex(@crypto.sha256(@fs.read_file(full).binary())) != expected {
+        eprintln("sha256 mismatch: \{full}")
+        bad += 1
+      }
+    }
+  }
+  if bad > 0 {
+    @sys.exit(1)
+  }
+  println("corpus ok: \{entries.length()} packages")
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["manifest", pkgs, version_file, manifest] =>
+      build_manifest(pkgs, version_file, manifest)
+    ["fetch", manifest, corpus] => fetch(manifest, corpus)
+    _ => {
+      eprintln(usage)
+      @sys.exit(2)
+    }
+  }
+}
+
+///|
+/// Scenario state for `features/corpus.feature`.
+struct CorpusWorld {
+  mut text : String
+  mut pkgs : Result[Array[Pkg], String]
+  mut metadata : Json
+  mut link : Result[(String, String), String]
+  mut entry : PackageEntry?
+  mut round_trip : Result[(String, Array[PackageEntry]), String]
+}
+
+///|
+fn CorpusWorld::new() -> CorpusWorld {
+  {
+    text: "",
+    pkgs: Ok([]),
+    metadata: Json::null(),
+    link: Err("not run"),
+    entry: None,
+    round_trip: Err("not run"),
+  }
+}
+
+///|
+impl @moonspec.World for CorpusWorld with fn configure(self, setup) {
+  setup.given1("the package list:", fn(doc : @moonspec.DocString) {
+    self.text = doc.content
+  })
+  setup.when0("I read the package list", fn() {
+    self.pkgs = parse_packages(self.text)
+  })
+  setup.then1("the packages are {string}", fn(expected : String) raise {
+    guard self.pkgs is Ok(pkgs) else {
+      fail("expected packages, got \{Repr(self.pkgs)}")
+    }
+    @expect.expect(pkgs.map(p => p.describe()).join(", ")).to_equal(expected)
+  })
+  setup.then1("reading fails with {string}", fn(message : String) raise {
+    @expect.expect(self.pkgs).to_equal(Err(message))
+  })
+  setup.given1("the Hex metadata {string}", fn(text : String) raise {
+    self.metadata = @json.parse(text)
+  })
+  setup.when1("I look for the repository of {string}", fn(line : String) raise {
+    guard parse_package_line(line) is Some(pkg) else {
+      fail("bad package line")
+    }
+    self.link = repository_link(pkg, self.metadata)
+  })
+  setup.then2("the repository is {string} with tag {string}", fn(
+    repository : String,
+    tag : String,
+  ) raise {
+    @expect.expect(self.link).to_equal(Ok((repository, tag)))
+  })
+  setup.then1("looking fails with {string}", fn(message : String) raise {
+    @expect.expect(self.link).to_equal(Err(message))
+  })
+  setup.then3(
+    "the download failure message for {string} at {string} is {string}",
+    fn(coordinate : String, zipball : String, expected : String) raise {
+      guard parse_package_line(coordinate) is Some(pkg) else {
+        fail("bad coordinate")
+      }
+      @expect.expect(download_failure_message(pkg, zipball)).to_equal(expected)
+    },
+  )
+  setup.then3("the zipball of {string} at {string} is {string}", fn(
+    repository : String,
+    tag : String,
+    expected : String,
+  ) raise {
+    @expect.expect(zipball_url(repository, tag)).to_equal(expected)
+  })
+  setup.given3(
+    "a manifest entry for {string} with file {string} hashed {string}",
+    fn(coordinate : String, path : String, sha : String) raise {
+      guard parse_package_line(coordinate) is Some(pkg) else {
+        fail("bad coordinate")
+      }
+      self.entry = Some({
+        pkg,
+        repository: "https://github.com/example/repo",
+        tag: "v\{pkg.version}",
+        zipball: "https://example.test/zip",
+        zip_sha1: "0",
+        files: [(path, sha)],
+      })
+    },
+  )
+  setup.when0("I write and read the manifest", fn() {
+    guard self.entry is Some(entry) else { return }
+    self.round_trip = try
+      parse_manifest(manifest_json("1.19.2", [entry]))
+    catch {
+      err => Err(err.to_string())
+    } noraise {
+      result => Ok(result)
+    }
+  })
+  setup.then0("the manifest entry is unchanged", fn() raise {
+    guard self.entry is Some(entry) else { fail("no entry") }
+    guard self.round_trip is Ok((_, entries)) else { fail("round trip failed") }
+    @expect.expect(entries).to_equal([entry])
+  })
+  setup.then1("the manifest names Gleam {string}", fn(version : String) raise {
+    guard self.round_trip is Ok((gleam, _)) else { fail("round trip failed") }
+    @expect.expect(gleam).to_equal(version)
+  })
+}
+
+///|
+async test "corpus feature" {
+  @moonspec.run_or_fail(
+    CorpusWorld::new,
+    @moonspec.RunOptions::new([
+      @moonspec.FeatureSource::File("features/corpus.feature"),
+    ]),
+  )
+  |> ignore
+}

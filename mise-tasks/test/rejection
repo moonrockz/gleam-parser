@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Check gleam-parser's verdicts and first errors against the recorded compiler verdicts"
+set -euo pipefail
+
+exec moon test tests/rejection --target js

@@ -1,0 +1,6 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:9
+  │
+1 │ const x =
+  │         ^ I was expecting to see a value after this equals sign
+

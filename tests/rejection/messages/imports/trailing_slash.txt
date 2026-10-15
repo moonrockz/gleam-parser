@@ -1,0 +1,6 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:14
+  │
+1 │ import gleam/
+  │              ^ The module ended unexpectedly
+

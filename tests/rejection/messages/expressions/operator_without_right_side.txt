@@ -1,0 +1,7 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:2:5
+  │
+2 │   1 +
+  │     ^ This operator has no value on its right side
+
+Hint: Remove it or put a value after it.

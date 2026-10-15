@@ -1,0 +1,12 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:2:7
+  │
+2 │   <<1:wibble>>
+  │       ^^^^^^ This is not a valid BitArray segment option
+
+See: https://tour.gleam.run/data-types/bit-arrays/
+
+Hint: Valid BitArray segment options are:
+bits, bytes, int, float, utf8, utf16, utf32, utf8_codepoint,
+utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native,
+size, unit.
