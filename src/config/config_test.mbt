@@ -256,3 +256,33 @@ test "load: environment over file over defaults; a missing file is no layer" {
   ).to_equal(Some(@config.Source::TomlSyntax))
   @fs.remove_file(path)
 }
+
+///|
+test "load names the file in a TOML error and keeps the read error's text" {
+  let path = "_build/gleam-parser-config-error-test.toml"
+  @fs.write_string_to_file(path, "[parser]\nwidth = 80\n")
+  let none = @config.Environment::of(Map([]))
+  let key_error = error_of(() => @config.Config::load(path~, env=none) |> ignore)
+  @fs.remove_file(path)
+  // A directory exists but cannot be read as a file.
+  let read_error = error_of(() => {
+    @config.Config::load(path="_build", env=none) |> ignore
+  })
+  @expect.expect_all(e => {
+    e
+    .expect(key_error)
+    .to_equal(
+      Some((@config.Source::TomlKey("parser.width"), "\{path}: unknown key")),
+    )
+    e
+    .expect(read_error.map(p => p.0))
+    .to_equal(Some(@config.Source::File("_build")))
+    e
+    .expect(
+      read_error.map(p => {
+        p.1.has_prefix("cannot read the file: ") && p.1.length() > 22
+      }),
+    )
+    .to_equal(Some(true))
+  })
+}
