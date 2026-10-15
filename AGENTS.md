@@ -91,14 +91,12 @@ same tag).
   comment between a doc comment and the definition detaches it (warning
   `GL-PARSE-003`); a doc comment inside a body is taken by the next
   definition; a trailing doc comment with no definition is ignored.
-- Two depth limits keep every target stack-safe, both `GL-PARSE-004`
+- One depth limit keeps every target stack-safe, `GL-PARSE-004`
   (`TooMuchNesting`): syntactic nesting stops at `@parser.max_nesting`
-  (100; wasm overflows at about 140 nested lists) while parsing, and a
-  definition whose JSON would be deeper than `@ast.max_depth`
-  (`@parser.json_depth(d) + @parser.definition_root_depth > 150`) is
-  reported and dropped. `src/parser/depth.mbt` mirrors
-  `src/ast/encode.mbt` step for step; the laws in
-  `src/parser/nesting_law_test.mbt` check the limit against the decoder.
+  (100; wasm overflows at about 140 nested lists) while parsing. The JSON
+  codec does not recurse (`src/ast/step.mbt`), so an AST the parser
+  accepts always encodes, decodes and canonicalises; the laws in
+  `src/parser/nesting_law_test.mbt` check the limit against the codec.
   The compiler has no such limit (known difference).
 - Snippet parsers for tests and tools: `parse_expression_text`,
   `parse_statements_text`, `parse_pattern_text`, `parse_type_text`,
@@ -120,10 +118,10 @@ moonrockz/gleam-parser
 │   ├── diagnostic/       # Severity, Label, Diagnostic, the code table
 │   ├── scanner/          # SourceText; lexer (port of lexer.rs); tokens, trivia, lexical diagnostics
 │   ├── lawkit/           # Property-test generators and helpers (public test support)
-│   ├── ast/              # Compiler-mirror AST; canonical JSON encode/decode; max_depth
+│   ├── ast/              # Compiler-mirror AST; canonical JSON encode/decode (step trampoline, no depth limit)
 │   ├── cst/              # ModuleCst, DefinitionCst (tokens per definition); trivia_extra
 │   ├── dialect/          # Dialect::gleam_1_19(): attributes, targets, deprecation rules
-│   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; depth
+│   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; nesting limit
 │   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
 │   └── syntax/ printer/  # v0.2, v0.3
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests
@@ -193,11 +191,12 @@ step when you add a code.
 - `decode_*` after `encode_*` gives an equal value; `encode` of a decoded
   fixture gives the fixture's bytes (`tests/features/ast_json.feature`).
 - The compiler's `u64` indexes are `UInt64` and are written with exact
-  digits. The codec recurses: the decoder stops with `DecodeError` past
-  `@ast.max_depth` (150) nested JSON levels, which keeps wasm from a stack
-  overflow; the parser must keep the ASTs it builds within that depth (a
-  deeper file is a `TOO MUCH NESTING` error, a known difference from the
-  compiler).
+  digits. The codec runs on a step trampoline (`src/ast/step.mbt`): a
+  node encoder or decoder takes a continuation and returns a step, `run`
+  loops, so no AST depth overflows the stack on any target and there is no
+  depth limit. Keep the four rules of `step.mbt` when you add a node. The
+  derived `Eq` and `Debug` of the AST still recurse. `@json.parse` has its
+  own nesting limit (`max_nesting_depth`) and recursion.
 - To change the schema: change `src/ast/encode.mbt`, `src/ast/decode.mbt`,
   `tools/gleam-ast-oracle/src/encode.rs` and `docs/ast-json.md` together,
   then `mise run fixtures:record` and commit the fixtures.

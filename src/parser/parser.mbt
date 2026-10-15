@@ -3,8 +3,7 @@
 /// `fn`, nested patterns, types and constants). Deeper text is a
 /// `GL-PARSE-004` error (`TooMuchNesting`), never a stack overflow, on
 /// every target: wasm overflows at about 140 nested lists, so the limit is
-/// 100. The JSON depth limit (`@ast.max_depth`) rejects most constructs
-/// before this one. The Gleam compiler has no such limit.
+/// 100. The Gleam compiler has no such limit.
 pub let max_nesting : Int32 = 100
 
 ///|

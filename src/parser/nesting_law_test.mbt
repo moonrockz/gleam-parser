@@ -33,7 +33,7 @@ test "law: every construct nested 20 deep parses and round-trips; 200 deep is on
 }
 
 ///|
-test "law: the deepest accepted nesting decodes, and one level more is rejected" {
+test "law: the deepest accepted nesting round-trips, and one level more is rejected" {
   @expect.expect_all(e => {
     for c in @lawkit.Construct::all() {
       let mut depth = 1
@@ -48,16 +48,6 @@ test "law: the deepest accepted nesting decodes, and one level more is rejected"
       let last_ok = @parser.parse_text(@lawkit.nested(c, depth - 1))
       e.expect((c, nesting_kinds(last_ok))).to_equal((c, []))
       e.expect((c, round_trips(last_ok))).to_equal((c, true))
-      let d = last_ok.module_.definitions[0].definition
-      e
-      .expect(
-        (
-          c,
-          @parser.definition_root_depth + @parser.json_depth(d) <=
-          @ast.max_depth,
-        ),
-      )
-      .to_equal((c, true))
       let rejected = @parser.parse_text(@lawkit.nested(c, depth))
       e
       .expect((c, nesting_kinds(rejected)))

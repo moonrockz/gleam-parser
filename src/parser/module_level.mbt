@@ -68,21 +68,9 @@ pub fn parse_module(
     match outcome {
       Ok(Some(targeted)) => {
         let tokens = p.tokens[start_index:p.index0]
-        if definition_too_deep(targeted.definition) {
-          report(
-            ParseError(
-              error=TooMuchNesting,
-              location=targeted.definition.location(),
-            ),
-          )
-          cst_definitions.push(
-            @cst.DefinitionCst::new(kind=Skipped, name=None, tokens~),
-          )
-        } else {
-          definitions.push(targeted)
-          let (kind, name) = cst_kind(targeted.definition)
-          cst_definitions.push(@cst.DefinitionCst::new(kind~, name~, tokens~))
-        }
+        definitions.push(targeted)
+        let (kind, name) = cst_kind(targeted.definition)
+        cst_definitions.push(@cst.DefinitionCst::new(kind~, name~, tokens~))
       }
       Ok(None) => {
         // Not a definition start: a stray token (reported as the compiler

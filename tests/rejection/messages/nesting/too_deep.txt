@@ -4,6 +4,6 @@ error: Syntax error
 2 │   [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
   │                                                                                                       ^ This is nested too deeply
 
-gleam-parser reads at most 100 nested levels of syntax, and a definition whose JSON would be deeper than 150 levels; the Gleam compiler has no such limit.
+gleam-parser reads at most 100 nested levels of syntax; the Gleam compiler has no such limit.
 
 Hint: Split the code into smaller functions or constants.

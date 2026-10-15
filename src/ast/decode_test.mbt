@@ -79,6 +79,10 @@ test "errors name the path and the problem" {
       "{\"kind\":\"bin_op\",\"left\":{\"kind\":\"var\",\"location\":{\"end\":1,\"start\":0},\"name\":\"a\"},\"location\":{\"end\":5,\"start\":0},\"operator\":\"plus\",\"operator_start\":2,\"right\":{\"kind\":\"var\",\"location\":{\"end\":5,\"start\":4},\"name\":\"b\"}}",
       "$.operator: unknown operator \"plus\"",
     ),
+    (
+      "{\"clauses\":[{\"alternative_patterns\":[[{\"kind\":\"nope\"}]],\"guard\":null,\"location\":{\"end\":1,\"start\":0},\"pattern\":[],\"then\":{\"kind\":\"var\",\"location\":{\"end\":1,\"start\":0},\"name\":\"x\"}}],\"kind\":\"case\",\"location\":{\"end\":1,\"start\":0},\"subjects\":[]}",
+      "$.clauses[0].alternative_patterns[0][0].kind: unknown pattern kind \"nope\"",
+    ),
     ("[]", "$: expected an OBJECT, found an ARRAY"),
   ]
   @expect.expect_all(e => {
@@ -181,19 +185,443 @@ fn chain(n : Int32) -> @ast.Expr {
 }
 
 ///|
-test "decoding stops with an error past the nesting limit, on every target" {
-  // A chain of n operators nests n JSON levels, plus the leaf's own keys.
-  let ok = @ast.decode_expr(
-    parse(@ast.canonical(@ast.encode_expr(chain(@ast.max_depth - 4)))),
+/// A list nested `n` deep: `[[[...1...]]]`.
+fn nested_list(n : Int32) -> @ast.Expr {
+  let sp = @span.SrcSpan::new(0, 1)
+  let mut e : @ast.Expr = Int(
+    location=sp,
+    value="1",
+    int_value=BigInt::from_int(1),
   )
-  @expect.expect(ok).to_equal(chain(@ast.max_depth - 4))
-  let deep = @ast.canonical(@ast.encode_expr(chain(@ast.max_depth + 1)))
+  for _ in 0..<n {
+    e = List(location=sp, elements=[e][:], tail=None)
+  }
+  e
+}
+
+///|
+/// Deep values are compared through their canonical text: the derived
+/// `Eq` of the AST recurses and is not safe at this depth on wasm.
+fn same_text(a : @ast.Expr, b : @ast.Expr) -> Bool {
+  @ast.canonical(@ast.encode_expr(a)) == @ast.canonical(@ast.encode_expr(b))
+}
+
+///|
+test "a 2000-term operator chain round-trips through the Json value on every target" {
+  let deep = chain(2000)
+  let back = @ast.decode_expr(@ast.encode_expr(deep))
+  @expect.expect(same_text(deep, back)).to_be_true()
+}
+
+///|
+test "a 2000-deep list round-trips through the Json value on every target" {
+  let deep = nested_list(2000)
+  let back = @ast.decode_expr(@ast.encode_expr(deep))
+  @expect.expect(same_text(deep, back)).to_be_true()
+}
+
+///|
+test "a 500-deep list round-trips through canonical text on every target" {
+  // `@json.parse` recurses and has its own default nesting limit (1024 JSON
+  // levels; a list node is two), so the text round trip stays under it;
+  // the codec itself has no limit.
+  let deep = nested_list(500)
+  let text = @ast.canonical(@ast.encode_expr(deep))
+  let back = @ast.decode_expr(@json.parse(text))
+  @expect.expect(@ast.canonical(@ast.encode_expr(back))).to_equal(text)
+}
+
+///|
+test "an error 2000 levels deep renders its path" {
+  // Built in a loop (no recursion in the test): 2000 list objects around
+  // a leaf of unknown kind.
+  let sp : Json = Json::object({
+    "end": Json::number(1.0),
+    "start": Json::number(0.0),
+  })
+  let mut j : Json = Json::object({ "kind": Json::string("nope") })
+  for _ in 0..<2000 {
+    j = Json::object({
+      "kind": Json::string("list"),
+      "location": sp,
+      "elements": Json::array([j]),
+      "tail": Json::null(),
+    })
+  }
   let got = try {
-    @ast.decode_expr(parse(deep)) |> ignore
+    @ast.decode_expr(j) |> ignore
     "no error"
   } catch {
-    @ast.DecodeError(message~, ..) => message
-    _ => "other"
+    @ast.DecodeError(path~, message~) => "\{path}: \{message}"
   }
-  @expect.expect(got).to_equal("nesting deeper than \{@ast.max_depth} levels")
+  let expected = StringBuilder()
+  expected.write_string("$")
+  for _ in 0..<2000 {
+    expected.write_string(".elements[0]")
+  }
+  expected.write_string(".kind: unknown expression kind \"nope\"")
+  @expect.expect(got).to_equal(expected.to_string())
+}
+
+///|
+fn sp0() -> @span.SrcSpan {
+  @span.SrcSpan::new(0, 1)
+}
+
+///|
+fn var_x() -> @ast.Expr {
+  Var(location=sp0(), name="x")
+}
+
+///|
+/// Wrap `inner` `n` times with `wrap`, in a loop (no recursion in the
+/// test).
+fn[A] spine(n : Int32, leaf : A, wrap : (A) -> A) -> A {
+  let mut v = leaf
+  for _ in 0..<n {
+    v = wrap(v)
+  }
+  v
+}
+
+///|
+fn stmt(inner : @ast.Expr, s : @ast.Statement) -> @ast.Expr {
+  ignore(inner)
+  Block(location=sp0(), statements=[s][:])
+}
+
+///|
+/// Every child edge of the expression encoder, each as a 2000-deep spine:
+/// a bug that recurses on one edge (an encoder that re-enters `run`, a
+/// continuation called directly) overflows wasm or js here.
+test "every expression child edge round-trips 2000 deep through the Json value on every target" {
+  let sp = sp0()
+  let wraps : Array[(String, (@ast.Expr) -> @ast.Expr)] = [
+    ("todo message", e => Todo(kind=Keyword, location=sp, message=Some(e))),
+    ("panic message", e => Panic(location=sp, message=Some(e))),
+    (
+      "echo expression",
+      e => Echo(location=sp, keyword_end=0, expression=Some(e), message=None),
+    ),
+    (
+      "call argument",
+      e => {
+        Call(
+          location=sp,
+          fun=var_x(),
+          arguments=[
+              (
+                { label: None, location: sp, value: e, implicit: None, } :
+                @ast.CallArg[@ast.Expr]),
+            ][:],
+          open_parenthesis=0,
+        )
+      },
+    ),
+    (
+      "record update argument",
+      e => {
+        RecordUpdate(
+          location=sp,
+          spread_start=0,
+          constructor_=var_x(),
+          record=(
+            { base: var_x(), location: sp, } :
+            @ast.RecordBeingUpdated[@ast.Expr]),
+          arguments=[
+              (
+                { label: "a", location: sp, value: e, } :
+                @ast.RecordUpdateArg[@ast.Expr]),
+            ][:],
+        )
+      },
+    ),
+    (
+      "record being updated",
+      e => {
+        RecordUpdate(
+          location=sp,
+          spread_start=0,
+          constructor_=var_x(),
+          record=(
+            { base: e, location: sp, } : @ast.RecordBeingUpdated[@ast.Expr]),
+          arguments=[][:],
+        )
+      },
+    ),
+    (
+      "bit array size option",
+      e => {
+        BitArray(
+          location=sp,
+          segments=[
+              (
+                {
+                  location: sp,
+                  value: var_x(),
+                  options: [@ast.Size(location=sp, value=e, short_form=false)][:],
+                } : @ast.BitArraySegment[@ast.Expr]),
+            ][:],
+        )
+      },
+    ),
+    (
+      "bit array segment value",
+      e => {
+        BitArray(
+          location=sp,
+          segments=[
+              (
+                { location: sp, value: e, options: [][:], } :
+                @ast.BitArraySegment[@ast.Expr]),
+            ][:],
+        )
+      },
+    ),
+    (
+      "case clause then",
+      e => {
+        Case(
+          location=sp,
+          subjects=[var_x()][:],
+          clauses=Some(
+            [
+              (
+                {
+                  location: sp,
+                  pattern: [@ast.Pattern::Discard(name="_", location=sp)][:],
+                  alternative_patterns: [][:],
+                  guard_: None,
+                  then: e,
+                } : @ast.Clause),
+            ][:],
+          ),
+        )
+      },
+    ),
+    ("case subject", e => Case(location=sp, subjects=[e][:], clauses=None)),
+    ("block statement", e => stmt(e, @ast.Expression(e))),
+    (
+      "fn body",
+      e => {
+        Fn(
+          location=sp,
+          kind=Anonymous(head=sp),
+          end_of_head_byte_index=0,
+          arguments=[][:],
+          body=[@ast.Expression(e)][:],
+          return_annotation=None,
+        )
+      },
+    ),
+    (
+      "assignment value",
+      e => {
+        stmt(
+          e,
+          @ast.Assignment({
+            location: sp,
+            value: e,
+            pattern: @ast.Pattern::Discard(name="_", location=sp),
+            kind: Let,
+            annotation: None,
+          }),
+        )
+      },
+    ),
+    (
+      "assert message of let assert",
+      e => {
+        stmt(
+          e,
+          @ast.Assignment({
+            location: sp,
+            value: var_x(),
+            pattern: @ast.Pattern::Discard(name="_", location=sp),
+            kind: Assert(location=sp, assert_keyword_start=0, message=Some(e)),
+            annotation: None,
+          }),
+        )
+      },
+    ),
+    (
+      "use call",
+      e => {
+        stmt(
+          e,
+          @ast.Use({
+            call: e,
+            location: sp,
+            right_hand_side_location: sp,
+            assignments_location: sp,
+            assignments: [][:],
+          }),
+        )
+      },
+    ),
+    (
+      "assert statement message",
+      e => {
+        stmt(
+          e,
+          @ast.Assert({ location: sp, value: var_x(), message: Some(e), }),
+        )
+      },
+    ),
+    ("tuple", e => Tuple(location=sp, elements=[e][:])),
+    ("pipeline", e => Pipeline(expressions=[var_x(), e][:])),
+    (
+      "field access",
+      e => FieldAccess(location=sp, label_location=sp, label="f", container=e),
+    ),
+    ("tuple index", e => TupleIndex(location=sp, index=0, tuple=e)),
+    ("negate bool", e => NegateBool(location=sp, value=e)),
+    ("list tail", e => List(location=sp, elements=[][:], tail=Some(e))),
+  ]
+  @expect.expect_all(x => {
+    for w in wraps {
+      let (name, wrap) = w
+      let deep = spine(2000, var_x(), wrap)
+      let text = @ast.canonical(@ast.encode_expr(deep))
+      let back = @ast.canonical(
+        @ast.encode_expr(@ast.decode_expr(@ast.encode_expr(deep))),
+      ) catch {
+        @ast.DecodeError(path~, message~) => "\{path}: \{message}"
+      }
+      x.expect((name, back == text)).to_equal((name, true))
+    }
+  })
+}
+
+///|
+/// The child edges of patterns, types, constants, guards and bit array
+/// sizes, each as a 2000-deep spine inside one definition or expression.
+test "every other node kind round-trips 2000 deep through the Json value on every target" {
+  let sp = sp0()
+  let deep_pattern : @ast.Pattern = spine(
+    2000,
+    Discard(name="_", location=sp),
+    p => List(location=sp, elements=[p][:], tail=None),
+  )
+  let deep_pattern_tail : @ast.Pattern = spine(
+    2000,
+    Discard(name="_", location=sp),
+    p => {
+      List(
+        location=sp,
+        elements=[][:],
+        tail=Some({ location: sp, pattern: p, }),
+      )
+    },
+  )
+  let deep_pattern_arg : @ast.Pattern = spine(
+    2000,
+    Discard(name="_", location=sp),
+    p => {
+      Constructor(
+        location=sp,
+        name_location=sp,
+        name="C",
+        arguments=[
+            (
+              { label: None, location: sp, value: p, implicit: None, } :
+              @ast.CallArg[@ast.Pattern]),
+          ][:],
+        module_=None,
+        spread=None,
+      )
+    },
+  )
+  let deep_size : @ast.Pattern = BitArraySize(
+    spine(2000, Variable(location=sp, name="n"), s => {
+      Block(location=sp, inner=s)
+    }),
+  )
+  let deep_guard : @ast.ClauseGuard = spine(2000, Var(location=sp, name="g"), g => {
+    Block(location=sp, value=g)
+  })
+  let deep_type : @ast.TypeAst = spine(
+    2000,
+    Var({ location: sp, name: "a", }),
+    t => Tuple({ location: sp, elements: [t][:], }),
+  )
+  let deep_type_fn : @ast.TypeAst = spine(
+    2000,
+    Var({ location: sp, name: "a", }),
+    t => Fn({ location: sp, arguments: [][:], return_: t, }),
+  )
+  let deep_constant : @ast.Constant = spine(
+    2000,
+    Var(location=sp, module_=None, name="c"),
+    c => List(location=sp, elements=[c][:], tail=None),
+  )
+  let deep_constant_arg : @ast.Constant = spine(
+    2000,
+    Var(location=sp, module_=None, name="c"),
+    c => {
+      Record(
+        location=sp,
+        arguments_start_position=0,
+        module_=None,
+        name="R",
+        arguments=Some(
+          [
+            (
+              { label: None, location: sp, value: c, implicit: None, } :
+              @ast.CallArg[@ast.Constant]),
+          ][:],
+        ),
+      )
+    },
+  )
+  let cases : Array[(String, Json)] = [
+    ("pattern list", @ast.encode_pattern(deep_pattern)),
+    ("pattern list tail", @ast.encode_pattern(deep_pattern_tail)),
+    ("pattern constructor argument", @ast.encode_pattern(deep_pattern_arg)),
+    ("bit array size", @ast.encode_pattern(deep_size)),
+    ("clause guard", @ast.encode_clause_guard(deep_guard)),
+    ("type tuple", @ast.encode_type_ast(deep_type)),
+    ("type fn return", @ast.encode_type_ast(deep_type_fn)),
+    ("constant list", @ast.encode_constant(deep_constant)),
+    ("constant record argument", @ast.encode_constant(deep_constant_arg)),
+    (
+      "module constant value",
+      @ast.encode_definition(
+        @ast.ModuleConstant({
+          documentation: None,
+          location: sp,
+          publicity: Public,
+          name: "c",
+          name_location: sp,
+          annotation: Some(deep_type),
+          value: deep_constant,
+          deprecation: NotDeprecated,
+        }),
+      ),
+    ),
+  ]
+  @expect.expect_all(x => {
+    for c in cases {
+      let (name, json) = c
+      let text = @ast.canonical(json)
+      let back = try {
+        match name {
+          "clause guard" =>
+            @ast.canonical(
+              @ast.encode_clause_guard(@ast.decode_clause_guard(json)),
+            )
+          "type tuple" | "type fn return" =>
+            @ast.canonical(@ast.encode_type_ast(@ast.decode_type_ast(json)))
+          "constant list" | "constant record argument" =>
+            @ast.canonical(@ast.encode_constant(@ast.decode_constant(json)))
+          "module constant value" =>
+            @ast.canonical(@ast.encode_definition(@ast.decode_definition(json)))
+          _ => @ast.canonical(@ast.encode_pattern(@ast.decode_pattern(json)))
+        }
+      } catch {
+        @ast.DecodeError(path~, message~) => "\{path}: \{message}"
+      }
+      x.expect((name, back == text)).to_equal((name, true))
+    }
+  })
 }

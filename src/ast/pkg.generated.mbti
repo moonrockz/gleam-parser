@@ -64,8 +64,6 @@ pub fn encode_type_ast(TypeAst) -> Json
 
 pub fn encode_warning(Warning) -> Json
 
-pub let max_depth : Int
-
 // Errors
 pub(all) suberror DecodeError {
   DecodeError(path~ : String, message~ : String)
