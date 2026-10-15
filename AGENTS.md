@@ -213,10 +213,13 @@ point of three bytes each.
 
 Treat `moonbitlang/core`, `moonbitlang/x` and `moonbitlang/async` as the
 MoonBit core library; look there before adding a helper or a dependency.
-Library code (`src/**`) uses only `moonbitlang/core` and the module's own
-packages (from v0.3 also `moonrockz/pretty`). The published `moon.mod`
-imports only `moonrockz/expect` (used by the packages' own tests); it brings
-`moonbitlang/async` and `moonbitlang/x` to users, which is accepted.
+Library code (`src/**`) may use packages owned by `moonrockz`,
+`moonbitlang` and `moonbit-community`, plus the module's own packages; any
+other owner needs a decision recorded here. The published `moon.mod`
+imports `moonrockz/expect` (used by the packages' own tests),
+`moonbit-community/toml` (the configuration file) and `moonbitlang/x`
+(`fs`, for `Config::load`); it brings `moonbitlang/async` and
+`bobzhang/lexer` to users, which is accepted.
 
 Test-only dependencies (`moonrockz/moonspec`, `moonbitlang/async`,
 `moonbitlang/x`) live in the unpublished workspace module `tests/`
