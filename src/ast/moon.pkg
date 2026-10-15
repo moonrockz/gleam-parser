@@ -1,5 +1,6 @@
 import {
   "moonbitlang/core/builtin",
+  "moonbitlang/core/list",
   "moonrockz/gleam-parser/span",
   "moonrockz/gleam-parser/scanner",
   "moonbitlang/core/string",
@@ -12,3 +13,7 @@ import {
   "moonbitlang/core/quickcheck",
   "moonbitlang/core/quickcheck/splitmix",
 } for "test"
+
+import {
+  "moonrockz/expect",
+} for "wbtest"
