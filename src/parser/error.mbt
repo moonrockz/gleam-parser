@@ -639,7 +639,7 @@ pub fn ParseErrorType::details(self : ParseErrorType) -> ParseErrorDetails {
       )
     TooMuchNesting =>
       details(
-        "gleam-parser reads at most \{max_nesting} nested levels of syntax, and a definition whose JSON would be deeper than \{@ast.max_depth} levels; the Gleam compiler has no such limit.",
+        "gleam-parser reads at most \{max_nesting} nested levels of syntax; the Gleam compiler has no such limit.",
         "This is nested too deeply",
         hint="Split the code into smaller functions or constants.",
       )

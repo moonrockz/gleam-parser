@@ -10,13 +10,6 @@ pub(all) suberror DecodeError {
 } derive(Eq, Debug)
 
 ///|
-/// The deepest JSON nesting the decoder reads: deeper input raises a
-/// `DecodeError` instead of overflowing the stack (wasm has a small one).
-/// Each AST level is at least one JSON level, so this bounds the AST depth
-/// a decoded module can have; the parser keeps generated ASTs within it.
-pub let max_depth : Int32 = 150
-
-///|
 priv enum Path {
   Root
   Key(Path, String)
@@ -24,52 +17,22 @@ priv enum Path {
 }
 
 ///|
-/// The number of steps from the root.
-fn Path::depth(self : Path) -> Int32 {
-  let mut n = 0
-  let mut p = self
-  while true {
-    match p {
-      Root => break
-      Key(parent, _) | Index(parent, _) => {
-        n += 1
-        p = parent
-      }
-    }
-  }
-  n
-}
-
-///|
-fn check_depth(path : Path) -> Unit raise DecodeError {
-  if path.depth() > max_depth {
-    fail(path, "nesting deeper than \{max_depth} levels")
-  }
-}
-
-///|
+/// The path as text (`$.module.definitions[3].definition`). A loop over the
+/// parents, so a path of any depth renders.
 fn Path::render(self : Path) -> String {
-  let sb = StringBuilder()
-  self.write_to(sb)
-  sb.to_string()
-}
-
-///|
-fn Path::write_to(self : Path, sb : StringBuilder) -> Unit {
-  match self {
-    Root => sb.write_string("$")
-    Key(parent, key) => {
-      parent.write_to(sb)
-      sb.write_string(".")
-      sb.write_string(key)
-    }
-    Index(parent, i) => {
-      parent.write_to(sb)
-      sb.write_string("[")
-      sb.write_string(i.to_string())
-      sb.write_string("]")
+  let segments = for p = self, acc = @list.List([]) {
+    match p {
+      Root => break acc
+      Key(parent, key) => continue parent, acc.prepend(".\{key}")
+      Index(parent, i) => continue parent, acc.prepend("[\{i}]")
     }
   }
+  let sb = StringBuilder()
+  sb.write_string("$")
+  for segment in segments {
+    sb.write_string(segment)
+  }
+  sb.to_string()
 }
 
 ///|
@@ -107,11 +70,7 @@ fn[T] dec_field(
 ) -> T raise DecodeError {
   let m = dec_object(j, path)
   match m.get(key) {
-    Some(v) => {
-      let child = Key(path, key)
-      check_depth(child)
-      f(v, child)
-    }
+    Some(v) => f(v, Key(path, key))
     None => fail(Key(path, key), "missing field")
   }
 }
@@ -192,9 +151,7 @@ fn[T] dec_array(
     Array(items) => {
       let out : Array[T] = []
       for i, item in items {
-        let child = Index(path, i)
-        check_depth(child)
-        out.push(f(item, child))
+        out.push(f(item, Index(path, i)))
       }
       out[:]
     }

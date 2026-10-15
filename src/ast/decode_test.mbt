@@ -185,19 +185,80 @@ fn chain(n : Int32) -> @ast.Expr {
 }
 
 ///|
-test "decoding stops with an error past the nesting limit, on every target" {
-  // A chain of n operators nests n JSON levels, plus the leaf's own keys.
-  let ok = @ast.decode_expr(
-    parse(@ast.canonical(@ast.encode_expr(chain(@ast.max_depth - 4)))),
+/// A list nested `n` deep: `[[[...1...]]]`.
+fn nested_list(n : Int32) -> @ast.Expr {
+  let sp = @span.SrcSpan::new(0, 1)
+  let mut e : @ast.Expr = Int(
+    location=sp,
+    value="1",
+    int_value=BigInt::from_int(1),
   )
-  @expect.expect(ok).to_equal(chain(@ast.max_depth - 4))
-  let deep = @ast.canonical(@ast.encode_expr(chain(@ast.max_depth + 1)))
+  for _ in 0..<n {
+    e = List(location=sp, elements=[e][:], tail=None)
+  }
+  e
+}
+
+///|
+/// Deep values are compared through their canonical text: the derived
+/// `Eq` of the AST recurses and is not safe at this depth on wasm.
+fn same_text(a : @ast.Expr, b : @ast.Expr) -> Bool {
+  @ast.canonical(@ast.encode_expr(a)) == @ast.canonical(@ast.encode_expr(b))
+}
+
+///|
+test "a 2000-term operator chain round-trips through the Json value on every target" {
+  let deep = chain(2000)
+  let back = @ast.decode_expr(@ast.encode_expr(deep))
+  @expect.expect(same_text(deep, back)).to_be_true()
+}
+
+///|
+test "a 2000-deep list round-trips through the Json value on every target" {
+  let deep = nested_list(2000)
+  let back = @ast.decode_expr(@ast.encode_expr(deep))
+  @expect.expect(same_text(deep, back)).to_be_true()
+}
+
+///|
+test "a 500-deep list round-trips through canonical text on every target" {
+  // `@json.parse` recurses and has its own default nesting limit (1024 JSON
+  // levels; a list node is two), so the text round trip stays under it;
+  // the codec itself has no limit.
+  let deep = nested_list(500)
+  let text = @ast.canonical(@ast.encode_expr(deep))
+  let back = @ast.decode_expr(@json.parse(text))
+  @expect.expect(@ast.canonical(@ast.encode_expr(back))).to_equal(text)
+}
+
+///|
+test "an error 2000 levels deep renders its path" {
+  // Built in a loop (no recursion in the test): 2000 list objects around
+  // a leaf of unknown kind.
+  let sp : Json = Json::object({
+    "end": Json::number(1.0),
+    "start": Json::number(0.0),
+  })
+  let mut j : Json = Json::object({ "kind": Json::string("nope") })
+  for _ in 0..<2000 {
+    j = Json::object({
+      "kind": Json::string("list"),
+      "location": sp,
+      "elements": Json::array([j]),
+      "tail": Json::null(),
+    })
+  }
   let got = try {
-    @ast.decode_expr(parse(deep)) |> ignore
+    @ast.decode_expr(j) |> ignore
     "no error"
   } catch {
-    @ast.DecodeError(message~, ..) => message
-    _ => "other"
+    @ast.DecodeError(path~, message~) => "\{path}: \{message}"
   }
-  @expect.expect(got).to_equal("nesting deeper than \{@ast.max_depth} levels")
+  let expected = StringBuilder()
+  expected.write_string("$")
+  for _ in 0..<2000 {
+    expected.write_string(".elements[0]")
+  }
+  expected.write_string(".kind: unknown expression kind \"nope\"")
+  @expect.expect(got).to_equal(expected.to_string())
 }

@@ -12,10 +12,6 @@ import {
 }
 
 // Values
-pub let definition_root_depth : Int
-
-pub fn json_depth(@ast.Definition) -> Int
-
 pub let max_nesting : Int
 
 pub fn parse_constant_text(String) -> @ast.Constant raise ParseError
