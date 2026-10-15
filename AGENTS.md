@@ -65,8 +65,9 @@ The reference is the Gleam compiler at tag `v1.19.2`
 To move to a new Gleam version: bump the tag in
 `tools/gleam-ast-oracle/Cargo.toml` and `tests/corpus/gleam_version.txt`;
 diff the files above between the tags; apply the changes to `src/ast`,
-`src/scanner`, `src/parser` and `docs/ast-json.md`; run
-`mise run corpus:goldens`, `mise run test:parity`, `mise run parity:ratchet`.
+`src/scanner`, `src/parser` and `docs/ast-json.md`; then re-record and
+ratchet as "Gleam Parity" says (a test checks that the two files name the
+same tag).
 
 ### Parser contract
 
@@ -80,7 +81,10 @@ diff the files above between the tags; apply the changes to `src/ast`,
   stopped (its start is before the end of the farthest token the parser
   loaded) comes first; then diagnostics by position; `UnexpectedEof` keeps
   the compiler's raw span `0..0` and sorts at the end of the text (the
-  renderer shows it at the last byte, as `error.rs` does).
+  renderer shows it at the last byte, as `error.rs` does). An error whose
+  end the compiler takes from an inner `UnexpectedEof` (for example
+  `InvalidModuleTypePattern` at the end of a file) keeps the compiler's
+  `start..0` span too.
 - Doc comments follow `take_documentation`: the `///` lines before a
   definition's start (its `pub`, `fn`, `import` module name, `const` name,
   variant name, field label) join with `\n` after each line; a regular
@@ -125,7 +129,10 @@ moonrockz/gleam-parser
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests
 │   ├── bdd/              # MoonSpec step definitions for tests/features
 │   ├── features/         # Gherkin features
-│   └── parity/ rejection/ corpus/ fixtures/   # plan 5
+│   ├── fixtures/ast/     # Gleam sources with the oracle's JSON
+│   ├── corpus/           # packages.txt, gleam_version.txt, manifest.json, goldens.lock, baseline.json
+│   ├── parity/           # Corpus parity (mise run test:parity)
+│   └── rejection/        # Rejection fixtures, verdicts.json, pending.json, messages/ (mise run test:rejection)
 ├── tools/gleam-ast-oracle/   # Rust oracle (plan 3)
 ├── scripts/              # MoonBit tooling scripts (.mbtx)
 ├── docs/cookbook/        # Unpublished module moonrockz/gleam_parser_cookbook: tested articles
@@ -396,9 +403,16 @@ All operations use **file-based mise tasks** in `mise-tasks/`. Do not add inline
 | `test:scripts` | Script tests (`scripts/*.mbtx`) |
 | `test:docs` | Cookbook articles |
 | `test:targets` | Check and test the library on wasm, wasm-gc, js and native |
-| `test` | unit + bdd + scripts + docs |
+| `test` | unit + bdd + scripts + rejection + docs |
 | `oracle:build` | Build the Rust AST oracle (`tools/gleam-ast-oracle`; needs cargo; local only) |
 | `fixtures:record` | Record the oracle's JSON for `tests/fixtures/ast/*.gleam` (needs `oracle:build`) |
+| `corpus:manifest` | Rebuild `tests/corpus/manifest.json` from `packages.txt` (downloads every package) |
+| `corpus:fetch` | Download and verify the pinned corpus into `.corpus/` |
+| `corpus:goldens` | Run the oracle over the corpus and write `goldens.lock` (needs cargo; local only) |
+| `test:parity` | Score Gleam parity against the lock (needs `corpus:fetch`) |
+| `parity:ratchet` | Raise `tests/corpus/baseline.json` to the current counts |
+| `rejection:record` | Record the compiler's verdicts for `tests/rejection` (needs cargo; local only) |
+| `test:rejection` | Check verdicts, first errors and message snapshots against `verdicts.json` |
 | `coverage:ci-gate`, `coverage:ci-warn` | Coverage threshold (80) |
 | `release:prepare`, `release:version`, `release:plan`, `release:notes`, `release:refresh`, `release:status`, `release:credentials`, `release:publish` | Release process (see Release Process) |
 
@@ -431,6 +445,82 @@ Project tooling logic is written in MoonBit, not bash, `jq` or `awk`.
 | `scripts/publish.mbtx` | `release:publish` | Publish to mooncakes.io; a release tag must match `moon.mod`'s version; an already published version (a second run for the tag) succeeds |
 | `scripts/hooks_install.mbtx` | `hooks:install` | Install lefthook hooks |
 | `scripts/fixtures.mbtx` | `fixtures:record` | Run the oracle over the AST fixtures and write their `.json` |
+| `scripts/corpus.mbtx` | `corpus:manifest`, `corpus:fetch` | Pin (Hex metadata, GitHub tag archives), download and verify the parity corpus |
+| `scripts/goldens.mbtx` | `corpus:goldens` | Run the oracle over the corpus; one raw result per file |
+| `scripts/rejection.mbtx` | `rejection:record` | Record the oracle's verdict per rejection fixture |
+
+## Gleam Parity
+
+gleam-parser measures parity with the Gleam compiler (gleam-core v1.19.2, the
+version in `tests/corpus/gleam_version.txt`) on a pinned corpus of 25
+published packages (233 files under `src/` and `test/`).
+
+- `tests/corpus/packages.txt` lists the packages as `name@version`, with an
+  optional `github.com/owner/repo#tag` when the Hex metadata has no GitHub
+  link or the tag is not `v<version>`. `manifest.json` pins each tag archive
+  (SHA-1) and each `.gleam` file (SHA-256).
+- `tests/corpus/goldens.lock` holds, per file, the SHA-256 of the canonical
+  oracle JSON (or `PARSE_ERROR`). Only hashes are committed; the raw oracle
+  output stays local in `.dev/out/goldens/raw/`.
+- `mise run test:parity` prints the scoreboard: files, tokenized (no lexical
+  error), parsed (no error diagnostic), matched (the canonical JSON of
+  `ParseResult::parsed()` hashes to the golden). It fails when a count drops
+  below `tests/corpus/baseline.json`. CI runs it in the `parity` job. It also
+  runs the corpus laws: the lossless scan and parse with LF and with CRLF, the
+  JSON round trip, and the never-crash laws on prefixes cut at token
+  boundaries (every boundary, or 50 evenly spaced ones per file).
+- Reports go to `_build/reports/parity/`: `parity.html` (filter by status),
+  `parity.json`, `parity.xml` (JUnit: one testsuite per package; unmatched
+  files are `skipped`, only a baseline regression is a `failure`) and
+  `summary.md` (the CI job summary). CI uploads them as the `parity-report`
+  artifact.
+- When a change raises the counts, run `mise run parity:ratchet` and commit
+  `baseline.json`.
+- To see why a file does not match, run `mise run corpus:goldens` once (needs
+  cargo), then `mise run test:parity`: it prints the first differing JSON path
+  and both values for up to 20 files.
+- To add a package: add it to `packages.txt`, run `mise run corpus:manifest`,
+  then `mise run corpus:goldens`, then `mise run parity:ratchet`; commit the
+  manifest, the lock and the baseline.
+- To move to a new Gleam version: change the tag in
+  `tools/gleam-ast-oracle/Cargo.toml` and `tests/corpus/gleam_version.txt`
+  (a test checks they agree), port the compiler changes, then
+  `mise run fixtures:record`, `mise run corpus:goldens`,
+  `mise run rejection:record` and `mise run parity:ratchet`.
+
+## Rejection Parity
+
+gleam-parser checks which Gleam source it accepts and rejects, and its first
+error, against the compiler (the oracle).
+
+- `tests/rejection/<group>/<case>.gleam` are small modules. A negative
+  fixture has one syntax problem and is valid otherwise. The oracle decides
+  the verdict: three fixtures written as rejections (`definitions/fn_no_body`,
+  `expressions/block_ends_with_let`, `expressions/case_without_clauses`) are
+  accepted by the parser; the compiler reports them in a later phase.
+- `mise run rejection:record` (needs cargo) runs the oracle on every fixture
+  and writes `tests/rejection/verdicts.json`: the fixture's SHA-256 and, under
+  `gleam-<version>`, `accepted` or the first error's kind, lexical kind and
+  location. CI never runs the oracle.
+- `mise run test:rejection` parses each fixture in `gleam-1.19`. gleam-parser
+  accepts a file when it gives no diagnostic with severity `Error`. The
+  checks are `verdict` (accept against reject) and `error` (both reject: the
+  first error's kind, lexical kind and location must equal the oracle's). A
+  changed fixture fails with "run `mise run rejection:record`".
+- `tests/rejection/messages/<fixture>.txt` holds gleam-parser's rendered
+  message (`render_plain`) for every fixture it rejects. A changed, missing or
+  stale message fails the check. Review the messages, then run
+  `GLEAM_REJECTION_MODE=approve mise run test:rejection`; the pull request
+  diff is the review.
+- `test:rejection` writes `_build/reports/rejection/index.html`: per fixture,
+  the compiler's and gleam-parser's verdicts and first errors side by side.
+  CI uploads it as the `rejection-report` artifact.
+- `tests/rejection/pending.json` lists the fixture and check pairs that do not
+  match yet. The list only shrinks: the check fails on a mismatch that is not
+  listed and on a listed pair that now matches (remove it).
+  `GLEAM_REJECTION_MODE=write-pending` rewrites the list; use it only when
+  adding fixtures. The one expected entry is `nesting/too_deep.gleam`
+  (`verdict`): the compiler has no nesting limit.
 
 ## Tooling
 

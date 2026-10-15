@@ -67,6 +67,17 @@ jobs:
       - name: Run cookbook tests
         run: mise run test:docs
 
+      - name: Check rejection parity
+        run: mise run test:rejection
+
+      - name: Upload rejection report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rejection-report
+          path: _build/reports/rejection
+          if-no-files-found: ignore
+
   targets:
     runs-on: ubuntu-latest
     steps:
@@ -114,6 +125,51 @@ jobs:
             mise run coverage:ci-warn
           fi
 
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hustcer/setup-moonbit@v1
+        with:
+          version: ${{ env.MOONBIT_VERSION }}
+          core-version: ${{ env.MOONBIT_VERSION }}
+
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: moon update
+
+      - name: Cache the parity corpus
+        uses: actions/cache@v4
+        with:
+          path: .corpus
+          key: gleam-parity-corpus-${{ hashFiles('tests/corpus/manifest.json') }}
+
+      - name: Fetch and verify the corpus
+        run: mise run corpus:fetch
+
+      - name: Score Gleam parity
+        run: mise run test:parity
+
+      - name: Add the summary to the job summary
+        if: always()
+        run: |
+          if [ -f _build/reports/parity/summary.md ]; then
+            cat _build/reports/parity/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-report
+          path: _build/reports/parity
+          if-no-files-found: ignore
+
   ci-ok:
     name: ci-ok
     runs-on: ubuntu-latest
@@ -124,6 +180,7 @@ jobs:
       - unit-tests
       - targets
       - coverage
+      - parity
     steps:
       - name: Check that every job passed or was skipped
         env:
