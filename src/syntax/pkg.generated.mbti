@@ -139,6 +139,24 @@ pub fn Tree::root(Self) -> NodeRef
 pub fn Tree::step(Self, NodeRef) -> PathStep?
 pub fn Tree::tokens_in(Self, @span.SrcSpan) -> Array[@scanner.Token]
 
+pub struct TreeCursor {
+  // private fields
+}
+pub fn TreeCursor::copy(Self) -> Self
+pub fn TreeCursor::depth(Self) -> Int
+pub fn TreeCursor::field_name(Self) -> String?
+pub fn TreeCursor::goto_first_child(Self) -> Bool
+pub fn TreeCursor::goto_first_child_for(Self, Int) -> Bool
+pub fn TreeCursor::goto_last_child(Self) -> Bool
+pub fn TreeCursor::goto_next_sibling(Self) -> Bool
+pub fn TreeCursor::goto_node_at(Self, Int) -> Bool
+pub fn TreeCursor::goto_parent(Self) -> Bool
+pub fn TreeCursor::goto_previous_sibling(Self) -> Bool
+pub fn TreeCursor::new(NodeRef) -> Self
+pub fn TreeCursor::node(Self) -> NodeRef
+pub fn TreeCursor::path(Self) -> NodePath
+pub fn TreeCursor::reset(Self, NodeRef) -> Unit
+
 // Type aliases
 
 // Traits
