@@ -1,0 +1,6 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:11
+  │
+1 │ const s = "abc
+  │           ^ The string starting here was left open
+

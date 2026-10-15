@@ -1,0 +1,7 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:16
+  │
+1 │ pub type Alias =
+  │                ^ I was expecting a type after this
+
+See: https://tour.gleam.run/basics/assignments/

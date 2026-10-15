@@ -1,0 +1,7 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:16
+  │
+1 │ const x = 1_000_
+  │                ^ Numbers cannot have a trailing underscore
+
+Hint: remove it.

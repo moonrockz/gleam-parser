@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Record the Gleam compiler's verdicts for tests/rejection (needs cargo; local only)"
+#MISE depends=["oracle:build"]
+set -euo pipefail
+
+exec moon run -q --target wasm scripts/rejection.mbtx -- record tests/rejection tools/gleam-ast-oracle/target/release/gleam-ast-oracle tests/corpus/gleam_version.txt tests/rejection/verdicts.json

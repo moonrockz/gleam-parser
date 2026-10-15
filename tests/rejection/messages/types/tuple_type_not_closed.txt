@@ -1,0 +1,9 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:28
+  │
+1 │ pub fn f(x: #(Int, String) {
+  │                            ^ I was not expecting this
+
+Found `{`, expected one of: 
+- `)`
+- a function parameter

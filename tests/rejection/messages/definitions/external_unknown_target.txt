@@ -1,0 +1,7 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:1
+  │
+1 │ @external(wasm, "m", "f")
+  │ ^^^^^^^^^ I don't recognise this target
+
+Try `erlang`, `javascript`.

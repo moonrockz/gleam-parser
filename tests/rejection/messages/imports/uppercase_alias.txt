@@ -1,0 +1,8 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:20
+  │
+1 │ import gleam/io as IO
+  │                    ^^ I'm expecting a lowercase name here
+
+A variable name must start with a lowercase letter, and can contain a-z,
+0-9, or _.

@@ -1,0 +1,8 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:2:7
+  │
+2 │   let case = 1
+  │       ^^^^ I was not expecting this
+
+Found the keyword `case`, expected one of: 
+- A pattern

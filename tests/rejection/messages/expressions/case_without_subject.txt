@@ -1,0 +1,8 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:3:5
+  │
+3 │     _ -> 1
+  │     ^ I was not expecting this
+
+Found a discard name, expected one of: 
+- `}`

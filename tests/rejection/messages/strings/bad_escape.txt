@@ -1,0 +1,8 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:12
+  │
+1 │ const s = "\q"
+  │            ^ I don't understand this escape code
+
+Hint: Add another backslash before it.
+See: https://tour.gleam.run/basics/strings

@@ -1,0 +1,7 @@
+error: Syntax error
+  ┌─ src/fixture.gleam:1:1
+  │
+1 │ @deprecated
+  │ ^^^^^^^^^^^ A deprecation attribute must have a string message.
+
+See: https://tour.gleam.run/functions/deprecations/
