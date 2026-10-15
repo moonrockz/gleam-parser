@@ -53,6 +53,30 @@ fn choose_version(exit_code : Int32, stdout : String) -> String {
 }
 
 ///|
+/// The git-cliff message `prepare` shows when it cannot compute a version.
+let no_cliff_version : String = "git-cliff could not compute the next version; run `mise run release:prepare` so mise provides git-cliff"
+
+///|
+/// The version `prepare` computes from git-cliff. A repository with no
+/// release tag makes git-cliff fail (it logs "No releases found, using
+/// 0.1.0" and then rejects `0.1.0` against the tag pattern): the first
+/// release is `initial_version`. With tags, a git-cliff failure is an error.
+fn prepare_version(
+  exit_code : Int32,
+  stdout : String,
+  has_tags : Bool,
+) -> Result[String, String] {
+  let version = stdout.trim().to_owned()
+  if exit_code == 0 && version != "" {
+    Ok(version)
+  } else if !has_tags {
+    Ok(initial_version)
+  } else {
+    Err(no_cliff_version)
+  }
+}
+
+///|
 /// A `major.minor.patch` version.
 struct Version {
   major : Int32
@@ -639,12 +663,14 @@ async fn prepare(requested : String?, local_only : Bool) -> Unit {
     Some(_) => ""
     None => {
       let (code, out) = stdout_of("git", ["cliff", "--bumped-version"])
-      if code != 0 || out.trim() == "" {
-        fail_with(
-          "git-cliff could not compute the next version; run `mise run release:prepare` so mise provides git-cliff",
-        )
+      let (_, tags) = stdout_of("git", ["tag", "--list", "v*"])
+      match prepare_version(code, out, tags.trim() != "") {
+        Ok(v) => v
+        Err(message) => {
+          fail_with(message)
+          ""
+        }
       }
-      out
     }
   }
   let version = match release_version(requested, computed, current_version()) {
@@ -915,6 +941,7 @@ struct ReleaseWorld {
   mut ref_type : String
   mut ref_name : String
   mut tag_exists : Bool
+  mut has_tags : Bool
   mut has_section : Bool
   mut highlights : Bool
   mut facts : Facts
@@ -930,6 +957,7 @@ fn ReleaseWorld::new() -> ReleaseWorld {
     ref_type: "",
     ref_name: "",
     tag_exists: false,
+    has_tags: false,
     has_section: true,
     highlights: true,
     facts: {
@@ -974,6 +1002,17 @@ impl @moonspec.World for ReleaseWorld with fn configure(self, setup) {
     @expect.expect(choose_version(self.exit_code, self.stdout)).to_equal(
       expected,
     )
+  })
+  setup.given1("the repository has {word} release tags", fn(tags : String) {
+    self.has_tags = tags == "some"
+  })
+  setup.then1("the prepare version is {string}", fn(expected : String) raise {
+    let got = match
+      prepare_version(self.exit_code, self.stdout, self.has_tags) {
+      Ok(v) => v
+      Err(message) => message
+    }
+    @expect.expect(got).to_equal(expected)
   })
   setup.when1("I read the version {string}", fn(text : String) {
     self.result = match parse_version(text) {
