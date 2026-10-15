@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/fuel"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/list",
+}
+
+// Values
+pub let default_budget : Budget
+
+// Errors
+pub(all) suberror FuelExhausted {
+  FuelExhausted(budget~ : Budget, spent~ : Array[Spent])
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct Budget(Int) derive(Compare, Eq, @debug.Debug)
+pub fn Budget::new(Int) -> Self?
+pub fn Budget::units(Self) -> Int
+
+pub struct Fuel {
+  budget : Budget
+  left : Int
+  ops : @list.List[Operation]
+} derive(Eq, @debug.Debug)
+pub fn Fuel::budget(Self) -> Budget
+pub fn Fuel::left(Self) -> Int
+pub fn Fuel::new(budget? : Budget) -> Self
+pub fn Fuel::spend(Self, Operation) -> Self raise FuelExhausted
+pub fn Fuel::spent(Self) -> Array[Spent]
+
+pub struct Operation(String) derive(Eq, Hash, @debug.Debug)
+pub fn Operation::name(Self) -> String
+pub fn Operation::new(String) -> Self
+
+pub(all) struct Spent {
+  operation : Operation
+  levels : Int
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

@@ -86,10 +86,7 @@ fn Parser::parse_function_call_in_clause_guard(
 fn Parser::parse_case_clause_guard_unit(
   self : Parser,
 ) -> @ast.ClauseGuard? raise ParseError {
-  self.enter()
-  let result = self.parse_case_clause_guard_unit_inner()
-  self.leave()
-  result
+  self.nested(op_clause_guard, () => self.parse_case_clause_guard_unit_inner())
 }
 
 ///|

@@ -29,6 +29,10 @@ Done:
 - **CST** (`ParseResult.cst`): every token grouped per definition;
   `ModuleCst::to_source()` is the text byte for byte, also with errors.
 - **Dialect** (`Dialect::gleam_1_19()`): what the parser accepts.
+- **Config** (`Config::default()`, `Config::load()`): the dialect and the
+  fuel budget (the recursion limit, 100 units by default), from a
+  `gleam-parser.toml` file, `GLEAM_PARSER_*` variables and the caller,
+  merged with `with_fallback`.
 - **Report** (`render_plain`, `render_terminal`, `encode_diagnostics`): the
   compiler's diagnostic layout, with colours, or as JSON.
 - **Parity**: on a pinned corpus of 25 published packages (233 files), all

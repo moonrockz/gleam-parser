@@ -57,17 +57,18 @@ test "pa: canonical JSON of a parse" {
 }
 ```
 
-A `Dialect` names what the parser accepts. `Dialect::gleam_1_19()` is the
-default; a dialect without a deprecation rule gives no warning for it:
+A `Config` names what the parser accepts (its `Dialect`) and how deep it
+reads (its fuel `Budget`). `Config::default()` is Gleam 1.19 with 100 units
+of fuel. A dialect without a deprecation rule gives no warning for it:
 
 ```mbt check
 ///|
 test "pa: a quiet dialect" {
   let text = "fn f(x) {\n  [\"a\"..x]\n}\n"
   let loud = @gleam.parse_text(text)
-  let quiet = @gleam.parse_text(text, dialect={
-    ..@gleam.Dialect::gleam_1_19(),
-    deprecations: [][:],
+  let quiet = @gleam.parse_text(text, config={
+    ..@gleam.Config::default(),
+    dialect: { ..@gleam.Dialect::gleam_1_19(), deprecations: [][:], },
   })
   @expect.expect_all(e => {
     e.expect(loud.diagnostics.map(d => d.code)).to_equal(["GL-PARSE-002"])
@@ -75,3 +76,6 @@ test "pa: a quiet dialect" {
   })
 }
 ```
+
+See [configure.mbt.md](configure.mbt.md) for the fuel budget and the
+configuration file.

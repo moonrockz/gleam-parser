@@ -2,10 +2,7 @@
 /// The left side of `=` or `->`. `None` when `token0` does not start a
 /// pattern.
 fn Parser::parse_pattern(self : Parser) -> @ast.Pattern? raise ParseError {
-  self.enter()
-  let result = self.parse_pattern_inner()
-  self.leave()
-  result
+  self.nested(op_pattern, () => self.parse_pattern_inner())
 }
 
 ///|

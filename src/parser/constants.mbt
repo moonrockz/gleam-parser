@@ -46,10 +46,7 @@ fn Parser::parse_const_value(self : Parser) -> @ast.Constant? raise ParseError {
 fn Parser::parse_const_value_unit(
   self : Parser,
 ) -> @ast.Constant? raise ParseError {
-  self.enter()
-  let result = self.parse_const_value_unit_inner()
-  self.leave()
-  result
+  self.nested(op_constant, () => self.parse_const_value_unit_inner())
 }
 
 ///|

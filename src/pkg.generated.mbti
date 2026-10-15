@@ -4,9 +4,11 @@ package "moonrockz/gleam-parser"
 import {
   "moonbitlang/core/bigint",
   "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/config",
   "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/fuel",
   "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
@@ -20,6 +22,8 @@ pub fn decode_expr(Json) -> @ast.Expr raise @ast.DecodeError
 pub fn decode_oracle_output(Json) -> @ast.OracleOutput raise @ast.DecodeError
 
 pub fn decode_parsed(Json) -> @ast.Parsed raise @ast.DecodeError
+
+pub let default_budget : @fuel.Budget
 
 pub fn diagnostic_description(String) -> String?
 
@@ -35,9 +39,9 @@ pub fn parse_float_value(String) -> Double?
 
 pub fn parse_int_value(String) -> @bigint.BigInt?
 
-pub fn parse_module(@scanner.TokenStream, dialect? : @dialect.Dialect) -> @parser.ParseResult
+pub fn parse_module(@scanner.TokenStream, config? : @config.Config) -> @parser.ParseResult
 
-pub fn parse_text(String, dialect? : @dialect.Dialect) -> @parser.ParseResult
+pub fn parse_text(String, config? : @config.Config) -> @parser.ParseResult
 
 pub fn render_plain(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
 
@@ -74,6 +78,8 @@ pub using @ast {type BitArraySegment}
 
 pub using @ast {type BitArraySize}
 
+pub using @fuel {type Budget}
+
 pub using @ast {type CallArg}
 
 pub using @ast {type Clause}
@@ -83,6 +89,10 @@ pub using @ast {type ClauseGuard}
 pub using @scanner {type Comment}
 
 pub using @scanner {type CommentKind}
+
+pub using @config {type Config}
+
+pub using @config {type ConfigError}
 
 pub using @ast {type Constant}
 
@@ -104,9 +114,15 @@ pub using @dialect {type Dialect}
 
 pub using @ast {type Documentation}
 
+pub using @config {type Environment}
+
 pub using @ast {type Expr}
 
 pub using @ast {type External}
+
+pub using @fuel {type Fuel}
+
+pub using @fuel {type FuelExhausted}
 
 pub using @ast {type Function}
 
@@ -136,6 +152,8 @@ pub using @cst {type ModuleCst}
 
 pub using @ast {type ModuleExtra}
 
+pub using @fuel {type Operation}
+
 pub using @ast {type OracleOutput}
 
 pub using @parser {type ParseError}
@@ -147,6 +165,8 @@ pub using @parser {type ParseErrorType}
 pub using @parser {type ParseResult}
 
 pub using @ast {type Parsed}
+
+pub using @config {type Partial}
 
 pub using @ast {type Pattern}
 
@@ -166,9 +186,13 @@ pub using @dialect {type Rule}
 
 pub using @diagnostic {type Severity}
 
+pub using @config {type Source}
+
 pub using @scanner {type SourceText}
 
 pub using @ast {type SpannedString}
+
+pub using @fuel {type Spent}
 
 pub using @span {type SrcSpan}
 

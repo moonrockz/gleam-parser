@@ -187,6 +187,34 @@ pub using @parser {
 pub using @dialect {type Dialect, type Rule}
 
 ///|
+/// Fuel: the recursion budget (`Budget`, at least 1; `default_budget` is
+/// 100 units), the operation names an exhausted budget reports (`Spent`),
+/// and the error `FuelExhausted`.
+pub using @fuel {
+  type Budget,
+  type Operation,
+  type Spent,
+  type Fuel,
+  type FuelExhausted,
+}
+
+///|
+/// Configuration: `Config` (dialect, fuel) from defaults, a TOML text, the
+/// environment and the caller, merged with `with_fallback`; `Config::load`
+/// reads `gleam-parser.toml` and `GLEAM_PARSER_*`.
+pub using @config {
+  type Config,
+  type Partial,
+  type Source,
+  type ConfigError,
+  type Environment,
+}
+
+///|
+/// The default fuel budget, 100 units (see `@fuel.default_budget`).
+pub let default_budget : Budget = @fuel.default_budget
+
+///|
 /// The CST: every token grouped per definition (`ModuleCst::to_source()`
 /// is the text byte for byte; a `Skipped` definition is a run the parser
 /// reported and skipped).
@@ -194,12 +222,13 @@ pub using @cst {type ModuleCst, type DefinitionCst, type DefinitionKind}
 
 ///|
 /// Parse a token stream into a module (see `@parser.parse_module`).
-pub fn parse_module(stream : TokenStream, dialect? : Dialect) -> ParseResult {
-  @parser.parse_module(stream, dialect?)
+pub fn parse_module(stream : TokenStream, config? : Config) -> ParseResult {
+  @parser.parse_module(stream, config?)
 }
 
 ///|
 /// Parse Gleam source text into a module, with recovery per definition.
+/// `config` sets the dialect and the fuel budget; see `Config`.
 ///
 /// ```mbt check
 /// test {
@@ -208,8 +237,8 @@ pub fn parse_module(stream : TokenStream, dialect? : Dialect) -> ParseResult {
 ///   inspect(r.has_errors(), content="false")
 /// }
 /// ```
-pub fn parse_text(text : String, dialect? : Dialect) -> ParseResult {
-  @parser.parse_text(text, dialect?)
+pub fn parse_text(text : String, config? : Config) -> ParseResult {
+  @parser.parse_text(text, config?)
 }
 
 ///|

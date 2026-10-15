@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/core/builtin",
+  "moonbitlang/core/list",
+}
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/quickcheck",
+} for "test"

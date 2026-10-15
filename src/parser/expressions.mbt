@@ -76,10 +76,7 @@ fn Parser::parse_expression_unit(
   self : Parser,
   context : UnitContext,
 ) -> @ast.Expr? raise ParseError {
-  self.enter()
-  let result = self.parse_expression_unit_inner(context)
-  self.leave()
-  result
+  self.nested(op_expression, () => self.parse_expression_unit_inner(context))
 }
 
 ///|

@@ -66,18 +66,24 @@ fn[A] Parser::finish_snippet(
 ///   debug_inspect(t.location(), content="{ start: 0, end: 7 }")
 /// }
 /// ```
-pub fn parse_type_text(text : String) -> @ast.TypeAst raise ParseError {
+pub fn parse_type_text(
+  text : String,
+  config? : @config.Config,
+) -> @ast.TypeAst raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
+  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_type())
   p.finish_snippet(stream, result, ExpectedType)
 }
 
 ///|
 /// Parse `text` as one pattern.
-pub fn parse_pattern_text(text : String) -> @ast.Pattern raise ParseError {
+pub fn parse_pattern_text(
+  text : String,
+  config? : @config.Config,
+) -> @ast.Pattern raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
+  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_pattern())
   p.finish_snippet(stream, result, ExpectedPattern)
 }
@@ -85,9 +91,12 @@ pub fn parse_pattern_text(text : String) -> @ast.Pattern raise ParseError {
 ///|
 /// Parse `text` as one constant value (the compiler's `parse_const_value`
 /// test interface; a missing value is `ExpectedExpr` at `0..0`).
-pub fn parse_constant_text(text : String) -> @ast.Constant raise ParseError {
+pub fn parse_constant_text(
+  text : String,
+  config? : @config.Config,
+) -> @ast.Constant raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
+  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_const_value())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
@@ -102,9 +111,12 @@ pub fn parse_constant_text(text : String) -> @ast.Constant raise ParseError {
 ///   debug_inspect(e.location(), content="{ start: 0, end: 5 }")
 /// }
 /// ```
-pub fn parse_expression_text(text : String) -> @ast.Expr raise ParseError {
+pub fn parse_expression_text(
+  text : String,
+  config? : @config.Config,
+) -> @ast.Expr raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
+  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_expression())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
@@ -114,9 +126,10 @@ pub fn parse_expression_text(text : String) -> @ast.Expr raise ParseError {
 /// the compiler's `parse_statement_sequence` test interface.
 pub fn parse_statements_text(
   text : String,
+  config? : @config.Config,
 ) -> ArrayView[@ast.Statement] raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, @dialect.Dialect::gleam_1_19())
+  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_statement_sequence().map(r => r.0[:]))
   p.finish_snippet(stream, result, ExpectedExpr)
 }

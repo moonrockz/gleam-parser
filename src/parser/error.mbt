@@ -88,7 +88,7 @@ pub(all) enum ParseErrorType {
   TypeDefinitionAngleGenerics(name~ : String, arguments~ : ArrayView[String])
   MissingConstantAsMessage
   RecordUpdateAfterFields
-  TooMuchNesting
+  TooMuchNesting(budget~ : @fuel.Budget, spent~ : Array[@fuel.Spent])
 } derive(Eq, Debug)
 
 ///|
@@ -170,7 +170,7 @@ pub fn ParseErrorType::kind(self : ParseErrorType) -> String {
     TypeDefinitionAngleGenerics(..) => "TypeDefinitionAngleGenerics"
     MissingConstantAsMessage => "MissingConstantAsMessage"
     RecordUpdateAfterFields => "RecordUpdateAfterFields"
-    TooMuchNesting => "TooMuchNesting"
+    TooMuchNesting(..) => "TooMuchNesting"
   }
 }
 
@@ -637,12 +637,16 @@ pub fn ParseErrorType::details(self : ParseErrorType) -> ParseErrorDetails {
         ].join("\n"),
         "I wasn't expecting a record update here",
       )
-    TooMuchNesting =>
+    TooMuchNesting(budget~, spent~) => {
+      let stack = spent
+        .map(s => "\{s.operation.name()} ×\{s.levels}")
+        .join(", ")
       details(
-        "gleam-parser reads at most \{max_nesting} nested levels of syntax; the Gleam compiler has no such limit.",
-        "This is nested too deeply",
-        hint="Split the code into smaller functions or constants.",
+        "The fuel budget of \{budget.units()} ran out while nesting \{stack}. gleam-parser spends one unit of fuel per nested level of syntax; the Gleam compiler has no such limit.",
+        "Recursion limit exceeded",
+        hint="Split the code into smaller functions or constants, or give the parser a Config with more fuel on a target with a large stack (native, js).",
       )
+    }
   }
 }
 
@@ -659,7 +663,7 @@ pub fn ParseError::to_diagnostic(self : ParseError) -> @diagnostic.Diagnostic {
     _ => {
       let details = error.details()
       @diagnostic.Diagnostic::new(
-        code=if error is TooMuchNesting {
+        code=if error is TooMuchNesting(..) {
           "GL-PARSE-004"
         } else {
           "GL-PARSE-001"

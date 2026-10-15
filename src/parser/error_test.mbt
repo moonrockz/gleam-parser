@@ -29,7 +29,9 @@ test "every error kind is its compiler variant name" {
     )
     .to_equal("ListSpreadWithAnotherSpread")
     e
-    .expect(@parser.ParseErrorType::TooMuchNesting.kind())
+    .expect(
+      @parser.ParseErrorType::TooMuchNesting(budget=@fuel.default_budget, spent=[]).kind(),
+    )
     .to_equal("TooMuchNesting")
   })
 }
@@ -161,7 +163,10 @@ test "a parse error becomes a GL-PARSE-001 diagnostic; nesting a GL-PARSE-004" {
     ParseError(error=OpNakedRight, location=sp(27, 29)),
   )
   let deep = @parser.ParseError::to_diagnostic(
-    ParseError(error=TooMuchNesting, location=sp(3, 4)),
+    ParseError(
+      error=TooMuchNesting(budget=@fuel.default_budget, spent=[]),
+      location=sp(3, 4),
+    ),
   )
   @expect.expect_all(e => {
     e.expect(d.code).to_equal("GL-PARSE-001")

@@ -111,7 +111,10 @@ test "deprecated syntax parses with a warning diagnostic; a quiet dialect gives 
     e.expect(r.module_.definitions.length()).to_equal(1)
   })
   let quiet = { ..@dialect.Dialect::gleam_1_19(), deprecations: [][:], }
-  let q = @parser.parse_text(text, dialect=quiet)
+  let q = @parser.parse_text(text, config={
+    ..@config.Config::default(),
+    dialect: quiet,
+  })
   @expect.expect(q.diagnostics.length()).to_equal(0)
 }
 
