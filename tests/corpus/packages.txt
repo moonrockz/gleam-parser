@@ -1,0 +1,29 @@
+# Gleam parity corpus: Hex packages pinned by version. The zipball is the
+# GitHub archive of tag v<version> of the repository in the Hex metadata.
+# Add `github.com/owner/repo#tag` after a coordinate when that does not hold.
+# After a change: mise run corpus:manifest && mise run corpus:goldens
+gleam_stdlib@1.0.5
+gleeunit@1.11.0
+gleam_erlang@1.3.0
+gleam_json@3.1.0
+gleam_otp@1.3.0
+gleam_http@4.5.0
+gleam_time@1.11.0
+filepath@1.1.2
+gleam_crypto@1.6.0
+gleam_regexp@1.1.1
+envoy@1.2.0
+glisten@9.0.1
+mist@6.0.3
+wisp@2.2.2
+lustre@5.7.1
+glance@7.0.0
+glexer@2.5.0
+tom@2.1.0
+glint@1.3.0
+birdie@2.0.2
+pog@4.1.0
+sqlight@1.2.0
+gleam_community_colour@2.0.4
+gleam_yielder@1.1.0
+non_empty_list@2.3.0

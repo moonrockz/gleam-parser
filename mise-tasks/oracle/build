@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build the Rust AST oracle (tools/gleam-ast-oracle; needs cargo; never runs in CI)"
 set -euo pipefail
-exec cargo build --release --manifest-path tools/gleam-ast-oracle/Cargo.toml
+# Run from the crate directory, so rustup applies its rust-toolchain.toml.
+cd tools/gleam-ast-oracle
+exec cargo build --release
