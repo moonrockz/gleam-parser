@@ -408,13 +408,3 @@ pub fn NodeRef::span(self : NodeRef) -> @span.SrcSpan {
     ConstantOption(o) => option_span(o)
   }
 }
-
-///|
-/// All child nodes in source order. Task 2 gives every node its children;
-/// until then the module lists its definitions.
-pub fn NodeRef::children(self : NodeRef) -> Array[NodeRef] {
-  match self {
-    Module(m, _) => m.definitions.map(d => Definition(d))
-    _ => []
-  }
-}
