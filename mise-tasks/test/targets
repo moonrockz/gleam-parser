@@ -4,7 +4,7 @@ set -euo pipefail
 # llvm is left out: the toolchain does not ship moonbitlang/core for it.
 for target in wasm wasm-gc js native; do
   moon check --target "$target"
-  for pkg in src src/span src/diagnostic src/scanner src/lawkit src/ast src/cst src/dialect src/fuel src/config src/parser src/report; do
+  for pkg in src src/span src/diagnostic src/scanner src/lawkit src/ast src/cst src/dialect src/fuel src/config src/syntax src/parser src/report; do
     moon test "$pkg" --target "$target"
   done
 done

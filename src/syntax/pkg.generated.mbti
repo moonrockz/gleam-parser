@@ -1,0 +1,55 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/syntax"
+
+import {
+  "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/cst",
+  "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/span",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub(all) enum NodeRef {
+  Module(@ast.Module, @cst.ModuleCst)
+  Definition(@ast.TargetedDefinition)
+  Statement(@ast.Statement)
+  Expr(@ast.Expr)
+  Pattern(@ast.Pattern)
+  TypeAst(@ast.TypeAst)
+  Constant(@ast.Constant)
+  ClauseGuard(@ast.ClauseGuard)
+  BitArraySize(@ast.BitArraySize)
+  Clause(@ast.Clause)
+  Arg(@ast.Arg)
+  RecordConstructor(@ast.RecordConstructor)
+  RecordConstructorArg(@ast.RecordConstructorArg)
+  UseAssignment(@ast.UseAssignment)
+  TailPattern(@ast.TailPattern)
+  ExprArg(@ast.CallArg[@ast.Expr])
+  PatternArg(@ast.CallArg[@ast.Pattern])
+  ConstantArg(@ast.CallArg[@ast.Constant])
+  ExprUpdateArg(@ast.RecordUpdateArg[@ast.Expr])
+  ConstantUpdateArg(@ast.RecordUpdateArg[@ast.Constant])
+  ExprRecord(@ast.RecordBeingUpdated[@ast.Expr])
+  ConstantRecord(@ast.RecordBeingUpdated[@ast.Constant])
+  ExprSegment(@ast.BitArraySegment[@ast.Expr])
+  PatternSegment(@ast.BitArraySegment[@ast.Pattern])
+  ConstantSegment(@ast.BitArraySegment[@ast.Constant])
+  ExprOption(@ast.BitArrayOption[@ast.Expr])
+  PatternOption(@ast.BitArrayOption[@ast.Pattern])
+  ConstantOption(@ast.BitArrayOption[@ast.Constant])
+} derive(Eq, @debug.Debug)
+pub fn NodeRef::category(Self) -> String
+pub fn NodeRef::children(Self) -> Array[Self]
+pub fn NodeRef::kind(Self) -> String
+pub fn NodeRef::of_result(@parser.ParseResult) -> Self
+pub fn NodeRef::span(Self) -> @span.SrcSpan
+
+// Type aliases
+
+// Traits

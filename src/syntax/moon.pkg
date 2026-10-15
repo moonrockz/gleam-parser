@@ -1,0 +1,29 @@
+import {
+  "moonbitlang/core/builtin",
+  "moonbitlang/core/list",
+  "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/scanner",
+  "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/cst",
+  "moonrockz/gleam-parser/parser",
+}
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/list",
+  "moonbitlang/core/quickcheck",
+  "moonrockz/gleam-parser/lawkit",
+  "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/scanner",
+} for "test"
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/quickcheck",
+  "moonrockz/gleam-parser/lawkit",
+  "moonrockz/gleam-parser/parser",
+} for "wbtest"
