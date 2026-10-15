@@ -47,6 +47,14 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   compiler's `series_of` records them, so `[1, ..rest]` has one).
 - **Dialect** — `Dialect::gleam_1_19()` (`src/dialect`): the reserved words,
   attributes, targets and deprecation rules the parser accepts.
+- **Fuel and Config** — `src/fuel`: an immutable recursion budget
+  (`Budget`, at least 1; `default_budget` 100 units, sized for wasm), one
+  unit per nested entry, `FuelExhausted` names the operations.
+  `src/config`: `Config { dialect, fuel }` from defaults,
+  `gleam-parser.toml` (`[parser]`: `gleam`, `fuel`), `GLEAM_PARSER_GLEAM`
+  and `GLEAM_PARSER_FUEL` and the caller, merged with `with_fallback` (set
+  fields win); every bad value is a `ConfigError` that names its source;
+  `Config::load` is the only I/O. Every parse entry point takes `config?`.
 - **Report** — `render_plain`, `render_terminal`, `encode_diagnostics`
   (`src/report`): the compiler's layout (codespan-reporting 0.13.1 rich
   display), then the text and `Hint: `.
@@ -91,13 +99,17 @@ same tag).
   comment between a doc comment and the definition detaches it (warning
   `GL-PARSE-003`); a doc comment inside a body is taken by the next
   definition; a trailing doc comment with no definition is ignored.
-- One depth limit keeps every target stack-safe, `GL-PARSE-004`
-  (`TooMuchNesting`): syntactic nesting stops at `@parser.max_nesting`
-  (100; wasm overflows at about 140 nested lists) while parsing. The JSON
-  codec does not recurse (`src/ast/step.mbt`), so an AST the parser
-  accepts always encodes, decodes and canonicalises; the laws in
-  `src/parser/nesting_law_test.mbt` check the limit against the codec.
-  The compiler has no such limit (known difference).
+- Fuel keeps every target stack-safe, `GL-PARSE-004` (`TooMuchNesting`,
+  message `Recursion limit exceeded`): the parser spends one unit of
+  `Config.fuel` per nested entry of an expression, pattern, type,
+  constant, clause guard or bit-array size (`Parser::nested`), and reports
+  the budget and the operations on the stack when it runs out. The default
+  budget is 100 units (wasm overflows at about 140 nested lists); raise it
+  only on native or js. The JSON codec does not recurse
+  (`src/ast/step.mbt`), so an AST the parser accepts always encodes,
+  decodes and canonicalises; the laws in `src/parser/nesting_law_test.mbt`
+  check the limit against the codec. The compiler has no such limit (known
+  difference).
 - Snippet parsers for tests and tools: `parse_expression_text`,
   `parse_statements_text`, `parse_pattern_text`, `parse_type_text`,
   `parse_constant_text` (the compiler's test interfaces; they raise
@@ -121,7 +133,9 @@ moonrockz/gleam-parser
 │   ├── ast/              # Compiler-mirror AST; canonical JSON encode/decode (step trampoline, no depth limit)
 │   ├── cst/              # ModuleCst, DefinitionCst (tokens per definition); trivia_extra
 │   ├── dialect/          # Dialect::gleam_1_19(): attributes, targets, deprecation rules
-│   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; nesting limit
+│   ├── fuel/             # Budget, Operation, Spent, Fuel (immutable), FuelExhausted
+│   ├── config/           # Config, Partial, Source, ConfigError, Environment; from_toml, from_env, load
+│   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; fuel
 │   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
 │   └── syntax/ printer/  # v0.2, v0.3
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests

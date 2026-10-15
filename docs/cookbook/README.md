@@ -11,3 +11,4 @@ article prefixes its top-level names (`gs_`, …).
 | [ast-json.mbt.md](ast-json.mbt.md) | Encode and decode the AST as canonical JSON |
 | [parsing.mbt.md](parsing.mbt.md) | Parse a module, read the AST, recover from errors, pick a dialect |
 | [diagnostics.mbt.md](diagnostics.mbt.md) | Render diagnostics as the compiler does, or as JSON |
+| [configure.mbt.md](configure.mbt.md) | Set the dialect and the fuel budget; load a configuration from TOML and the environment |
