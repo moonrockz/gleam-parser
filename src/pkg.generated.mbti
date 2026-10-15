@@ -12,9 +12,12 @@ import {
   "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/syntax",
 }
 
 // Values
+pub fn[V : @syntax.Visitor] accept(@syntax.NodeRef, V) -> Unit
+
 pub fn canonical(Json) -> String
 
 pub fn decode_expr(Json) -> @ast.Expr raise @ast.DecodeError
@@ -35,6 +38,10 @@ pub fn encode_oracle_output(@ast.OracleOutput) -> Json
 
 pub fn encode_parsed(@ast.Parsed) -> Json
 
+pub fn[A] fold(@syntax.NodeRef, A, (A, @syntax.NodeRef) -> (A, @syntax.Control), leave? : (A, @syntax.NodeRef) -> A) -> A
+
+pub fn kind_table() -> Array[(String, String, Array[String])]
+
 pub fn parse_float_value(String) -> Double?
 
 pub fn parse_int_value(String) -> @bigint.BigInt?
@@ -42,6 +49,12 @@ pub fn parse_int_value(String) -> @bigint.BigInt?
 pub fn parse_module(@scanner.TokenStream, config? : @config.Config) -> @parser.ParseResult
 
 pub fn parse_text(String, config? : @config.Config) -> @parser.ParseResult
+
+pub fn[S : @syntax.EventSource, H : @syntax.Handler] push_events(S, H) -> Unit
+
+pub fn[A] reduce(@syntax.NodeRef, (@syntax.NodeRef, ArrayView[A]) -> A) -> A
+
+pub fn[A] reduce_with_fields(@syntax.NodeRef, (@syntax.NodeRef, ArrayView[(@syntax.PathStep, A)]) -> A) -> A
 
 pub fn render_plain(@diagnostic.Diagnostic, @scanner.SourceText, String) -> String
 
@@ -52,6 +65,8 @@ pub fn tokenize(@scanner.SourceText) -> @scanner.TokenStream
 pub fn tokenize_text(String) -> @scanner.TokenStream
 
 pub fn version() -> String
+
+pub fn walk(@syntax.NodeRef, (@syntax.NodeRef) -> @syntax.Control, leave? : (@syntax.NodeRef) -> Unit) -> Unit
 
 // Errors
 
@@ -96,6 +111,8 @@ pub using @config {type ConfigError}
 
 pub using @ast {type Constant}
 
+pub using @syntax {type Control}
+
 pub using @ast {type CustomType}
 
 pub using @ast {type DecodeError}
@@ -114,7 +131,13 @@ pub using @dialect {type Dialect}
 
 pub using @ast {type Documentation}
 
+pub using @syntax {type EnterEvent}
+
 pub using @config {type Environment}
+
+pub using @syntax {type Event}
+
+pub using @syntax {type EventReader}
 
 pub using @ast {type Expr}
 
@@ -142,6 +165,8 @@ pub using @scanner {type Keyword}
 
 pub using @diagnostic {type Label}
 
+pub using @syntax {type LeaveEvent}
+
 pub using @scanner {type LexicalErrorType}
 
 pub using @ast {type Module}
@@ -151,6 +176,10 @@ pub using @ast {type ModuleConstant}
 pub using @cst {type ModuleCst}
 
 pub using @ast {type ModuleExtra}
+
+pub using @syntax {type NodePath}
+
+pub using @syntax {type NodeRef}
 
 pub using @fuel {type Operation}
 
@@ -167,6 +196,8 @@ pub using @parser {type ParseResult}
 pub using @ast {type Parsed}
 
 pub using @config {type Partial}
+
+pub using @syntax {type PathStep}
 
 pub using @ast {type Pattern}
 
@@ -214,6 +245,10 @@ pub using @scanner {type TokenKind}
 
 pub using @scanner {type TokenStream}
 
+pub using @syntax {type Tree}
+
+pub using @syntax {type TreeCursor}
+
 pub using @scanner {type Trivia}
 
 pub using @ast {type TypeAlias}
@@ -241,5 +276,11 @@ pub using @ast {type Use}
 pub using @ast {type UseAssignment}
 
 pub using @ast {type Warning}
+
+pub using @syntax {trait EventSource}
+
+pub using @syntax {trait Handler}
+
+pub using @syntax {trait Visitor}
 
 // Traits

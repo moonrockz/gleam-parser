@@ -1,0 +1,234 @@
+///|
+/// What an `Enter` event tells: only what a streaming parser knows when a
+/// node starts. `field` is the node's field in its parent and `path` the
+/// steps from the start node (`None` and the empty path for the start
+/// node); `depth` is `path.depth()`; `start` is the node's first byte.
+pub struct EnterEvent {
+  category : String
+  kind : String
+  field : String?
+  start : Int32
+  depth : Int32
+  path : NodePath
+} derive(Eq, Debug)
+
+///|
+/// What a `Leave` event tells: the finished node, with the depth and path
+/// of its `Enter`.
+pub struct LeaveEvent {
+  node : NodeRef
+  depth : Int32
+  path : NodePath
+} derive(Eq, Debug)
+
+///|
+/// An `EnterEvent`; its `depth` is `path.depth()`. Event sources outside
+/// this package build events with `new`, so fields added later need not
+/// break them.
+///
+/// ```mbt check
+/// test {
+///   let path = @syntax.NodePath::root().child("definitions", 0)
+///   let e = @syntax.EnterEvent::new(
+///     category="definition",
+///     kind="function",
+///     field=Some("definitions"),
+///     start=0,
+///     path~,
+///   )
+///   inspect(e.depth, content="1")
+///   inspect(e.path, content="definitions[0]")
+/// }
+/// ```
+pub fn EnterEvent::new(
+  category~ : String,
+  kind~ : String,
+  field~ : String?,
+  start~ : Int32,
+  path~ : NodePath,
+) -> EnterEvent {
+  { category, kind, field, start, depth: path.depth(), path, }
+}
+
+///|
+/// A `LeaveEvent`; its `depth` is `path.depth()`.
+///
+/// ```mbt check
+/// test {
+///   let root = @syntax.NodeRef::of_result(@parser.parse_text("const x = 1\n"))
+///   let e = @syntax.LeaveEvent::new(node=root, path=@syntax.NodePath::root())
+///   inspect(e.depth, content="0")
+///   inspect(e.node.kind(), content="module")
+/// }
+/// ```
+pub fn LeaveEvent::new(node~ : NodeRef, path~ : NodePath) -> LeaveEvent {
+  { node, depth: path.depth(), path, }
+}
+
+///|
+/// A traversal event, in walk order.
+pub(all) enum Event {
+  Enter(EnterEvent)
+  Leave(LeaveEvent)
+} derive(Eq, Debug)
+
+///|
+/// A pull source of events in walk order. `skip_children` is valid right
+/// after an `Enter`: the next event is then that node's `Leave`. Elsewhere
+/// it does nothing.
+pub(open) trait EventSource {
+  fn next(Self) -> Event?
+  fn skip_children(Self) -> Unit
+}
+
+///|
+/// One open node of a reader: its children with their fields.
+priv struct ReaderFrame {
+  entered : NodeRef
+  path : NodePath
+  fields : Array[(PathStep, NodeRef)]
+  mut at : Int32
+}
+
+///|
+/// Reads the events of a tree one at a time (the walk engine, paused
+/// between `next` calls). Each reader owns its state; readers over one
+/// tree do not affect each other. To stop early, stop calling `next`.
+///
+/// ```mbt check
+/// test {
+///   let root = @syntax.NodeRef::of_result(
+///     @parser.parse_text("pub fn f(x) {\n  x\n}\n"),
+///   )
+///   let reader = @syntax.EventReader::new(root)
+///   let log = []
+///   let mut body = ""
+///   while reader.next() is Some(event) {
+///     match event {
+///       Enter(e) => {
+///         log.push("+" + e.kind)
+///         if e.category == "expression" {
+///           body = "\{e.field.unwrap()} at depth \{e.depth}: \{e.path}"
+///         }
+///         // Skip the arguments: their `Leave` comes next.
+///         if e.category == "arg" {
+///           reader.skip_children()
+///         }
+///       }
+///       Leave(e) => log.push("-" + e.node.kind())
+///     }
+///   }
+///   inspect(
+///     log.join(" "),
+///     content="+module +function +arg -arg +expression +var -var -expression -function -module",
+///   )
+///   inspect(
+///     body,
+///     content="expression at depth 3: definitions[0].body[0].expression[0]",
+///   )
+/// }
+/// ```
+pub struct EventReader {
+  priv stack : Array[ReaderFrame]
+  /// The node whose `Enter` was returned last (with its path), until its
+  /// children are read.
+  priv mut pending : (NodeRef, NodePath)?
+  /// The root, until its `Enter` is returned.
+  priv mut root : NodeRef?
+}
+
+///|
+/// A reader positioned before `root`'s `Enter`.
+pub fn EventReader::new(root : NodeRef) -> EventReader {
+  { stack: [], pending: None, root: Some(root), }
+}
+
+///|
+/// The reader's remaining events as an `Iter`. The iterator calls `next`
+/// on this reader, so it shares the reader's state: call `skip_children`
+/// on the reader right after an `Enter` to skip that node's children, and
+/// break out of the loop to stop.
+///
+/// ```mbt check
+/// test {
+///   let root = @syntax.NodeRef::of_result(
+///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
+///   )
+///   let reader = @syntax.EventReader::new(root)
+///   let args = []
+///   for event in reader.iter() {
+///     if event is Enter(e) {
+///       if e.category == "expression" {
+///         reader.skip_children()
+///       }
+///       if e.category == "arg" {
+///         args.push(e.path.to_string())
+///       }
+///     }
+///   }
+///   debug_inspect(
+///     args,
+///     content="[\"definitions[0].arguments[0]\", \"definitions[0].arguments[1]\"]",
+///   )
+/// }
+/// ```
+pub fn EventReader::iter(self : EventReader) -> Iter[Event] {
+  Iter::new(() => EventSource::next(self))
+}
+
+///|
+pub extend EventReader with EventSource::{next, skip_children}
+
+///|
+fn enter_event(n : NodeRef, field : String?, path : NodePath) -> Event {
+  Enter(
+    EnterEvent::new(
+      category=n.category(),
+      kind=n.kind(),
+      field~,
+      start=n.span().start,
+      path~,
+    ),
+  )
+}
+
+///|
+/// The next event in walk order, or `None` after the root's `Leave`.
+pub impl EventSource for EventReader with fn next(self) {
+  if self.pending is Some((n, path)) {
+    self.pending = None
+    self.stack.push({
+      entered: n,
+      path,
+      fields: n.children_with_fields(),
+      at: 0,
+    })
+  }
+  if self.root is Some(r) {
+    self.root = None
+    let path = NodePath::root()
+    self.pending = Some((r, path))
+    return Some(enter_event(r, None, path))
+  }
+  guard self.stack.last() is Some(top) else { return None }
+  if top.at < top.fields.length() {
+    let (step, child) = top.fields[top.at]
+    top.at = top.at + 1
+    let path = top.path.child(step.field, step.index)
+    self.pending = Some((child, path))
+    Some(enter_event(child, Some(step.field), path))
+  } else {
+    ignore(self.stack.pop())
+    Some(Leave(LeaveEvent::new(node=top.entered, path=top.path)))
+  }
+}
+
+///|
+/// Right after an `Enter`, skip that node's children: the next event is
+/// its `Leave`. Elsewhere it does nothing.
+pub impl EventSource for EventReader with fn skip_children(self) {
+  if self.pending is Some((n, path)) {
+    self.pending = None
+    self.stack.push({ entered: n, path, fields: [], at: 0, })
+  }
+}
