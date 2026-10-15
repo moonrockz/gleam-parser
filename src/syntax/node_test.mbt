@@ -35,9 +35,9 @@ test "a definition's kind is the JSON kind and its span reaches end_position" {
     ])
     e.expect(defs.map(d => d.category())).to_equal(Array::make(5, "definition"))
     // `pub fn main() {\n  1\n}` is bytes 0..21: the head ends at 13, the
-    // body at 21. A constant's location is its head `const x`.
+    // body at 21. A constant spans its head `const x` and its value.
     e.expect(defs[0].span()).to_equal(sp(0, 21))
-    e.expect(defs[1].span()).to_equal(sp(23, 30))
+    e.expect(defs[1].span()).to_equal(sp(23, 34))
     e.expect(defs[2].span()).to_equal(sp(36, 50))
     e.expect(defs[4].span()).to_equal(sp(68, 83))
   })

@@ -330,6 +330,39 @@ fn[V] option_kind(o : @ast.BitArrayOption[V]) -> String {
 }
 
 ///|
+/// A guard's span. The compiler's `TupleIndex` guard location covers
+/// `.index` only, and a binary operator built on it starts there too, so
+/// the span starts at the leftmost node of the guard's left spine (a loop,
+/// not a recursion).
+fn guard_span(g : @ast.ClauseGuard) -> @span.SrcSpan {
+  let own = g.location()
+  let mut start = own.start
+  let mut cur = g
+  while true {
+    let s = cur.location().start
+    if s < start {
+      start = s
+    }
+    match cur {
+      BinaryOperator(left~, ..) => cur = left
+      TupleIndex(tuple~, ..) => cur = tuple
+      FieldAccess(container~, ..) => cur = container
+      Block(..) | Not(..) | Var(..) | Constant(_) => break
+    }
+  }
+  @span.SrcSpan::new(start, own.end)
+}
+
+///|
+fn later(a : Int32, b : Int32) -> Int32 {
+  if a > b {
+    a
+  } else {
+    b
+  }
+}
+
+///|
 fn[V] option_span(o : @ast.BitArrayOption[V]) -> @span.SrcSpan {
   match o {
     Bytes(location~)
@@ -353,12 +386,14 @@ fn[V] option_span(o : @ast.BitArrayOption[V]) -> @span.SrcSpan {
 }
 
 ///|
-/// The node's span, in UTF-8 byte offsets (the end is exclusive). The
-/// module spans from 0 to the end of its last token; a function or custom
-/// type from its head to its `end_position` (its AST `location` covers
-/// the head only); every other node has the AST's `location`: a pipeline
-/// runs from its first to its last expression, a `pattern as name` from
-/// the pattern's start to the name's end.
+/// The node's span, in UTF-8 byte offsets (the end is exclusive). A node's
+/// span contains its children's. The module spans from 0 to the end of its
+/// last token; a definition from its head to its last child (`end_position`
+/// for a function or custom type, the value of a constant, the type of an
+/// alias; the compiler's `location` covers the head only); a `TupleIndex`
+/// guard from its tuple to its index; every other node has the AST's
+/// `location`: a pipeline runs from its first to its last expression, a
+/// `pattern as name` from the pattern's start to the name's end.
 ///
 /// ```mbt check
 /// test {
@@ -376,16 +411,44 @@ pub fn NodeRef::span(self : NodeRef) -> @span.SrcSpan {
       }
     Definition(t) =>
       match t.definition {
-        Function(f) => @span.SrcSpan::new(f.location.start, f.end_position)
+        Function(f) => {
+          // An external function has no body: `end_position` ends the head,
+          // and the return annotation may lie after it.
+          let mut end = if f.end_position > f.location.end {
+            f.end_position
+          } else {
+            f.location.end
+          }
+          if f.return_annotation is Some(r) {
+            end = later(end, r.location().end)
+          }
+          for a in f.arguments {
+            end = later(end, a.location.end)
+          }
+          @span.SrcSpan::new(f.location.start, end)
+        }
         CustomType(c) => @span.SrcSpan::new(c.location.start, c.end_position)
-        other => other.location()
+        TypeAlias(a) =>
+          @span.SrcSpan::new(
+            a.location.start,
+            later(a.location.end, a.type_ast.location().end),
+          )
+        ModuleConstant(c) => {
+          // The compiler's location covers `const name` only.
+          let mut end = later(c.location.end, c.value.location().end)
+          if c.annotation is Some(t) {
+            end = later(end, t.location().end)
+          }
+          @span.SrcSpan::new(c.location.start, end)
+        }
+        Import(i) => i.location
       }
     Statement(s) => s.location()
     Expr(e) => e.location()
     Pattern(p) => p.location()
     TypeAst(t) => t.location()
     Constant(c) => c.location()
-    ClauseGuard(g) => g.location()
+    ClauseGuard(g) => guard_span(g)
     BitArraySize(z) => z.location()
     Clause(c) => c.location
     Arg(a) => a.location

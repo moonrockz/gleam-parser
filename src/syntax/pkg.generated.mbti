@@ -6,6 +6,7 @@ import {
   "moonrockz/gleam-parser/ast",
   "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
 }
 
@@ -123,6 +124,20 @@ pub(all) struct PathStep {
   field : String
   index : Int
 } derive(Eq, Hash, @debug.Debug)
+
+pub struct Tree {
+  // private fields
+}
+pub fn Tree::ancestors(Self, NodeRef) -> Array[NodeRef]
+pub fn Tree::field_of(Self, NodeRef) -> String?
+pub fn Tree::new(@parser.ParseResult) -> Self
+pub fn Tree::node_at(Self, Int) -> NodeRef?
+pub fn Tree::node_path(Self, NodeRef) -> NodePath?
+pub fn Tree::parent(Self, NodeRef) -> NodeRef?
+pub fn Tree::path(Self, NodeRef) -> Array[NodeRef]
+pub fn Tree::root(Self) -> NodeRef
+pub fn Tree::step(Self, NodeRef) -> PathStep?
+pub fn Tree::tokens_in(Self, @span.SrcSpan) -> Array[@scanner.Token]
 
 // Type aliases
 
