@@ -50,7 +50,10 @@ test {
 
 Planned, in order:
 
-- **Syntax tree**: a read-only node model with six traversal styles.
+- **Syntax tree** (`NodeRef`, `Tree`, `NodePath`): a read-only node model
+  over the AST with parent links, position lookup and seven traversal
+  styles: `walk`, `fold`, `reduce`, `Visitor`, pull events, push events
+  and `TreeCursor`; every traversal uses an explicit stack.
 - **Printer and formatter**: Gleam source from an AST, `gleam format` parity.
 
 ## Installation

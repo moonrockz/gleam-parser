@@ -215,6 +215,102 @@ pub using @config {
 pub let default_budget : Budget = @fuel.default_budget
 
 ///|
+/// The syntax tree (v0.2): a read-only node model (`NodeRef`), parent
+/// links and positions (`Tree`), paths (`NodePath`) and seven traversals:
+/// `walk`, `fold`, `reduce`, `Visitor` with `accept`, `EventReader`
+/// (pull), `push_events` with `Handler` (push) and `TreeCursor`. Every
+/// traversal uses an explicit stack, so no depth overflows and no fuel is
+/// spent.
+pub using @syntax {
+  type NodeRef,
+  type Control,
+  type PathStep,
+  type NodePath,
+  type Tree,
+  trait Visitor,
+  type Event,
+  type EnterEvent,
+  type LeaveEvent,
+  trait EventSource,
+  type EventReader,
+  trait Handler,
+  type TreeCursor,
+}
+
+///|
+/// Visit every node below `root` in pre-order (see `@syntax.walk`).
+///
+/// ```mbt check
+/// test {
+///   let root = @gleam.NodeRef::of_result(
+///     @gleam.parse_text("pub fn f(x) {\n  x\n}\n"),
+///   )
+///   let kinds = []
+///   @gleam.walk(root, n => {
+///     kinds.push(n.kind())
+///     Continue
+///   })
+///   inspect(kinds.join(" "), content="module function arg expression var")
+/// }
+/// ```
+pub fn walk(
+  root : NodeRef,
+  enter : (NodeRef) -> Control,
+  leave~ : (NodeRef) -> Unit = _ => (),
+) -> Unit {
+  @syntax.walk(root, enter, leave~)
+}
+
+///|
+/// Walk with an accumulator (see `@syntax.fold`).
+pub fn[A] fold(
+  root : NodeRef,
+  init : A,
+  enter : (A, NodeRef) -> (A, Control),
+  leave~ : (A, NodeRef) -> A = (a, _) => a,
+) -> A {
+  @syntax.fold(root, init, enter, leave~)
+}
+
+///|
+/// Reduce the tree to one value, bottom up (see `@syntax.reduce`).
+pub fn[A] reduce(root : NodeRef, f : (NodeRef, ArrayView[A]) -> A) -> A {
+  @syntax.reduce(root, f)
+}
+
+///|
+/// `reduce` with each child's step next to its result (see
+/// `@syntax.reduce_with_fields`).
+pub fn[A] reduce_with_fields(
+  root : NodeRef,
+  f : (NodeRef, ArrayView[(PathStep, A)]) -> A,
+) -> A {
+  @syntax.reduce_with_fields(root, f)
+}
+
+///|
+/// Walk with a `Visitor` (see `@syntax.accept`).
+pub fn[V : Visitor] accept(root : NodeRef, visitor : V) -> Unit {
+  @syntax.accept(root, visitor)
+}
+
+///|
+/// Pull every event from `source` and push it to `handler` (see
+/// `@syntax.push_events`).
+pub fn[S : EventSource, H : Handler] push_events(
+  source : S,
+  handler : H,
+) -> Unit {
+  @syntax.push_events(source, handler)
+}
+
+///|
+/// Every node type as (category, kind, fields) (see `@syntax.kind_table`).
+pub fn kind_table() -> Array[(String, String, Array[String])] {
+  @syntax.kind_table()
+}
+
+///|
 /// The CST: every token grouped per definition (`ModuleCst::to_source()`
 /// is the text byte for byte; a `Skipped` definition is a run the parser
 /// reported and skipped).

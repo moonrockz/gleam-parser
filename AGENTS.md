@@ -58,7 +58,26 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
 - **Report** — `render_plain`, `render_terminal`, `encode_diagnostics`
   (`src/report`): the compiler's layout (codespan-reporting 0.13.1 rich
   display), then the text and `Hint: `.
-- **Syntax tree** (v0.2) — read-only node model and traversal.
+- **Syntax tree** (v0.2) — `src/syntax`: a read-only node model over the
+  AST. `NodeRef` points into the typed AST (28 cases, nothing copied);
+  `(category, kind)` is the JSON vocabulary of `docs/ast-json.md`, fields
+  are the JSON keys in encoder order, and `kind_table()` lists every row
+  (checked against the schema by `tests/features/syntax.feature`). Spans
+  are byte offsets, and a node's span contains its children's: the module
+  spans to its last token, a definition to its last child (a constant's
+  value, an external function's return annotation, `end_position`), a
+  clause guard starts at the leftmost node of its left spine (the compiler
+  locates a `TupleIndex` guard at `.index` only). Paths mirror the JSON
+  (`definitions[0].body[1].value[0]`); a clause's `alternative_patterns`
+  is flattened to one index. Seven traversals on explicit stacks (no
+  recursion, no fuel): `walk`, `fold`, `reduce` (bottom up, returns a
+  value; a trait cannot carry the result type), `Visitor` with `accept`,
+  `EventReader` (pull), `push_events` with `Handler` (push), `TreeCursor`.
+  `Tree` indexes parents once and answers `parent`, `node_path`,
+  `node_at(offset)` (the smallest span, deepest among equals) and
+  `tokens_in`. One documented gap: a descent with `goto_first_child_for`
+  stops at a function capture's generated argument; `goto_node_at` reaches
+  the hole.
 - **Printer and formatter** (v0.3) — Gleam source with `gleam format` parity.
 
 ### Gleam reference
@@ -137,7 +156,8 @@ moonrockz/gleam-parser
 │   ├── config/           # Config, Partial, Source, ConfigError, Environment; from_toml, from_env, load
 │   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; fuel
 │   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
-│   └── syntax/ printer/  # v0.2, v0.3
+│   ├── syntax/           # NodeRef, children, kind_table; walk, fold, reduce, Visitor, events, Tree, NodePath, TreeCursor
+│   └── printer/          # v0.3
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests
 │   ├── bdd/              # MoonSpec step definitions for tests/features
 │   ├── features/         # Gherkin features
