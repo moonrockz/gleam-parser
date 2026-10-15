@@ -29,6 +29,7 @@ pub(all) struct Partial {
 ///|
 /// Where a configuration value came from; an error names it.
 pub(all) enum Source {
+  /// Reserved: the built-in defaults (no error comes from them).
   Default
   /// A key path in the TOML file (`parser.fuel`).
   TomlKey(String)
@@ -38,6 +39,7 @@ pub(all) enum Source {
   EnvVar(String)
   /// A file path that could not be read.
   File(String)
+  /// Reserved: a value the caller passed (no error comes from it).
   Caller
 } derive(Eq, Debug)
 
@@ -66,6 +68,7 @@ pub fn Config::with_fallback(self : Config, over : Partial) -> Config {
 }
 
 ///|
+/// No field set.
 pub fn Partial::empty() -> Partial {
   { dialect: None, fuel: None, }
 }

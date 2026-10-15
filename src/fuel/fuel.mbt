@@ -25,6 +25,7 @@ pub fn Budget::new(units : Int32) -> Budget? {
 }
 
 ///|
+/// The number of units.
 pub fn Budget::units(self : Budget) -> Int32 {
   self.0
 }
@@ -41,11 +42,13 @@ pub let default_budget : Budget = Budget(100)
 pub struct Operation(String) derive(Eq, Hash, Debug)
 
 ///|
+/// An operation with this name; the name appears in `FuelExhausted`.
 pub fn Operation::new(name : String) -> Operation {
   Operation(name)
 }
 
 ///|
+/// The operation's name.
 pub fn Operation::name(self : Operation) -> String {
   self.0
 }
@@ -93,11 +96,13 @@ pub fn Fuel::spend(self : Fuel, op : Operation) -> Fuel raise FuelExhausted {
 }
 
 ///|
+/// The units not yet spent.
 pub fn Fuel::left(self : Fuel) -> Int32 {
   self.left
 }
 
 ///|
+/// The budget this fuel started with.
 pub fn Fuel::budget(self : Fuel) -> Budget {
   self.budget
 }

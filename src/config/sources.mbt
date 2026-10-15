@@ -16,6 +16,7 @@ pub fn Environment::of(vars : Map[String, String]) -> Environment {
 }
 
 ///|
+/// The value of the variable `name`, or `None` when it is not set.
 pub fn Environment::get(self : Environment, name : String) -> String? {
   (self.0)(name)
 }
@@ -73,12 +74,30 @@ fn parse_gleam(
 
 ///|
 fn parse_fuel(units : Int64, source : Source) -> @fuel.Budget raise ConfigError {
+  // Both bounds before `to_int`: a value outside the Int range would wrap.
+  if units < 1L {
+    bad(source, "must be at least 1")
+  }
   if units > 2147483647L {
     bad(source, "must be at most 2147483647")
   }
   match @fuel.Budget::new(units.to_int()) {
     Some(b) => b
     None => bad(source, "must be at least 1")
+  }
+}
+
+///|
+/// The TOML parser's message without its internal location: the text
+/// after `FAILED: ` and before ` at {`.
+fn toml_message(raw : String) -> String {
+  let text = match raw.find("FAILED: ") {
+    Some(i) => raw[i + 8:].to_owned()
+    None => raw
+  }
+  match text.find(" at {") {
+    Some(i) => text[:i].to_owned()
+    None => text
   }
 }
 
@@ -105,7 +124,9 @@ fn article(type_name : String) -> String {
 /// }
 /// ```
 pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
-  let root = @toml.parse(text) catch { e => bad(TomlSyntax, "\{e}") }
+  let root = @toml.parse(text) catch {
+    e => bad(TomlSyntax, toml_message("\{e}"))
+  }
   let tables = match root {
     TomlTable(m) => m
     other =>
@@ -189,9 +210,10 @@ pub fn Config::from_env(env : Environment) -> Partial raise ConfigError {
 /// with `File(path)`. The only function of this package with I/O.
 ///
 /// ```mbt nocheck
-/// let config = @gleam.Config::load()
-///
-/// let r = @gleam.parse_text(text, config~)
+/// fn parse_with_config(text : String) -> @gleam.ParseResult raise {
+///   let config = @gleam.Config::load()
+///   @gleam.parse_text(text, config~)
+/// }
 /// ```
 pub fn Config::load(
   path~ : String = "gleam-parser.toml",

@@ -87,8 +87,8 @@ environment; it is the one function of the library that reads a file:
 
 ```mbt nocheck
 ///|
-let config = @gleam.Config::load()
-
-///|
-let r = @gleam.parse_text(text, config~)
+fn cf_parse_with_config(text : String) -> @gleam.ParseResult raise {
+  let config = @gleam.Config::load()
+  @gleam.parse_text(text, config~)
+}
 ```

@@ -125,20 +125,10 @@ test "the nesting error names the budget and the operations, outermost first" {
     e.expect(d.code).to_equal("GL-PARSE-004")
     e.expect(d.message).to_equal("Recursion limit exceeded")
     e
-    .expect(
-      d.text.has_prefix(
-        "The fuel budget of 4 ran out while nesting expression ×",
-      ),
+    .expect(d.text)
+    .to_equal(
+      "The fuel budget of 4 ran out while nesting expression ×1, pattern ×3. gleam-parser spends one unit of fuel per nested level of syntax; the Gleam compiler has no such limit.",
     )
-    .to_be_true()
-    e.expect(d.text.contains("pattern ×")).to_be_true()
-    e
-    .expect(
-      d.text.has_suffix(
-        "gleam-parser spends one unit of fuel per nested level of syntax; the Gleam compiler has no such limit.",
-      ),
-    )
-    .to_be_true()
     e
     .expect(d.hint)
     .to_equal(
@@ -146,5 +136,36 @@ test "the nesting error names the budget and the operations, outermost first" {
         "Split the code into smaller functions or constants, or give the parser a Config with more fuel on a target with a large stack (native, js).",
       ),
     )
+  })
+}
+
+///|
+/// The units a construct spends besides its own levels (the literal inside
+/// the innermost list, the function body) are a fixed cost `k`; a budget
+/// of `n + k` accepts depth `n` and rejects depth `n + 1`, for every small
+/// `n`, not only at the default budget.
+test "law: every small budget accepts exactly its depth of nested lists" {
+  let mut last_ok = 0
+  while last_ok < 400 &&
+        !@parser.parse_text(@lawkit.nested(List, last_ok + 1)).has_errors() {
+    last_ok += 1
+  }
+  let k = @fuel.default_budget.units() - last_ok
+  @expect.expect_all(e => {
+    e.expect(k >= 1).to_be_true()
+    for n in 1..<=10 {
+      let ok = @parser.parse_text(
+        @lawkit.nested(List, n),
+        config=with_fuel(n + k),
+      )
+      let too_deep = @parser.parse_text(
+        @lawkit.nested(List, n + 1),
+        config=with_fuel(n + k),
+      )
+      e.expect((n, nesting_kinds(ok))).to_equal((n, []))
+      e
+      .expect((n, nesting_kinds(too_deep)))
+      .to_equal((n, ["GL-PARSE-004 TooMuchNesting"]))
+    }
   })
 }

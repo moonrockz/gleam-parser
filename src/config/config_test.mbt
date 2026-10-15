@@ -89,6 +89,21 @@ test "from_toml names the key of every bad value" {
       Some((@config.Source::TomlKey("parser.fuel"), "must be at least 1")),
     )
     e
+    .expect(bad("[parser]\nfuel = -4294967196\n"))
+    .to_equal(
+      Some((@config.Source::TomlKey("parser.fuel"), "must be at least 1")),
+    )
+    e
+    .expect(bad("[parser]\nfuel = 4294967396\n"))
+    .to_equal(
+      Some(
+        (@config.Source::TomlKey("parser.fuel"), "must be at most 2147483647"),
+      ),
+    )
+    e
+    .expect(bad("[parser\nfuel = 1\nfuel = 2\n"))
+    .to_equal(Some((@config.Source::TomlSyntax, "Expected ']'")))
+    e
     .expect(bad("[parser]\nfuel = \"100\"\n"))
     .to_equal(
       Some(
@@ -185,6 +200,11 @@ test "from_env names the variable of every bad value; an empty value is an error
           "expected an integer, found \"abc\"",
         ),
       ),
+    )
+    e
+    .expect(bad({ "GLEAM_PARSER_FUEL": "-4294967196" }))
+    .to_equal(
+      Some((@config.Source::EnvVar("GLEAM_PARSER_FUEL"), "must be at least 1")),
     )
     e
     .expect(bad({ "GLEAM_PARSER_FUEL": "0" }))
