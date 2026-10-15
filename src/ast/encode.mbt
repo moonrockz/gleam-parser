@@ -634,18 +634,20 @@ fn[R] enc_statement(s : Statement, k : (Json) -> Step[R]) -> Step[R] {
     Assignment(a) =>
       node(a.value, enc_expr, value => {
         node(a.pattern, enc_pattern, pattern => {
-          maybe(a.annotation, enc_type_ast, annotation => {
-            give(
-              k,
-              obj([
-                ("kind", str("assignment")),
-                ("location", encode_span(a.location)),
-                ("value", value),
-                ("pattern", pattern),
-                ("assignment_kind", assignment_kind(a.kind)),
-                ("annotation", annotation),
-              ]),
-            )
+          node(a.kind, enc_assignment_kind, assignment_kind => {
+            maybe(a.annotation, enc_type_ast, annotation => {
+              give(
+                k,
+                obj([
+                  ("kind", str("assignment")),
+                  ("location", encode_span(a.location)),
+                  ("value", value),
+                  ("pattern", pattern),
+                  ("assignment_kind", assignment_kind),
+                  ("annotation", annotation),
+                ]),
+              )
+            })
           })
         })
       })
@@ -689,17 +691,22 @@ fn[R] enc_statement(s : Statement, k : (Json) -> Step[R]) -> Step[R] {
 /// `Assignment.kind` is written under `assignment_kind`, because `kind`
 /// names the statement. The `Assert` arm's message is an expression, so
 /// this is a node: the statement encoder enters it through `node`.
-fn assignment_kind(k : AssignmentKind) -> Json {
-  match k {
-    Let => obj([("kind", str("let"))])
-    Generated => obj([("kind", str("generated"))])
+fn[R] enc_assignment_kind(a : AssignmentKind, k : (Json) -> Step[R]) -> Step[R] {
+  match a {
+    Let => give(k, obj([("kind", str("let"))]))
+    Generated => give(k, obj([("kind", str("generated"))]))
     Assert(location~, assert_keyword_start~, message~) =>
-      obj([
-        ("kind", str("assert")),
-        ("location", encode_span(location)),
-        ("assert_keyword_start", num(assert_keyword_start)),
-        ("message", opt(message, encode_expr)),
-      ])
+      maybe(message, enc_expr, message => {
+        give(
+          k,
+          obj([
+            ("kind", str("assert")),
+            ("location", encode_span(location)),
+            ("assert_keyword_start", num(assert_keyword_start)),
+            ("message", message),
+          ]),
+        )
+      })
   }
 }
 

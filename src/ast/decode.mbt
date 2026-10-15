@@ -1,6 +1,12 @@
 // Decoders for the canonical JSON of docs/ast-json.md. Every decoder takes
 // the JSON path of its input, so an error names the exact location
 // (`$.module.definitions[3].definition.body[0].value`).
+//
+// Leaves (spans, strings, numbers, payload-free enums) decode directly.
+// Nodes (`dec_*` with a continuation) run on the step trampoline of
+// `step.mbt`: they enter a child only through `child`, `child_opt`,
+// `child_list` or `children`, and hand their value to the continuation
+// through `yield_`.
 
 ///|
 /// Raised on malformed input. `path` is a JSONPath-like location (`$` is

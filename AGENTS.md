@@ -121,7 +121,7 @@ moonrockz/gleam-parser
 │   ├── ast/              # Compiler-mirror AST; canonical JSON encode/decode (step trampoline, no depth limit)
 │   ├── cst/              # ModuleCst, DefinitionCst (tokens per definition); trivia_extra
 │   ├── dialect/          # Dialect::gleam_1_19(): attributes, targets, deprecation rules
-│   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; depth
+│   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; nesting limit
 │   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
 │   └── syntax/ printer/  # v0.2, v0.3
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests
