@@ -1,5 +1,7 @@
 import {
   "moonbitlang/core/builtin",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/list",
   "moonrockz/gleam-parser/span",
   "moonrockz/gleam-parser/ast",
   "moonrockz/gleam-parser/cst",

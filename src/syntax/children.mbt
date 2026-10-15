@@ -2,14 +2,6 @@
 // docs/ast-json.md (the encoder's order in src/ast/encode.mbt).
 
 ///|
-/// One step of a node path: a field of the parent and the node's index in
-/// that field (0 for a field that holds one node).
-pub(all) struct PathStep {
-  field : String
-  index : Int32
-} derive(Eq, Hash, Debug)
-
-///|
 fn[T] optional(x : T?, f : (T) -> NodeRef) -> Array[NodeRef] {
   match x {
     Some(v) => [f(v)]
