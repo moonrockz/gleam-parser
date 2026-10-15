@@ -40,6 +40,6 @@ pub fn decode_oracle_output(json : Json) -> OracleOutput raise DecodeError {
         location=dec_field(e, path, "location", dec_span),
       )
     }
-    None => Parsed(dec_parsed(json, Root))
+    None => Parsed(decode_parsed(json))
   }
 }

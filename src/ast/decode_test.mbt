@@ -79,6 +79,10 @@ test "errors name the path and the problem" {
       "{\"kind\":\"bin_op\",\"left\":{\"kind\":\"var\",\"location\":{\"end\":1,\"start\":0},\"name\":\"a\"},\"location\":{\"end\":5,\"start\":0},\"operator\":\"plus\",\"operator_start\":2,\"right\":{\"kind\":\"var\",\"location\":{\"end\":5,\"start\":4},\"name\":\"b\"}}",
       "$.operator: unknown operator \"plus\"",
     ),
+    (
+      "{\"clauses\":[{\"alternative_patterns\":[[{\"kind\":\"nope\"}]],\"guard\":null,\"location\":{\"end\":1,\"start\":0},\"pattern\":[],\"then\":{\"kind\":\"var\",\"location\":{\"end\":1,\"start\":0},\"name\":\"x\"}}],\"kind\":\"case\",\"location\":{\"end\":1,\"start\":0},\"subjects\":[]}",
+      "$.clauses[0].alternative_patterns[0][0].kind: unknown pattern kind \"nope\"",
+    ),
     ("[]", "$: expected an OBJECT, found an ARRAY"),
   ]
   @expect.expect_all(e => {
