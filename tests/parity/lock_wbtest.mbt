@@ -3,7 +3,7 @@
 priv enum Golden {
   Hash(String)
   ParseError
-} derive(Eq, Debug)
+}
 
 ///|
 /// One line of `tests/corpus/goldens.lock`.
@@ -11,7 +11,7 @@ priv struct LockEntry {
   key : String
   source_sha256 : String
   golden : Golden
-} derive(Eq, Debug)
+}
 
 ///|
 let parse_error_marker : String = "PARSE_ERROR"

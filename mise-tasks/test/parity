@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Score Gleam parity against the golden lock (needs mise run corpus:fetch)"
+set -euo pipefail
+
+GLEAM_PARITY_MODE=check exec moon test tests/parity --target js
