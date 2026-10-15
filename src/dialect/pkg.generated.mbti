@@ -17,9 +17,12 @@ pub(all) struct Dialect {
   targets : ArrayView[String]
   deprecations : ArrayView[Rule]
 } derive(Eq, @debug.Debug)
+pub fn Dialect::from_version(String) -> Self?
 pub fn Dialect::gleam_1_19() -> Self
+pub fn Dialect::known_versions() -> Array[String]
 pub fn Dialect::knows_attribute(Self, String) -> Bool
 pub fn Dialect::knows_target(Self, String) -> Bool
+pub fn Dialect::version(Self) -> String
 pub fn Dialect::warns(Self, Rule) -> Bool
 
 pub(all) enum Rule {

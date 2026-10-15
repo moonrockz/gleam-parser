@@ -30,3 +30,16 @@ test "a dialect without a rule does not warn about it" {
     .to_equal("deprecated-empty-clause-guard")
   })
 }
+
+///|
+test "a dialect is found by its Gleam version" {
+  @expect.expect_all(e => {
+    e
+    .expect(@dialect.Dialect::from_version("1.19"))
+    .to_equal(Some(@dialect.Dialect::gleam_1_19()))
+    e.expect(@dialect.Dialect::from_version("1.18")).to_equal(None)
+    e.expect(@dialect.Dialect::from_version("")).to_equal(None)
+    e.expect(@dialect.Dialect::gleam_1_19().version()).to_equal("1.19")
+    e.expect(@dialect.Dialect::known_versions()).to_equal(["1.19"])
+  })
+}

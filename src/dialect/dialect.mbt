@@ -90,3 +90,38 @@ pub fn Dialect::knows_attribute(self : Dialect, name : String) -> Bool {
 pub fn Dialect::knows_target(self : Dialect, name : String) -> Bool {
   self.targets.contains(name)
 }
+
+///|
+/// The Gleam versions with a built-in dialect, as `from_version` reads
+/// them.
+pub fn Dialect::known_versions() -> Array[String] {
+  ["1.19"]
+}
+
+///|
+/// The built-in dialect for a Gleam version (`"1.19"`), or `None`.
+///
+/// ```mbt check
+/// test {
+///   debug_inspect(
+///     @dialect.Dialect::from_version("1.19").map(d => d.version()),
+///     content="Some(\"1.19\")",
+///   )
+/// }
+/// ```
+pub fn Dialect::from_version(version : String) -> Dialect? {
+  match version {
+    "1.19" => Some(Dialect::gleam_1_19())
+    _ => None
+  }
+}
+
+///|
+/// The Gleam version this dialect follows (`"1.19"` for `gleam-1.19`).
+pub fn Dialect::version(self : Dialect) -> String {
+  if self.name.has_prefix("gleam-") {
+    self.name[6:].to_owned()
+  } else {
+    self.name
+  }
+}
