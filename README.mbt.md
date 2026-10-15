@@ -33,6 +33,10 @@ Done:
   fuel budget (the recursion limit, 100 units by default), from a
   `gleam-parser.toml` file, `GLEAM_PARSER_*` variables and the caller,
   merged with `with_fallback`.
+- **Syntax tree** (`NodeRef`, `Tree`, `NodePath`): a read-only node model
+  over the AST with parent links, position lookup and seven traversal
+  styles: `walk`, `fold`, `reduce`, `Visitor`, pull events, push events
+  and `TreeCursor`; every traversal uses an explicit stack.
 - **Report** (`render_plain`, `render_terminal`, `encode_diagnostics`): the
   compiler's diagnostic layout, with colours, or as JSON.
 - **Parity**: on a pinned corpus of 25 published packages (233 files), all
@@ -48,12 +52,20 @@ test {
 }
 ```
 
-Planned, in order:
+Find the node at a byte offset and its path (from a tested doc example):
 
-- **Syntax tree** (`NodeRef`, `Tree`, `NodePath`): a read-only node model
-  over the AST with parent links, position lookup and seven traversal
-  styles: `walk`, `fold`, `reduce`, `Visitor`, pull events, push events
-  and `TreeCursor`; every traversal uses an explicit stack.
+```moonbit
+test {
+  let tree = @gleam.Tree::new(@gleam.parse_text("pub fn add(a, b) {\n  a + b\n}\n"))
+  // Byte 25 is the `b` in `a + b`.
+  let b = tree.node_at(25).unwrap()
+  inspect("\{b.category()}/\{b.kind()}", content="expression/var")
+  inspect(tree.node_path(b).unwrap(), content="definitions[0].body[0].expression[0].right[0]")
+}
+```
+
+Planned:
+
 - **Printer and formatter**: Gleam source from an AST, `gleam format` parity.
 
 ## Installation

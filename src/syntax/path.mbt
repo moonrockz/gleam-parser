@@ -9,9 +9,12 @@ pub(all) struct PathStep {
 ///|
 /// Where a node sits below a start node: the steps from the start node,
 /// each a field and an index, like a path into the AST JSON
-/// (`definitions[0].body[1].value[0]`). A path is immutable; a child's
-/// path shares its parent's steps. Get one from `Tree::node_path`, an
-/// `EnterEvent` or `TreeCursor::path`.
+/// (`definitions[0].body[1].value[0]`). Two differences from the JSON
+/// path: a field that holds one node gets index 0 (`body[1].value[0]`,
+/// not `body[1].value`), and the `definition` wrapper of a targeted
+/// definition is not a step (`definitions[0]` is the definition). A path
+/// is immutable; a child's path shares its parent's steps. Get one from
+/// `Tree::node_path`, an `EnterEvent` or `TreeCursor::path`.
 ///
 /// ```mbt check
 /// test {
@@ -62,6 +65,21 @@ pub fn NodePath::child(
 ///|
 /// The path with these steps, from the start node down.
 /// `from_steps(p.steps())` equals `p`.
+///
+/// ```mbt check
+/// test {
+///   let path = @syntax.NodePath::from_steps([
+///     { field: "definitions", index: 0, },
+///     { field: "body", index: 1, },
+///   ])
+///   inspect(path, content="definitions[0].body[1]")
+///   debug_inspect(
+///     path.steps().map(s => s.field),
+///     content="[\"definitions\", \"body\"]",
+///   )
+///   inspect(@syntax.NodePath::from_steps(path.steps()) == path, content="true")
+/// }
+/// ```
 pub fn NodePath::from_steps(steps : ArrayView[PathStep]) -> NodePath {
   let mut path = NodePath::root()
   for step in steps {
@@ -75,6 +93,20 @@ pub fn NodePath::from_steps(steps : ArrayView[PathStep]) -> NodePath {
 /// and `rest` leads from `n` on, the result leads from `start` through
 /// `n`. The empty path is the identity on both sides. It takes time linear
 /// in `rest.depth()` and shares this path's steps.
+///
+/// ```mbt check
+/// test {
+///   let to_body = @syntax.NodePath::root()
+///     .child("definitions", 0)
+///     .child("body", 0)
+///   let below = @syntax.NodePath::root().child("expression", 0).child("right", 0)
+///   inspect(
+///     to_body.append(below),
+///     content="definitions[0].body[0].expression[0].right[0]",
+///   )
+///   inspect(to_body.append(@syntax.NodePath::root()) == to_body, content="true")
+/// }
+/// ```
 pub fn NodePath::append(self : NodePath, rest : NodePath) -> NodePath {
   let mut path = self
   for step in rest.steps() {

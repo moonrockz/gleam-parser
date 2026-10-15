@@ -25,6 +25,21 @@ pub struct LeaveEvent {
 /// An `EnterEvent`; its `depth` is `path.depth()`. Event sources outside
 /// this package build events with `new`, so fields added later need not
 /// break them.
+///
+/// ```mbt check
+/// test {
+///   let path = @syntax.NodePath::root().child("definitions", 0)
+///   let e = @syntax.EnterEvent::new(
+///     category="definition",
+///     kind="function",
+///     field=Some("definitions"),
+///     start=0,
+///     path~,
+///   )
+///   inspect(e.depth, content="1")
+///   inspect(e.path, content="definitions[0]")
+/// }
+/// ```
 pub fn EnterEvent::new(
   category~ : String,
   kind~ : String,
@@ -37,6 +52,15 @@ pub fn EnterEvent::new(
 
 ///|
 /// A `LeaveEvent`; its `depth` is `path.depth()`.
+///
+/// ```mbt check
+/// test {
+///   let root = @syntax.NodeRef::of_result(@parser.parse_text("const x = 1\n"))
+///   let e = @syntax.LeaveEvent::new(node=root, path=@syntax.NodePath::root())
+///   inspect(e.depth, content="0")
+///   inspect(e.node.kind(), content="module")
+/// }
+/// ```
 pub fn LeaveEvent::new(node~ : NodeRef, path~ : NodePath) -> LeaveEvent {
   { node, depth: path.depth(), path, }
 }

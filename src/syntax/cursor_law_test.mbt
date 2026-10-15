@@ -383,3 +383,63 @@ test "law: goto_node_at from the root or from any ancestor of node_at(p) moves t
     seed=2166,
   )
 }
+
+///|
+/// Random spans on a small grid: equal, nested, adjacent and empty ones.
+struct Spans(Array[(Int32, Int32)]) derive(Debug)
+
+///|
+impl @quickcheck.Arbitrary for Spans with fn arbitrary(size, rs) {
+  let n = pick(rs, size + 3)
+  Spans(
+    Array::makei(n, _ => {
+      let a = pick(rs, 7)
+      let b = pick(rs, 7)
+      if a <= b {
+        (a, b)
+      } else {
+        (b, a)
+      }
+    }),
+  )
+}
+
+///|
+impl @quickcheck.Shrink for Spans with fn shrink(_self) {
+  [].iter()
+}
+
+///|
+test "law: among children with equal spans goto_first_child_for picks the first" {
+  @quickcheck.check(
+    (input : Spans) => {
+      let Spans(pairs) = input
+      let elements : Array[@ast.Expr] = pairs.mapi((i, s) => {
+        Int(
+          location=@span.SrcSpan::new(s.0, s.1),
+          value="\{i}",
+          int_value=BigInt::from_int(i),
+        )
+      })
+      let list = @syntax.NodeRef::Expr(
+        List(location=@span.SrcSpan::new(0, 8), elements=elements[:], tail=None),
+      )
+      let kids = list.children()
+      let c = @syntax.TreeCursor::new(list)
+      let offsets = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      offsets
+      .iter()
+      .all(p => {
+        c.reset(list)
+        let moved = c.goto_first_child_for(p)
+        match child_for(kids, p) {
+          None => !moved
+          Some(i) => moved && c.node() == kids[i]
+        }
+      })
+    },
+    count=200,
+    max_size=8,
+    seed=2193,
+  )
+}

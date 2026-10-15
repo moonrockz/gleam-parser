@@ -387,13 +387,15 @@ fn[V] option_span(o : @ast.BitArrayOption[V]) -> @span.SrcSpan {
 
 ///|
 /// The node's span, in UTF-8 byte offsets (the end is exclusive). A node's
-/// span contains its children's. The module spans from 0 to the end of its
-/// last token; a definition from its head to its last child (`end_position`
-/// for a function or custom type, the value of a constant, the type of an
-/// alias; the compiler's `location` covers the head only); a `TupleIndex`
-/// guard from its tuple to its index; every other node has the AST's
-/// `location`: a pipeline runs from its first to its last expression, a
-/// `pattern as name` from the pattern's start to the name's end.
+/// span contains its children's spans. The module spans from 0 to the end
+/// of its last token. A definition spans from its head to its last child:
+/// `end_position` for a function or a custom type, the value of a
+/// constant, the type of an alias (the compiler's `location` covers the
+/// head only). A clause guard starts at the leftmost node of its left
+/// spine (the compiler locates a `TupleIndex` guard at `.index` only).
+/// Every other node has the AST's `location`. A pipeline runs from its
+/// first to its last expression. A `pattern as name` runs from the
+/// pattern's start to the name's end.
 ///
 /// ```mbt check
 /// test {

@@ -19,11 +19,3 @@ import {
   "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/scanner",
 } for "test"
-
-import {
-  "moonrockz/expect",
-  "moonbitlang/core/debug",
-  "moonbitlang/core/quickcheck",
-  "moonrockz/gleam-parser/lawkit",
-  "moonrockz/gleam-parser/parser",
-} for "wbtest"

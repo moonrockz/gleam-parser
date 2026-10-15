@@ -11,8 +11,10 @@ pub struct Tree {
 }
 
 ///|
-/// The index key of a node: category, kind and span. Two different nodes
-/// with the same key are told apart by structural equality.
+/// The index key of a node: category, kind and span. Two nodes can share a
+/// key (a capture `g(_)` gives an outer and an inner node at one span); the
+/// bucket tells them apart with `same`. Two structurally equal nodes at one
+/// key would collide; the parser makes none.
 fn identity(n : NodeRef) -> String {
   let s = n.span()
   "\{n.category()}/\{n.kind()}/\{s.start}-\{s.end}"

@@ -182,7 +182,7 @@ test "law: LF, CRLF and a missing final newline give the same node kinds in walk
 }
 
 ///|
-test "law: for any text, every node lies inside the source and inside its parent, except below a definition's head" {
+test "law: for any text, every node lies inside the source and inside its parent" {
   @quickcheck.check(
     (t : @lawkit.GleamText) => {
       let text = t.text()

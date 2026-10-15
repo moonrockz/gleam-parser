@@ -11,10 +11,10 @@ priv struct ReduceFrame[A] {
 ///|
 /// Reduce the tree below `root` to one value, bottom up: `f` gets a node
 /// and its children's results in `children()` order and returns the
-/// node's result; the root's result is the answer. The visitor that
-/// returns a value (a trait cannot carry the result type; a closure can).
-/// An explicit stack, not recursion, holds the open nodes, so trees of
-/// any depth work on every target.
+/// node's result; the root's result is the answer. This is the visitor
+/// that returns a value: a trait cannot carry the result type, a closure
+/// can. An explicit stack, not recursion, holds the open nodes, so trees
+/// of any depth work on every target.
 ///
 /// ```mbt check
 /// test {

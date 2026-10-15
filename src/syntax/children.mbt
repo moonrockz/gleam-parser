@@ -408,6 +408,15 @@ pub fn NodeRef::children(self : NodeRef) -> Array[NodeRef] {
 /// not a child of this node. It looks through all the fields on each call;
 /// to get the field of every child, use `children_with_fields` or
 /// `Tree::field_of`.
+///
+/// ```mbt check
+/// test {
+///   let sum = @syntax.NodeRef::Expr(@parser.parse_expression_text("a + b"))
+///   let right = sum.field("right")[0]
+///   debug_inspect(sum.field_of(right), content="Some(\"right\")")
+///   debug_inspect(right.field_of(sum), content="None")
+/// }
+/// ```
 pub fn NodeRef::field_of(self : NodeRef, child : NodeRef) -> String? {
   for e in self.entries() {
     if e.1.any(c => same(c, child)) {

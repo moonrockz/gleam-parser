@@ -217,7 +217,8 @@ test "tr: a cursor and a tree" {
 }
 ```
 
-A path mirrors the AST JSON (`definitions[0].body[0].expression[0]`), with
-index 0 for a field that holds one node. One gap: a clause's
-`alternative_patterns` is a list of lists in the JSON and is flattened to
-one index here.
+A path mirrors the AST JSON (`definitions[0].body[0].expression[0]`),
+with three differences: a field that holds one node gets index 0, the
+`definition` wrapper of a targeted definition is not a step, and a
+clause's `alternative_patterns` (a list of lists in the JSON) is flattened
+to one index.

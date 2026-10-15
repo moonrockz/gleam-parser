@@ -68,8 +68,12 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   value, an external function's return annotation, `end_position`), a
   clause guard starts at the leftmost node of its left spine (the compiler
   locates a `TupleIndex` guard at `.index` only). Paths mirror the JSON
-  (`definitions[0].body[1].value[0]`); a clause's `alternative_patterns`
-  is flattened to one index. Seven traversals on explicit stacks (no
+  (`definitions[0].body[1].value[0]`) with three differences: a
+  single-node field gets index 0, the `definition` wrapper of a targeted
+  definition is not a step, and a clause's `alternative_patterns` is
+  flattened to one index. `src/syntax/children.mbt` (`entries` and
+  `kind_table`) changes with the schema; laws check that every row equals
+  a node's fields and that every JSON key holding nodes is a field. Seven traversals on explicit stacks (no
   recursion, no fuel): `walk`, `fold`, `reduce` (bottom up, returns a
   value; a trait cannot carry the result type), `Visitor` with `accept`,
   `EventReader` (pull), `push_events` with `Handler` (push), `TreeCursor`.
@@ -92,7 +96,8 @@ The reference is the Gleam compiler at tag `v1.19.2`
 To move to a new Gleam version: bump the tag in
 `tools/gleam-ast-oracle/Cargo.toml` and `tests/corpus/gleam_version.txt`;
 diff the files above between the tags; apply the changes to `src/ast`,
-`src/scanner`, `src/parser` and `docs/ast-json.md`; then re-record and
+`src/scanner`, `src/parser`, `src/syntax/children.mbt` and
+`docs/ast-json.md`; then re-record and
 ratchet as "Gleam Parity" says (a test checks that the two files name the
 same tag).
 
@@ -232,8 +237,9 @@ step when you add a code.
   derived `Eq` and `Debug` of the AST still recurse. `@json.parse` has its
   own nesting limit (`max_nesting_depth`) and recursion.
 - To change the schema: change `src/ast/encode.mbt`, `src/ast/decode.mbt`,
-  `tools/gleam-ast-oracle/src/encode.rs` and `docs/ast-json.md` together,
-  then `mise run fixtures:record` and commit the fixtures.
+  `tools/gleam-ast-oracle/src/encode.rs`, `docs/ast-json.md` and
+  `src/syntax/children.mbt` (`entries`, `kind_table`) together, then
+  `mise run fixtures:record` and commit the fixtures.
 
 ### Positions
 
@@ -523,7 +529,8 @@ published packages (233 files under `src/` and `test/`).
   manifest, the lock and the baseline.
 - To move to a new Gleam version: change the tag in
   `tools/gleam-ast-oracle/Cargo.toml` and `tests/corpus/gleam_version.txt`
-  (a test checks they agree), port the compiler changes, then
+  (a test checks they agree), port the compiler changes (`src/ast`,
+  `src/parser`, `src/syntax/children.mbt`), then
   `mise run fixtures:record`, `mise run corpus:goldens`,
   `mise run rejection:record` and `mise run parity:ratchet`.
 
