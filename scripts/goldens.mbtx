@@ -1,0 +1,207 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/x@0.5.5/sys",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonrockz/moonspec@0.11.0",
+  "moonrockz/expect@0.6.1",
+}
+
+///|
+/// Run the Gleam AST oracle over the fetched corpus and write one raw result
+/// per corpus file.
+///
+/// Usage: goldens.mbtx <manifest.json> <corpus-dir> <oracle-binary> <out-dir>
+///
+/// For `<pkg>@<version>/<path>` it writes `<out-dir>/<pkg>@<version>/<path>.json`
+/// (the oracle's JSON for a parsed file) or `<path>.error` (its error JSON).
+/// The lock (`tests/corpus/goldens.lock`) is then written by
+/// `GLEAM_PARITY_MODE=write-lock moon test tests/parity --target js`.
+
+///|
+let usage : String = "Usage: goldens.mbtx <manifest.json> <corpus-dir> <oracle-binary> <out-dir>"
+
+///|
+/// One oracle result: the corpus key and the raw JSON line.
+enum OracleResult {
+  Parsed(String, String)
+  Rejected(String, String)
+} derive(Eq, Debug)
+
+///|
+fn OracleResult::describe(self : OracleResult) -> String {
+  match self {
+    Parsed(key, _) => "\{key}: parsed"
+    Rejected(key, _) => "\{key}: rejected"
+  }
+}
+
+///|
+/// Corpus keys (`<pkg>@<version>/<path>`) listed in a manifest, in order.
+fn manifest_keys(manifest : Json) -> Array[String] raise {
+  guard manifest is Object(root) && root.get("packages") is Some(Array(items)) else {
+    fail("manifest: missing packages array")
+  }
+  let keys = []
+  for item in items {
+    guard item is Object(p) &&
+      p.get("name") is Some(String(name)) &&
+      p.get("version") is Some(String(version)) &&
+      p.get("files") is Some(Array(files)) else {
+      fail("manifest: malformed package entry")
+    }
+    for f in files {
+      guard f is Object(fo) && fo.get("path") is Some(String(path)) else {
+        fail("manifest: malformed file entry in \{name}")
+      }
+      keys.push("\{name}@\{version}/\{path}")
+    }
+  }
+  keys
+}
+
+///|
+/// Pair the oracle's output lines with the keys, in order. A line with an
+/// `error` field is a rejection.
+fn pair_results(
+  output : String,
+  keys : Array[String],
+) -> Array[OracleResult] raise {
+  let lines = output
+    .split("\n")
+    .map(l => l.to_owned())
+    .filter(l => l != "")
+    .collect()
+  if lines.length() != keys.length() {
+    fail("oracle: \{lines.length()} results for \{keys.length()} files")
+  }
+  let results = []
+  for i in 0..<keys.length() {
+    let key = keys[i]
+    let json = @json.parse(lines[i]) catch {
+      _ => fail("oracle: not JSON for \{key}")
+    }
+    guard json is Object(o) else { fail("oracle: not an object for \{key}") }
+    if o.get("error") is Some(_) {
+      results.push(Rejected(key, lines[i]))
+    } else {
+      results.push(Parsed(key, lines[i]))
+    }
+  }
+  results
+}
+
+///|
+fn parent(path : String) -> String {
+  match path.rev_find("/") {
+    Some(i) => path.view(end_offset=i).to_owned()
+    None => "."
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [manifest, corpus, oracle, out] else {
+    eprintln(usage)
+    @sys.exit(2)
+    return
+  }
+  let keys = manifest_keys(@fs.read_file(manifest).json())
+  let files = keys.map(k => "\{corpus}/\{k}")
+  let (code, stdout) = @process.collect_stdout(oracle, files)
+  if code != 0 {
+    eprintln("oracle failed with exit code \{code}")
+    @sys.exit(code)
+    return
+  }
+  let results = pair_results(stdout.text(), keys) catch {
+    err => {
+      eprintln(err.to_string())
+      @sys.exit(1)
+      return
+    }
+  }
+  // Start from an empty output directory so no stale result survives.
+  if @fs.exists(out) {
+    @fs.rmdir(out, recursive=true)
+  }
+  let mut parsed = 0
+  let mut rejected = 0
+  for result in results {
+    let (path, line) = match result {
+      Parsed(key, line) => {
+        parsed += 1
+        ("\{out}/\{key}.json", line)
+      }
+      Rejected(key, line) => {
+        rejected += 1
+        ("\{out}/\{key}.error", line)
+      }
+    }
+    @fs.mkdir(parent(path), recursive=true, allow_exist=true)
+    @fs.write_file(path, line + "\n")
+  }
+  println(
+    "oracle: \{parsed} parsed, \{rejected} rejected, \{keys.length()} files",
+  )
+}
+
+///|
+/// Scenario state for `features/goldens.feature`.
+struct GoldensWorld {
+  mut manifest : String
+  mut output : String
+  mut results : Result[Array[OracleResult], String]
+}
+
+///|
+fn GoldensWorld::new() -> GoldensWorld {
+  { manifest: "", output: "", results: Err("not run"), }
+}
+
+///|
+impl @moonspec.World for GoldensWorld with fn configure(self, setup) {
+  setup.given1("the manifest:", fn(doc : @moonspec.DocString) {
+    self.manifest = doc.content
+  })
+  setup.then1("the corpus keys are {string}", fn(expected : String) raise {
+    @expect.expect(manifest_keys(@json.parse(self.manifest)).join(", ")).to_equal(
+      expected,
+    )
+  })
+  setup.given1("the oracle output:", fn(doc : @moonspec.DocString) {
+    self.output = doc.content
+  })
+  setup.when1("I pair the output with the keys {string}", fn(keys : String) {
+    let list = keys.split(", ").map(k => k.to_owned()).collect()
+    self.results = try pair_results(self.output, list) catch {
+      err => Err(err.to_string())
+    } noraise {
+      r => Ok(r)
+    }
+  })
+  setup.then1("the results are {string}", fn(expected : String) raise {
+    guard self.results is Ok(results) else {
+      fail("expected results, got \{Repr(self.results)}")
+    }
+    @expect.expect(results.map(r => r.describe()).join("; ")).to_equal(expected)
+  })
+  setup.then1("pairing fails with {string}", fn(message : String) raise {
+    guard self.results is Err(actual) else { fail("expected a failure") }
+    @expect.expect(actual).to_contain(message)
+  })
+}
+
+///|
+async test "goldens feature" {
+  @moonspec.run_or_fail(
+    GoldensWorld::new,
+    @moonspec.RunOptions::new([
+      @moonspec.FeatureSource::File("features/goldens.feature"),
+    ]),
+  )
+  |> ignore
+}
