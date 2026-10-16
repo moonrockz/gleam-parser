@@ -98,6 +98,16 @@ pub fn GleamTokens::text(Self) -> String
 pub impl @quickcheck.Arbitrary for GleamTokens
 pub impl @shrink.Shrink for GleamTokens
 
+pub struct HardCommented {
+  module_ : GleamModule
+  text : String
+} derive(@debug.Debug)
+pub fn HardCommented::comments(Self) -> Array[String]
+pub fn HardCommented::of(GleamModule) -> Self
+pub fn HardCommented::text(Self) -> String
+pub impl @quickcheck.Arbitrary for HardCommented
+pub impl @shrink.Shrink for HardCommented
+
 pub struct Units(String) derive(@debug.Debug)
 pub fn Units::text(Self) -> String
 pub impl @quickcheck.Arbitrary for Units

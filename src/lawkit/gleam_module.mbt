@@ -159,9 +159,15 @@ pub fn text_expr(size : Int32, rs : @splitmix.RandomState) -> String {
 }
 
 ///|
-/// A clause's patterns must match the two subjects, so every clause has two.
+/// A clause's patterns must match the two subjects, so every clause has
+/// two; one clause in three has an alternative (`a, b | c, d`).
 fn text_clause_patterns(size : Int32, rs : @splitmix.RandomState) -> String {
-  "\{text_pattern(size, rs)}, \{text_pattern(size, rs)}"
+  let first = "\{text_pattern(size, rs)}, \{text_pattern(size, rs)}"
+  if m_pick(rs, 3) == 0 {
+    "\{first} | \{text_pattern(size, rs)}, \{text_pattern(size, rs)}"
+  } else {
+    first
+  }
 }
 
 ///|

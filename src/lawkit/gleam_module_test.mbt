@@ -4,7 +4,7 @@ test "gen_module reaches every definition kind and construct over many seeds" {
     "import ", "const ", "pub type ", "type ", " = \n", "fn ", "pub fn ", "@deprecated(",
     "@internal", "@target(", "@external(", "///", "////", "let assert ", "use ",
     "assert ", "case ", " if ", "|>", "<<", "#(", "..", " as ", "todo", "panic",
-    "echo", "<>", "fn(", "Point(..",
+    "echo", "<>", "fn(", "Point(..", " | ",
   ]
   let seen : Set[String] = Set([])
   for seed in 0..<200 {

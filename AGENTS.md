@@ -377,9 +377,10 @@ inputs.
   attribute, expression, statement, pattern, guard and type form, no
   deprecated syntax; shrinks by dropping a definition) and
   `Construct`/`nested(construct, depth)` (each nesting construct at any
-  depth) and `Commented` (a `GleamModule` with a `//` comment line before
-  every code line, for the formatter's comment law); a later plan adds
-  `Spaced`. Keep generated depth
+  depth), `Commented` (a `GleamModule` with a `//` comment line before
+  every code line) and `HardCommented` (a comment line before every hard
+  token: `)`, `]`, `|>`, `->`, `|`, `as`, `..`), both for the formatter's
+  comment laws; a later plan adds `Spaced`. Keep generated depth
   bounded by `size`, so generators do not overflow the stack on wasm.
 - **Valid input fails loudly.** A generator of valid input makes the law fail
   on any diagnostic, never skip the case. Generate arbitrary text only for
@@ -629,11 +630,19 @@ gleam-parser checks `format` against `gleam format` 1.19.2.
   idempotent on `let b = --{a + 3}` either) and 233/233 corpus files: every
   mismatch is a regression. A new mismatch is a port bug; fix it against
   `format/src/lib.rs` with a test whose expectation comes from the binary.
+- Known differences from a perfect formatter, where the port copies the
+  compiler on purpose: `let b = --{a + 3}` is not idempotent; an empty
+  `case x {}` keeps trailing whitespace; a comment inside an empty tuple or
+  list that a comment precedes (`_ ->\n  // a\n  #(\n    // b\n  )`) is
+  written as `#(// b)`, which does not parse; a comment inside an
+  attribute's parentheses moves before the attribute and detaches the doc
+  comment; a bit array with a comment between its segments is not
+  idempotent. `HardCommented` skips those positions.
 - Laws (`src/format/laws_test.mbt`, `nesting_law_test.mbt`,
   `chains_test.mbt`): idempotence and reparse on `GleamModule`, every
   comment once on `Commented` (a comment before every definition,
-  statement, clause, variant and closing brace; the positions inside an
-  expression, such as before `)`, `->` or `|>`, are a follow-up), never a
+  statement, clause, variant and closing brace) and on `HardCommented` (a
+  comment before every `)`, `]`, `|>`, `->`, `|`, `as` and `..`), never a
   crash on `GleamText`, the deepest
   nesting and the longest flat chains on every target. The cookbook article
   is `docs/cookbook/format.mbt.md`.
