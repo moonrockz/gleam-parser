@@ -153,3 +153,22 @@ fn first_difference(expected : String, actual : String) -> String {
   }
   "line \{n + 1}: expected \{e.length()} lines, actual \{a.length()}"
 }
+
+///|
+test "a lock without a fetched corpus is an instruction, not a regression" {
+  @expect.expect_all(s => {
+    s
+    .expect(corpus_problem(lock_exists=true, corpus_exists=false))
+    .to_equal(
+      Some(
+        "tests/corpus/format.lock exists but .corpus does not; run mise run corpus:fetch",
+      ),
+    )
+    s
+    .expect(corpus_problem(lock_exists=false, corpus_exists=false))
+    .to_equal(None)
+    s
+    .expect(corpus_problem(lock_exists=true, corpus_exists=true))
+    .to_equal(None)
+  })
+}

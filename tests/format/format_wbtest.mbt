@@ -115,6 +115,12 @@ fn score_fixtures() -> Array[FileResult] raise {
       let stem = e.view(end_offset=e.length() - 6).to_owned()
       let expected_path = "\{suite_dir}/\{stem}.formatted.gleam"
       if !@fs.path_exists(expected_path) {
+        results.push(
+          failed_result(
+            "\{suite}/\{e}",
+            "no recorded output; run mise run formatter:record",
+          ),
+        )
         continue
       }
       let input = @fs.read_file_to_string("\{suite_dir}/\{e}")
@@ -161,8 +167,25 @@ fn read_lock() -> Array[(String, String)] raise {
 }
 
 ///|
+/// Why the corpus cannot be scored, or `None`.
+fn corpus_problem(lock_exists~ : Bool, corpus_exists~ : Bool) -> String? {
+  if lock_exists && !corpus_exists {
+    Some(
+      "tests/corpus/format.lock exists but .corpus does not; run mise run corpus:fetch",
+    )
+  } else {
+    None
+  }
+}
+
+///|
 fn score_corpus() -> Array[FileResult] raise {
-  if !@fs.path_exists(lock_path) || !@fs.path_exists(corpus_dir) {
+  let lock_exists = @fs.path_exists(lock_path)
+  let corpus_exists = @fs.path_exists(corpus_dir)
+  if corpus_problem(lock_exists~, corpus_exists~) is Some(problem) {
+    fail(problem)
+  }
+  if !lock_exists {
     return []
   }
   let results = []
@@ -184,6 +207,15 @@ fn score_corpus() -> Array[FileResult] raise {
             false,
             Some("output hash differs from the lock"),
           )
+        // Both reject the file: that is a match of verdicts.
+        Err(e) if expected == "FORMAT_ERROR" =>
+          {
+            key,
+            matched: true,
+            idempotent: true,
+            reparsed: true,
+            detail: Some(e),
+          }
         Err(e) => failed_result(key, e)
       },
     )
