@@ -228,7 +228,8 @@ fn Formatter::append_as_message_constant(
 }
 
 ///|
-/// The compiler's `constant_binary_operator`.
+/// The compiler's `constant_binary_operator`, with the left spine walked
+/// in a loop (see `bin_op`).
 fn Formatter::constant_binary_operator(
   self : Formatter,
   name : @ast.BinOp,
@@ -236,14 +237,37 @@ fn Formatter::constant_binary_operator(
   right : @ast.Constant,
   nest_steps : Bool,
 ) -> @pretty.Doc raise FormatError {
-  let left_side = self.constant_binary_operator_side(name, left, nest_steps)
-  let comments = self.pop_comments(right.location().start)
-  let name_doc = breakable_space + commented(binop(name), comments[:])
-  let right_side = self.constant_binary_operator_side(name, right, nest_steps)
-  left_side +
-  (if nest_steps { nest(name_doc) } else { name_doc }) +
-  t(" ") +
-  right_side
+  let ops = [name]
+  let rights = [right]
+  let mut leaf = left
+  while leaf is BinaryOperator(operator~, left=l, right=r, ..) {
+    ops.push(operator)
+    rights.push(r)
+    leaf = l
+  }
+  let n = ops.length() - 1
+  let mut doc = self.constant_binary_operator_side(ops[n], leaf, nest_steps)
+  for k = n; k >= 0; k = k - 1 {
+    let comments = self.pop_comments(rights[k].location().start)
+    let name_doc = breakable_space + commented(binop(ops[k]), comments[:])
+    let right_side = self.constant_binary_operator_side(
+      ops[k],
+      rights[k],
+      nest_steps,
+    )
+    doc = doc +
+      (if nest_steps { nest(name_doc) } else { name_doc }) +
+      t(" ") +
+      right_side
+    if k > 0 {
+      doc = if can_be_grouped_with(ops[k], ops[k - 1]) {
+        doc
+      } else {
+        operator_side(group(doc), precedence(ops[k - 1]), precedence(ops[k]))
+      }
+    }
+  }
+  doc
 }
 
 ///|

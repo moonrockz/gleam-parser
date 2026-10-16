@@ -108,7 +108,7 @@ fn Formatter::expr(
       String(value~, ..) => string(value)
       Block(statements~, location~) => self.block(location, statements, false)
       Var(name~, ..) => if name == capture_variable { t("_") } else { t(name) }
-      TupleIndex(tuple~, index~, ..) => self.tuple_index(tuple, index)
+      TupleIndex(..) => self.access_chain(expression)
       NegateInt(value~, ..) => self.negate_int(value)
       NegateBool(value~, ..) => self.negate_bool(value)
       Fn(kind=Capture(..), body~, ..) => self.fn_capture(body, EverywhereElse)
@@ -137,8 +137,7 @@ fn Formatter::expr(
           },
           location,
         )
-      FieldAccess(label~, container~, ..) =>
-        self.expr(container) + t(".") + t(label)
+      FieldAccess(..) => self.access_chain(expression)
       Tuple(elements~, location~) => self.tuple(elements, location)
       BitArray(segments~, location~) => {
         let docs = []
@@ -162,24 +161,43 @@ fn Formatter::expr(
 }
 
 ///|
-/// The compiler's `tuple_index`: `{t.1}.0` loses its braces.
-fn Formatter::tuple_index(
+/// The compiler's `FieldAccess` arm and `tuple_index`, for a whole chain
+/// (`a.b.0.c`) in a loop: the parser accepts a chain of any length. The
+/// compiler's `tuple_index` drops the braces of `{t.1}.0`; that inner
+/// expression is the base of the chain.
+fn Formatter::access_chain(
   self : Formatter,
-  tuple : @ast.Expr,
-  index : UInt64,
+  expression : @ast.Expr,
 ) -> @pretty.Doc raise FormatError {
-  let inner = match tuple {
-    Block(statements~, ..) =>
-      if statements.length() == 1 &&
-        statements[0] is Expression(TupleIndex(tuple=t2, ..) as e) &&
-        !is_tuple_expr(t2) {
-        self.expr(e)
-      } else {
-        self.expr(tuple)
+  let suffixes : Array[String] = []
+  let mut base = expression
+  let mut walking = true
+  while walking {
+    match base {
+      FieldAccess(label~, container~, ..) => {
+        suffixes.push(label)
+        base = container
       }
-    _ => self.expr(tuple)
+      TupleIndex(tuple~, index~, ..) => {
+        suffixes.push(index.to_string())
+        match tuple {
+          Block(statements~, ..) if statements.length() == 1 &&
+            statements[0] is Expression(TupleIndex(tuple=t2, ..) as inner) &&
+            !is_tuple_expr(t2) => {
+            base = inner
+            walking = false
+          }
+          _ => base = tuple
+        }
+      }
+      _ => walking = false
+    }
   }
-  inner + t(".") + t(index.to_string())
+  let mut doc = self.expr(base)
+  for k = suffixes.length() - 1; k >= 0; k = k - 1 {
+    doc = doc + t(".") + t(suffixes[k])
+  }
+  doc
 }
 
 ///|

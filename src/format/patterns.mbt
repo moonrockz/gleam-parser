@@ -114,14 +114,28 @@ fn Formatter::bit_array_size(
       Int(value~, ..) => int(value)
       Variable(name~, ..) => t(name)
       BinaryOperator(left~, right~, operator~, ..) => {
-        let op = match operator {
-          Add => t(" + ")
-          Subtract => t(" - ")
-          Multiply => t(" * ")
-          Divide => t(" / ")
-          Remainder => t(" % ")
+        // The left spine in a loop: the parser accepts a chain of any
+        // length, so no fuel and no stack per link.
+        let ops = [operator]
+        let rights = [right]
+        let mut leaf = left
+        while leaf is BinaryOperator(operator=o, left=l, right=r, ..) {
+          ops.push(o)
+          rights.push(r)
+          leaf = l
         }
-        self.bit_array_size(left) + op + self.bit_array_size(right)
+        let mut doc = self.bit_array_size(leaf)
+        for k = ops.length() - 1; k >= 0; k = k - 1 {
+          let op = match ops[k] {
+            Add => t(" + ")
+            Subtract => t(" - ")
+            Multiply => t(" * ")
+            Divide => t(" / ")
+            Remainder => t(" % ")
+          }
+          doc = doc + op + self.bit_array_size(rights[k])
+        }
+        doc
       }
       Block(inner~, ..) => t("{ ") + self.bit_array_size(inner) + t(" }")
     }

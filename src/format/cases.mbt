@@ -126,29 +126,61 @@ fn Formatter::alternative_patterns(
 }
 
 ///|
-/// The compiler's `clause_guard_bin_op`.
+/// The compiler's `clause_guard_bin_op`, with the left spine walked in a
+/// loop: the comments before each left side are popped top-down first (the
+/// compiler pops them on the way down), then the leaf, then each right side
+/// from the innermost link out.
 fn Formatter::clause_guard_bin_op(
   self : Formatter,
   name : @ast.BinOp,
   left : @ast.ClauseGuard,
   right : @ast.ClauseGuard,
 ) -> @pretty.Doc raise FormatError {
-  let left_comments = self.pop_comments(left.location().start)
-  let left_doc = self.clause_guard_bin_op_side(
-    name,
-    left,
-    guard_precedence(left),
+  let ops = [name]
+  let rights = [right]
+  let lefts = [left]
+  let mut leaf = left
+  while leaf is BinaryOperator(operator~, left=l, right=r, ..) {
+    ops.push(operator)
+    rights.push(r)
+    lefts.push(l)
+    leaf = l
+  }
+  let n = ops.length() - 1
+  let left_comments = []
+  for k = 0; k <= n; k = k + 1 {
+    left_comments.push(self.pop_comments(lefts[k].location().start))
+  }
+  let mut doc = self.clause_guard_bin_op_side(
+    ops[n],
+    leaf,
+    guard_precedence(leaf),
   )
-  let left_doc = commented(left_doc, left_comments[:])
-  let right_comments = self.pop_comments(right.location().start)
-  let right_doc = self.clause_guard_bin_op_side(
-    name,
-    right,
-    guard_precedence(right) - 1,
-  )
-  let right_doc = binop(name) + t(" ") + right_doc
-  let right_doc = commented(right_doc, right_comments[:])
-  left_doc + breakable_space + right_doc
+  doc = commented(doc, left_comments[n][:])
+  for k = n; k >= 0; k = k - 1 {
+    let right_comments = self.pop_comments(rights[k].location().start)
+    let right_doc = self.clause_guard_bin_op_side(
+      ops[k],
+      rights[k],
+      guard_precedence(rights[k]) - 1,
+    )
+    let right_doc = commented(
+      binop(ops[k]) + t(" ") + right_doc,
+      right_comments[:],
+    )
+    doc = doc + breakable_space + right_doc
+    if k > 0 {
+      // Link k is the left side of link k - 1 (`clause_guard_bin_op_side`).
+      let side_precedence = precedence(ops[k])
+      doc = if can_be_grouped_with(ops[k], ops[k - 1]) {
+        operator_side(doc, precedence(ops[k - 1]), side_precedence)
+      } else {
+        operator_side(group(doc), precedence(ops[k - 1]), side_precedence)
+      }
+      doc = commented(doc, left_comments[k - 1][:])
+    }
+  }
+  doc
 }
 
 ///|
