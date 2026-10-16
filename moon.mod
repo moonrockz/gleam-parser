@@ -6,6 +6,7 @@ import {
   "moonrockz/expect@0.6.1",
   "moonbit-community/toml@0.5.0",
   "moonbitlang/x@0.5.5",
+  "moonrockz/pretty@0.2.0",
 }
 
 readme = "README.mbt.md"

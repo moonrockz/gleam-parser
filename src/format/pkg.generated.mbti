@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/format"
+
+import {
+  "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/config",
+  "moonrockz/gleam-parser/diagnostic",
+  "moonrockz/gleam-parser/fuel",
+  "moonrockz/gleam-parser/parser",
+}
+
+// Values
+pub fn format(String, config? : @config.Config) -> String raise FormatError
+
+pub fn format_parsed(@parser.ParseResult, config? : @config.Config) -> String raise FormatError
+
+// Errors
+pub(all) suberror FormatError {
+  ParseFailed(Array[@diagnostic.Diagnostic])
+  OutOfFuel(@fuel.FuelExhausted)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+
+// Type aliases
+
+// Traits
