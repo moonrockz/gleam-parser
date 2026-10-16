@@ -179,7 +179,7 @@ fn Formatter::comments_before(
     self.comments_at = end_comments
   }
   self.empty_lines_at = end_empty
-  popped[first:].to_array()
+  popped[first:].to_owned()
 }
 
 ///|
@@ -321,14 +321,6 @@ fn Formatter::definition(
 fn Formatter::statement_fn(
   self : Formatter,
   _f : @ast.Function,
-) -> @pretty.Doc raise FormatError {
-  t("todo")
-}
-
-///|
-fn Formatter::module_constant(
-  self : Formatter,
-  _c : @ast.ModuleConstant,
 ) -> @pretty.Doc raise FormatError {
   t("todo")
 }
