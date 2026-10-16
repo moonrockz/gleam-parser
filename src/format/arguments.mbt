@@ -49,3 +49,27 @@ fn Formatter::wrap_arguments(
     None => nest_if_broken(doc) + trailing_comma_break + t(")")
   }
 }
+
+///|
+/// The compiler's `wrap_arguments_with_spread`.
+fn Formatter::wrap_arguments_with_spread(
+  self : Formatter,
+  arguments : Array[@pretty.Doc],
+  comments_limit : Int32,
+) -> @pretty.Doc {
+  if arguments.is_empty() {
+    return self.wrap_arguments(arguments, comments_limit)
+  }
+  let doc = open_paren_break +
+    @pretty.join(arguments, comma_break) +
+    comma_break +
+    t("..")
+  let comments = self.pop_comments(comments_limit)
+  match printed_comments(comments[:], false) {
+    Some(c) =>
+      @pretty.force_break(nest_if_broken(doc + trailing_comma_break + c)) +
+      empty_break +
+      t(")")
+    None => nest_if_broken(doc) + trailing_comma_break + t(")")
+  }
+}

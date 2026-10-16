@@ -15,13 +15,12 @@ pub(all) suberror FormatError {
 /// where the compiler keeps them. Raises `ParseFailed` when the text has
 /// a syntax error, `OutOfFuel` when `config.fuel` runs out.
 ///
-/// Not finished: a function body is written as `todo` until the next pull
-/// request ports expressions and statements. Do not write the output back
-/// over a file with function bodies.
-///
 /// ```mbt check
 /// test {
-///   inspect(@format.format("// a\n\n\n// b\n"), content="// a\n\n// b\n")
+///   inspect(
+///     @format.format("pub fn main(){\n  io.println(  \"hi\" )\n}\n"),
+///     content="pub fn main() {\n  io.println(\"hi\")\n}\n",
+///   )
 /// }
 /// ```
 pub fn format(

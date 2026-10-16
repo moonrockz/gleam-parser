@@ -24,15 +24,6 @@ fn Formatter::fn_arg(
 }
 
 ///|
-/// The compiler's `statements` (PR 2). Until then a placeholder.
-fn Formatter::statements(
-  self : Formatter,
-  _body : ArrayView[@ast.Statement],
-) -> @pretty.Doc raise FormatError {
-  self.nested(op_format, () => t("todo"))
-}
-
-///|
 /// The compiler's `statement_fn`.
 fn Formatter::statement_fn(
   self : Formatter,

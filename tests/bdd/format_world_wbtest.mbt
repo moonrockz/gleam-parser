@@ -23,6 +23,16 @@ impl @moonspec.World for FormatWorld with fn configure(self, setup) {
   setup.given1("the Gleam source {string}", fn(text : String) {
     self.source = unescape(text)
   })
+  setup.given1(
+    "the Gleam source of a function whose body is {int} nested lists",
+    fn(n : Int32) {
+      self.source = "pub fn f() {\n  " +
+        "[".repeat(n) +
+        "1" +
+        "]".repeat(n) +
+        "\n}\n"
+    },
+  )
   setup.when0("I format it", fn() {
     self.result = Some(format_result(self.source))
   })
