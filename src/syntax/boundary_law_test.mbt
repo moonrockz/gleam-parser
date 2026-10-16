@@ -1,6 +1,6 @@
 ///|
 fn contains(s : @span.SrcSpan, p : Int32) -> Bool {
-  s.start <= p && p < s.end
+  s.start.to_int() <= p && p < s.end.to_int()
 }
 
 ///|
@@ -14,13 +14,13 @@ fn within(a : @span.SrcSpan, b : @span.SrcSpan) -> Bool {
 fn edge_offsets(length : Int32, spans : Array[@span.SrcSpan]) -> Array[Int32] {
   let out = [0, length, length + 1, -1]
   for s in spans {
-    out.push(s.start)
-    out.push(s.end)
-    out.push(s.start - 1)
-    out.push(s.end - 1)
-    out.push(s.end + 1)
+    out.push(s.start.to_int())
+    out.push(s.end.to_int())
+    out.push(s.start.to_int() - 1)
+    out.push(s.end.to_int() - 1)
+    out.push(s.end.to_int() + 1)
   }
-  out
+  out.filter(x => x >= 0)
 }
 
 ///|
@@ -46,7 +46,7 @@ test "law: node_at is a smallest node that contains the offset: deepest among eq
     (m : @lawkit.GleamModule) => {
       let (tree, text, _, nodes) = module_tree(m)
       let depth = nodes.map(n => tree.ancestors(n).length())
-      let length = @scanner.SourceText::new(text).byte_length()
+      let length = @scanner.SourceText::new(text).byte_length().to_int()
       edge_offsets(length, nodes.map(n => n.span()))
       .iter()
       .all(p => {
@@ -56,7 +56,7 @@ test "law: node_at is a smallest node that contains the offset: deepest among eq
             holders.push(i)
           }
         }
-        match tree.node_at(p) {
+        match tree.node_at(@span.ByteOffset::new(p).unwrap()) {
           None => holders.is_empty()
           Some(found) => {
             guard nodes.search_by(n => n == found) is Some(fi) else {
@@ -91,15 +91,24 @@ test "law: tokens_in keeps exactly the whole tokens inside the span" {
       let candidates : Array[@span.SrcSpan] = nodes.map(n => n.span())
       for i, r in all {
         candidates.push(r)
-        candidates.push(@span.SrcSpan::new(r.start, r.start))
-        if r.end - r.start >= 2 {
-          candidates.push(@span.SrcSpan::new(r.start + 1, r.end))
-          candidates.push(@span.SrcSpan::new(r.start, r.end - 1))
+        candidates.push(@span.SrcSpan::between(r.start, r.start).unwrap())
+        if r.end.to_int() - r.start.to_int() >= 2 {
+          candidates.push(
+            @span.SrcSpan::between(r.start.shift(1).unwrap(), r.end).unwrap(),
+          )
+          candidates.push(
+            @span.SrcSpan::between(r.start, r.end.shift(-1).unwrap()).unwrap(),
+          )
         }
         if all.get(i + 1) is Some(next) {
-          candidates.push(@span.SrcSpan::new(r.start, next.end))
-          candidates.push(@span.SrcSpan::new(r.start, next.start))
-          candidates.push(@span.SrcSpan::new(r.end - 1, next.start + 1))
+          candidates.push(@span.SrcSpan::between(r.start, next.end).unwrap())
+          candidates.push(@span.SrcSpan::between(r.start, next.start).unwrap())
+          candidates.push(
+            @span.SrcSpan::between(
+              r.end.shift(-1).unwrap(),
+              next.start.shift(1).unwrap(),
+            ).unwrap(),
+          )
         }
       }
       candidates
@@ -187,7 +196,7 @@ test "law: for any text, every node lies inside the source and inside its parent
     (t : @lawkit.GleamText) => {
       let text = t.text()
       let result = @parser.parse_text(text)
-      let length = @scanner.SourceText::new(text).byte_length()
+      let length = @scanner.SourceText::new(text).byte_length().to_int()
       let root = @syntax.NodeRef::of_result(result)
       let mut ok = true
       let open : Array[@syntax.NodeRef] = []
@@ -196,9 +205,8 @@ test "law: for any text, every node lies inside the source and inside its parent
         n => {
           let s = n.span()
           ok = ok &&
-            0 <= s.start &&
             s.start <= s.end &&
-            s.end <= length &&
+            s.end.to_int() <= length &&
             (match open.last() {
               // A definition's own AST location covers its head only, but
               // its node span reaches end_position; the module covers all.

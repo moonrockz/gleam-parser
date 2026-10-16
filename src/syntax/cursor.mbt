@@ -85,8 +85,8 @@ pub fn TreeCursor::path(self : TreeCursor) -> NodePath {
 ///|
 /// The number of `goto_*` steps below the start node (0 at the start
 /// node).
-pub fn TreeCursor::depth(self : TreeCursor) -> Int32 {
-  self.frames.length() - 1
+pub fn TreeCursor::depth(self : TreeCursor) -> NodeDepth {
+  NodeDepth::new(self.frames.length() - 1).unwrap()
 }
 
 ///|
@@ -181,7 +181,7 @@ pub fn TreeCursor::goto_parent(self : TreeCursor) -> Bool {
 ///   let tree = @syntax.Tree::new(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let p = 23 // the `+` in `a + b`
+///   let p = @span.ByteOffset::new(23).unwrap() // the `+` in `a + b`
 ///   let contains = (s : @span.SrcSpan) => s.start <= p && p < s.end
 ///   let cursor = @syntax.TreeCursor::new(tree.root())
 ///   while cursor.goto_first_child_for(p) {
@@ -200,7 +200,10 @@ pub fn TreeCursor::goto_parent(self : TreeCursor) -> Bool {
 ///   inspect(naive.path(), content="definitions[0].body[0].expression[0].right[0]")
 /// }
 /// ```
-pub fn TreeCursor::goto_first_child_for(self : TreeCursor, p : Int32) -> Bool {
+pub fn TreeCursor::goto_first_child_for(
+  self : TreeCursor,
+  p : @span.ByteOffset,
+) -> Bool {
   self.descend(kids => {
     let mut best : Int32? = None
     for i, x in kids {
@@ -238,15 +241,24 @@ pub fn TreeCursor::goto_first_child_for(self : TreeCursor, p : Int32) -> Bool {
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let cursor = @syntax.TreeCursor::new(tree.root())
-///   inspect(cursor.goto_node_at(23), content="true")
+///   inspect(
+///     cursor.goto_node_at(@span.ByteOffset::new(23).unwrap()),
+///     content="true",
+///   )
 ///   inspect(cursor.node().kind(), content="bin_op")
 ///   inspect(cursor.path(), content="definitions[0].body[0].expression[0]")
 ///   // `pub` is outside the current node: the cursor stays.
-///   inspect(cursor.goto_node_at(0), content="false")
+///   inspect(
+///     cursor.goto_node_at(@span.ByteOffset::new(0).unwrap()),
+///     content="false",
+///   )
 ///   inspect(cursor.node().kind(), content="bin_op")
 /// }
 /// ```
-pub fn TreeCursor::goto_node_at(self : TreeCursor, p : Int32) -> Bool {
+pub fn TreeCursor::goto_node_at(
+  self : TreeCursor,
+  p : @span.ByteOffset,
+) -> Bool {
   guard innermost_at(self.node(), p) is Some((_, indices)) else { return false }
   for i in indices {
     ignore(self.descend(_ => Some(i)))

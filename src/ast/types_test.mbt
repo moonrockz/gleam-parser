@@ -1,6 +1,6 @@
 ///|
 fn sp(a : Int32, b : Int32) -> @span.SrcSpan {
-  @span.SrcSpan::new(a, b)
+  @span.SrcSpan::new(a, b).unwrap()
 }
 
 ///|
@@ -12,8 +12,8 @@ test "a parsed module with one function builds and compares by value" {
   ]
   let f = @ast.Function::{
     location: sp(0, 13),
-    body_start: Some(13),
-    end_position: 16,
+    body_start: Some(@span.ByteOffset::new(13).unwrap()),
+    end_position: @span.ByteOffset::new(16).unwrap(),
     name: Some({ location: sp(7, 11), name: "main", }),
     arguments: [][:],
     body: body[:],

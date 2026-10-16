@@ -1,6 +1,6 @@
 ///|
 fn sp(a : Int32, b : Int32) -> @span.SrcSpan {
-  @span.SrcSpan::new(a, b)
+  @span.SrcSpan::new(a, b).unwrap()
 }
 
 ///|

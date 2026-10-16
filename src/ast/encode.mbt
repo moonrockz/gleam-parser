@@ -27,6 +27,11 @@ fn num64(u : UInt64) -> Json {
 }
 
 ///|
+fn offset_num(offset : @span.ByteOffset) -> Json {
+  num(offset.to_int())
+}
+
+///|
 fn str(s : String) -> Json {
   Json::string(s)
 }
@@ -211,7 +216,7 @@ fn write_json_string(sb : StringBuilder, s : String) -> Unit {
 /// Encode a source span as `start` and `end` byte offsets.
 /// The offsets are written as given, including the compiler's `start..0` EOF spans.
 pub fn encode_span(s : @span.SrcSpan) -> Json {
-  obj([("start", num(s.start)), ("end", num(s.end))])
+  obj([("start", offset_num(s.start)), ("end", offset_num(s.end))])
 }
 
 ///|
@@ -221,7 +226,7 @@ fn spanned_string(s : SpannedString) -> Json {
 
 ///|
 fn documentation(d : Documentation) -> Json {
-  obj([("start", num(d.start)), ("text", str(d.text))])
+  obj([("start", offset_num(d.start)), ("text", str(d.text))])
 }
 
 ///|
@@ -367,7 +372,7 @@ fn[R] enc_definition(d : Definition, k : (Json) -> Step[R]) -> Step[R] {
           obj([
             ("kind", str("custom_type")),
             ("location", encode_span(c.location)),
-            ("end_position", num(c.end_position)),
+            ("end_position", offset_num(c.end_position)),
             ("name", str(c.name)),
             ("name_location", encode_span(c.name_location)),
             ("publicity", encode_publicity(c.publicity)),
@@ -439,8 +444,8 @@ fn[R] enc_function(
           obj([
             ("kind", str(kind)),
             ("location", encode_span(f.location)),
-            ("body_start", opt(f.body_start, num)),
-            ("end_position", num(f.end_position)),
+            ("body_start", opt(f.body_start, offset_num)),
+            ("end_position", offset_num(f.end_position)),
             ("name", opt(f.name, spanned_string)),
             ("arguments", arr(arguments)),
             ("body", arr(body)),
@@ -462,7 +467,7 @@ fn unqualified_import(u : UnqualifiedImport) -> Json {
   obj([
     ("location", encode_span(u.location)),
     ("name", str(u.name)),
-    ("name_position", num(u.name_position)),
+    ("name_position", offset_num(u.name_position)),
     ("as_name", opt(u.as_name, str)),
   ])
 }
@@ -571,7 +576,7 @@ fn[R] enc_type_ast(t : TypeAst, k : (Json) -> Step[R]) -> Step[R] {
             ("location", encode_span(c.location)),
             ("name", type_ast_constructor_name(c.name)),
             ("arguments", arr(arguments)),
-            ("start_parentheses", opt(c.start_parentheses, num)),
+            ("start_parentheses", opt(c.start_parentheses, offset_num)),
           ]),
         )
       })
@@ -629,7 +634,7 @@ fn type_ast_constructor_name(n : TypeAstConstructorName) -> Json {
         ("kind", str("qualified")),
         ("module", str(module_)),
         ("module_location", encode_span(module_location)),
-        ("dot_location", num(dot_location)),
+        ("dot_location", offset_num(dot_location)),
         ("name", opt(name, spanned_string)),
       ])
     Unqualified(name~, location~) =>
@@ -725,7 +730,7 @@ fn[R] enc_assignment_kind(a : AssignmentKind, k : (Json) -> Step[R]) -> Step[R] 
           obj([
             ("kind", str("assert")),
             ("location", encode_span(location)),
-            ("assert_keyword_start", num(assert_keyword_start)),
+            ("assert_keyword_start", offset_num(assert_keyword_start)),
             ("message", message),
           ]),
         )
@@ -860,7 +865,7 @@ fn[V, R] enc_bit_array_option(
         obj([
           ("kind", str("unit")),
           ("location", encode_span(location)),
-          ("value", num(value)),
+          ("value", num(value.to_int())),
         ]),
       )
   }
@@ -898,7 +903,10 @@ fn function_literal_kind(k : FunctionLiteralKind) -> Json {
 ///
 /// ```mbt check
 /// test {
-///   let value : @ast.Expr = Var(location=@span.SrcSpan::new(0, 1), name="x")
+///   let value : @ast.Expr = Var(
+///     location=@span.SrcSpan::new(0, 1).unwrap(),
+///     name="x",
+///   )
 ///   assert_eq(@ast.decode_expr(@ast.encode_expr(value)), value)
 /// }
 /// ```
@@ -974,7 +982,7 @@ fn[R] enc_expr(e : Expr, k : (Json) -> Step[R]) -> Step[R] {
                 ("kind", str("fn")),
                 ("location", encode_span(location)),
                 ("fn_kind", function_literal_kind(kind)),
-                ("end_of_head_byte_index", num(end_of_head_byte_index)),
+                ("end_of_head_byte_index", offset_num(end_of_head_byte_index)),
                 ("arguments", arr(arguments)),
                 ("body", arr(body)),
                 ("return_annotation", return_annotation),
@@ -1007,7 +1015,7 @@ fn[R] enc_expr(e : Expr, k : (Json) -> Step[R]) -> Step[R] {
               ("location", encode_span(location)),
               ("fun", fun),
               ("arguments", arr(arguments)),
-              ("open_parenthesis", num(open_parenthesis)),
+              ("open_parenthesis", offset_num(open_parenthesis)),
             ]),
           )
         })
@@ -1021,7 +1029,7 @@ fn[R] enc_expr(e : Expr, k : (Json) -> Step[R]) -> Step[R] {
               ("kind", str("bin_op")),
               ("location", encode_span(location)),
               ("operator", str(operator.name())),
-              ("operator_start", num(operator_start)),
+              ("operator_start", offset_num(operator_start)),
               ("left", left),
               ("right", right),
             ]),
@@ -1084,7 +1092,7 @@ fn[R] enc_expr(e : Expr, k : (Json) -> Step[R]) -> Step[R] {
           obj([
             ("kind", str("tuple_index")),
             ("location", encode_span(location)),
-            ("index", num64(index)),
+            ("index", num64(index.to_uint64())),
             ("tuple", tuple),
           ]),
         )
@@ -1120,7 +1128,7 @@ fn[R] enc_expr(e : Expr, k : (Json) -> Step[R]) -> Step[R] {
             obj([
               ("kind", str("echo")),
               ("location", encode_span(location)),
-              ("keyword_end", num(keyword_end)),
+              ("keyword_end", offset_num(keyword_end)),
               ("expression", expression),
               ("message", message),
             ]),
@@ -1147,7 +1155,7 @@ fn[R] enc_expr(e : Expr, k : (Json) -> Step[R]) -> Step[R] {
               obj([
                 ("kind", str("record_update")),
                 ("location", encode_span(location)),
-                ("spread_start", num(spread_start)),
+                ("spread_start", offset_num(spread_start)),
                 ("constructor", constructor_),
                 ("record", record),
                 ("arguments", arr(arguments)),
@@ -1237,7 +1245,7 @@ fn[R] enc_clause_guard(g : ClauseGuard, k : (Json) -> Step[R]) -> Step[R] {
               ("kind", str("binary_operator")),
               ("location", encode_span(location)),
               ("operator", str(operator.name())),
-              ("operator_start", num(operator_start)),
+              ("operator_start", offset_num(operator_start)),
               ("left", left),
               ("right", right),
             ]),
@@ -1271,7 +1279,7 @@ fn[R] enc_clause_guard(g : ClauseGuard, k : (Json) -> Step[R]) -> Step[R] {
           obj([
             ("kind", str("tuple_index")),
             ("location", encode_span(location)),
-            ("index", num64(index)),
+            ("index", num64(index.to_uint64())),
             ("tuple", tuple),
           ]),
         )
@@ -1283,7 +1291,7 @@ fn[R] enc_clause_guard(g : ClauseGuard, k : (Json) -> Step[R]) -> Step[R] {
           obj([
             ("kind", str("field_access")),
             ("label_location", encode_span(label_location)),
-            ("index", opt(index, num64)),
+            ("index", opt(index, i => num64(i.to_uint64()))),
             ("label", str(label)),
             ("container", container),
           ]),
@@ -1451,7 +1459,7 @@ fn[R] enc_pattern(p : Pattern, k : (Json) -> Step[R]) -> Step[R] {
             opt(left_side_assignment, a => {
               obj([
                 ("name", str(a.name)),
-                ("name_start_position", num(a.name_start_position)),
+                ("name_start_position", offset_num(a.name_start_position)),
                 ("location", encode_span(a.location)),
               ])
             }),
@@ -1591,7 +1599,7 @@ fn[R] enc_constant(c : Constant, k : (Json) -> Step[R]) -> Step[R] {
             obj([
               ("kind", str("record")),
               ("location", encode_span(location)),
-              ("arguments_start_position", num(arguments_start_position)),
+              ("arguments_start_position", offset_num(arguments_start_position)),
               ("module", opt(module_, spanned_string)),
               ("name", str(name)),
               ("arguments", arguments),
@@ -1652,7 +1660,7 @@ fn[R] enc_constant(c : Constant, k : (Json) -> Step[R]) -> Step[R] {
             obj([
               ("kind", str("binary_operator")),
               ("location", encode_span(location)),
-              ("operator_start", num(operator_start)),
+              ("operator_start", offset_num(operator_start)),
               ("operator", str(operator.name())),
               ("left", left),
               ("right", right),
@@ -1681,9 +1689,9 @@ pub fn encode_extra(x : ModuleExtra) -> Json {
     ("module_comments", list(x.module_comments, encode_span)),
     ("doc_comments", list(x.doc_comments, encode_span)),
     ("comments", list(x.comments, encode_span)),
-    ("empty_lines", list(x.empty_lines, num)),
-    ("new_lines", list(x.new_lines, num)),
-    ("trailing_commas", list(x.trailing_commas, num)),
+    ("empty_lines", list(x.empty_lines, offset_num)),
+    ("new_lines", list(x.new_lines, offset_num)),
+    ("trailing_commas", list(x.trailing_commas, offset_num)),
   ])
 }
 

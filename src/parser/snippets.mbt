@@ -4,7 +4,7 @@
 /// farthest token loaded.
 fn first_lexical_error(
   stream : @scanner.TokenStream,
-  farthest : Int32,
+  farthest : @span.ByteOffset,
 ) -> @diagnostic.Diagnostic? {
   for d in stream.diagnostics {
     if d.code == "GL-SCAN-001" && d.span.start < farthest {
@@ -42,7 +42,9 @@ fn[A] Parser::finish_snippet(
     Ok(v) => v
     Err(e) => raise e
   }
-  guard parsed is Some(value) else { parse_error(missing, sp(0, 0)) }
+  guard parsed is Some(value) else {
+    parse_error(missing, sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()))
+  }
   match self.next_token() {
     Some(t) =>
       parse_error(
@@ -63,7 +65,12 @@ fn[A] Parser::finish_snippet(
 /// ```mbt check
 /// test {
 ///   let t = @parser.parse_type_text("List(a)")
-///   debug_inspect(t.location(), content="{ start: 0, end: 7 }")
+///   debug_inspect(
+///     t.location(),
+///     content=(
+///       #|{ start: ByteOffset(0), end: ByteOffset(7) }
+///     ),
+///   )
 /// }
 /// ```
 pub fn parse_type_text(
@@ -108,7 +115,12 @@ pub fn parse_constant_text(
 /// ```mbt check
 /// test {
 ///   let e = @parser.parse_expression_text("1 + 2")
-///   debug_inspect(e.location(), content="{ start: 0, end: 5 }")
+///   debug_inspect(
+///     e.location(),
+///     content=(
+///       #|{ start: ByteOffset(0), end: ByteOffset(5) }
+///     ),
+///   )
 /// }
 /// ```
 pub fn parse_expression_text(

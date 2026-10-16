@@ -66,7 +66,9 @@ test "a move that has nowhere to go returns false and leaves the cursor in place
     // An argument without an annotation is a leaf.
     s.expect(c.goto_first_child()).to_equal(false)
     s.expect(c.goto_last_child()).to_equal(false)
-    s.expect(c.goto_first_child_for(9)).to_equal(false)
+    s
+    .expect(c.goto_first_child_for(@span.ByteOffset::new(9).unwrap()))
+    .to_equal(false)
     s.expect(at(c)).to_equal("arg/arg arguments 2")
   })
 }
@@ -76,15 +78,21 @@ test "goto_first_child_for picks the first child that contains or follows the of
   @expect.expect_all(s => {
     let c = @syntax.TreeCursor::new(root_of(two_defs))
     // Inside the function head.
-    s.expect(c.goto_first_child_for(5)).to_equal(true)
+    s
+    .expect(c.goto_first_child_for(@span.ByteOffset::new(5).unwrap()))
+    .to_equal(true)
     s.expect(at(c)).to_equal("definition/function definitions 1")
     ignore(c.goto_parent())
     // On the blank line between the definitions (byte 20).
-    s.expect(c.goto_first_child_for(20)).to_equal(true)
+    s
+    .expect(c.goto_first_child_for(@span.ByteOffset::new(20).unwrap()))
+    .to_equal(true)
     s.expect(at(c)).to_equal("definition/module_constant definitions 1")
     ignore(c.goto_parent())
     // After the last child.
-    s.expect(c.goto_first_child_for(100)).to_equal(false)
+    s
+    .expect(c.goto_first_child_for(@span.ByteOffset::new(100).unwrap()))
+    .to_equal(false)
     s.expect(at(c)).to_equal("module/module - 0")
   })
 }
@@ -130,7 +138,8 @@ fn navigate(root : @syntax.NodeRef) -> Array[String] raise {
     }
     while !c.goto_next_sibling() {
       if !c.goto_parent() {
-        if c.depth() != 0 || tag(c.node()) != tag(root) {
+        if c.depth() != @syntax.NodeDepth::new(0).unwrap() ||
+          tag(c.node()) != tag(root) {
           fail("the navigation did not end at its start node")
         }
         return out
@@ -158,7 +167,7 @@ test "a cursor handles 3000 nested lists" {
     while c.goto_parent() {
 
     }
-    s.expect(c.depth()).to_equal(0)
+    s.expect(c.depth()).to_equal(@syntax.NodeDepth::new(0).unwrap())
     s.expect(navigate(deep_list(3000)).length()).to_equal(3001)
   })
 }
@@ -180,7 +189,7 @@ test "a cursor reports the path of its node" {
 
 ///|
 test "among children with equal spans goto_first_child_for picks the first" {
-  let sp = @span.SrcSpan::new(2, 4)
+  let sp = @span.SrcSpan::new(2, 4).unwrap()
   let first : @ast.Expr = Int(
     location=sp,
     value="0",
@@ -193,14 +202,16 @@ test "among children with equal spans goto_first_child_for picks the first" {
   )
   let list = @syntax.NodeRef::Expr(
     List(
-      location=@span.SrcSpan::new(0, 6),
+      location=@span.SrcSpan::new(0, 6).unwrap(),
       elements=[first, second][:],
       tail=None,
     ),
   )
   let c = @syntax.TreeCursor::new(list)
   @expect.expect_all(s => {
-    s.expect(c.goto_first_child_for(2)).to_be_true()
+    s
+    .expect(c.goto_first_child_for(@span.ByteOffset::new(2).unwrap()))
+    .to_be_true()
     s.expect(c.node()).to_equal(@syntax.NodeRef::Expr(first))
   })
 }
@@ -211,16 +222,22 @@ test "goto_node_at moves below the current node only, and stays when the node do
   let cursor = @syntax.TreeCursor::new(tree.root())
   @expect.expect_all(s => {
     // The `+` in `a + b` is byte 23.
-    s.expect(cursor.goto_node_at(23)).to_be_true()
+    s
+    .expect(cursor.goto_node_at(@span.ByteOffset::new(23).unwrap()))
+    .to_be_true()
     s.expect(cursor.node().kind()).to_equal("bin_op")
     s
     .expect(cursor.path().to_string())
     .to_equal("definitions[0].body[0].expression[0]")
     // From there, `pub` is outside: the cursor stays.
-    s.expect(cursor.goto_node_at(0)).to_be_false()
+    s
+    .expect(cursor.goto_node_at(@span.ByteOffset::new(0).unwrap()))
+    .to_be_false()
     s.expect(cursor.node().kind()).to_equal("bin_op")
     // `b` is inside: the cursor goes down, and goto_parent goes back up.
-    s.expect(cursor.goto_node_at(25)).to_be_true()
+    s
+    .expect(cursor.goto_node_at(@span.ByteOffset::new(25).unwrap()))
+    .to_be_true()
     s.expect(cursor.field_name()).to_equal(Some("right"))
     s.expect(cursor.goto_parent()).to_be_true()
     s.expect(cursor.node().kind()).to_equal("bin_op")

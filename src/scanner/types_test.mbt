@@ -25,26 +25,28 @@ test "comment spans exclude the slashes" {
   let c = @scanner.Comment::{
     kind: Doc,
     content: " hi",
-    span: @span.SrcSpan::new(10, 16),
+    span: @span.SrcSpan::new(10, 16).unwrap(),
   }
   @expect.expect_all(e => {
-    e.expect(@scanner.CommentKind::Regular.prefix_length()).to_equal(2)
-    e.expect(@scanner.CommentKind::Doc.prefix_length()).to_equal(3)
-    e.expect(@scanner.CommentKind::Module.prefix_length()).to_equal(4)
-    e.expect(c.content_span()).to_equal(@span.SrcSpan::new(13, 16))
+    e.expect(@scanner.CommentKind::Regular.prefix_length().to_int()).to_equal(2)
+    e.expect(@scanner.CommentKind::Doc.prefix_length().to_int()).to_equal(3)
+    e.expect(@scanner.CommentKind::Module.prefix_length().to_int()).to_equal(4)
+    e.expect(c.content_span()).to_equal(@span.SrcSpan::new(13, 16).unwrap())
     e.expect(@scanner.Trivia::Comment(c).text()).to_equal("/// hi")
     e
     .expect(@scanner.Trivia::Comment(c).span())
-    .to_equal(@span.SrcSpan::new(10, 16))
+    .to_equal(@span.SrcSpan::new(10, 16).unwrap())
     e
-    .expect(@scanner.Trivia::Newline("\r\n", @span.SrcSpan::new(0, 2)).text())
+    .expect(
+      @scanner.Trivia::Newline("\r\n", @span.SrcSpan::new(0, 2).unwrap()).text(),
+    )
     .to_equal("\r\n")
   })
 }
 
 ///|
 test "a token and a stream rebuild their source" {
-  let sp = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+  let sp = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b).unwrap()
   let t1 = @scanner.Token::{
     kind: Keyword(Fn),
     lexeme: "fn",
@@ -75,7 +77,9 @@ test "a token and a stream rebuild their source" {
 test "a stream with only trivia rebuilds from its trivia" {
   let stream = @scanner.TokenStream::{
     tokens: [][:],
-    trivia: [@scanner.Trivia::Whitespace(" ", @span.SrcSpan::new(0, 1))][:],
+    trivia: [
+      @scanner.Trivia::Whitespace(" ", @span.SrcSpan::new(0, 1).unwrap()),
+    ][:],
     diagnostics: [][:],
   }
   @expect.expect(stream.to_source()).to_equal(" ")

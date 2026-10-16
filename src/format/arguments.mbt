@@ -27,7 +27,7 @@ fn Formatter::wrap_function_call_arguments(
 fn Formatter::wrap_arguments(
   self : Formatter,
   arguments : Array[@pretty.Doc],
-  comments_limit : Int32,
+  comments_limit : @span.ByteOffset,
 ) -> @pretty.Doc {
   if arguments.is_empty() {
     let comments = self.pop_comments(comments_limit)
@@ -55,7 +55,7 @@ fn Formatter::wrap_arguments(
 fn Formatter::wrap_arguments_with_spread(
   self : Formatter,
   arguments : Array[@pretty.Doc],
-  comments_limit : Int32,
+  comments_limit : @span.ByteOffset,
 ) -> @pretty.Doc {
   if arguments.is_empty() {
     return self.wrap_arguments(arguments, comments_limit)

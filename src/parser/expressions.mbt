@@ -20,8 +20,8 @@ fn Parser::parse_expression_inner(
 ) -> @ast.Expr? raise ParseError {
   let opstack : Array[OpEntry] = []
   let estack : Array[@ast.Expr] = []
-  let mut last_op_start = 0
-  let mut last_op_end = 0
+  let mut last_op_start = @span.ByteOffset::zero()
+  let mut last_op_end = @span.ByteOffset::zero()
   let mut context = Other
   while true {
     match self.parse_expression_unit(context) {
@@ -271,7 +271,10 @@ fn Parser::parse_expression_unit_inner(
           // Tuple access
           Some({ kind: Int(value~, ..), span, .. }) => {
             self.advance()
-            match parse_u64(value.replace(old="_", new="")) {
+            match
+              parse_u64(value.replace(old="_", new="")).map(
+                @ast.TupleIndex::from_uint64,
+              ) {
               Some(index) =>
                 expr = TupleIndex(
                   location=sp(start, span.end),
@@ -292,7 +295,7 @@ fn Parser::parse_expression_unit_inner(
           }
           // A field access with no label.
           _ => {
-            let end = dot_start + 1
+            let end = dot_start.shift(1).unwrap()
             return Some(
               FieldAccess(
                 location=sp(start, end),
@@ -379,7 +382,7 @@ fn Parser::parse_expression_unit_inner(
 /// malformed lists. `start` is the `[` position.
 fn Parser::parse_list(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
 ) -> @ast.Expr raise ParseError {
   let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
     p => p.parse_expression(),
@@ -387,7 +390,7 @@ fn Parser::parse_list(
   )
   let mut tail : @ast.Expr? = None
   let mut elements_after_tail : Array[@ast.Expr]? = None
-  let mut dot_dot_location : (Int32, Int32)? = None
+  let mut dot_dot_location : (@span.ByteOffset, @span.ByteOffset)? = None
   if self.maybe_one(DotDot) is Some((dots_start, dots_end)) {
     dot_dot_location = Some((dots_start, dots_end))
     tail = self.parse_expression()

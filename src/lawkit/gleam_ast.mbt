@@ -20,7 +20,7 @@ fn ast_pick(rs : @splitmix.RandomState, n : Int32) -> Int32 {
 ///|
 fn ast_span(rs : @splitmix.RandomState) -> @span.SrcSpan {
   let a = ast_pick(rs, 200)
-  @span.SrcSpan::new(a, a + ast_pick(rs, 40))
+  @span.SrcSpan::new(a, a + ast_pick(rs, 40)).unwrap()
 }
 
 ///|
@@ -110,7 +110,10 @@ fn ast_spanned(rs : @splitmix.RandomState) -> @ast.SpannedString {
 
 ///|
 fn ast_doc(rs : @splitmix.RandomState) -> @ast.Documentation {
-  { start: ast_pick(rs, 100), text: ast_string(rs) + "\n", }
+  {
+    start: @span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
+    text: ast_string(rs) + "\n",
+  }
 }
 
 ///|
@@ -140,7 +143,7 @@ pub fn gen_type_ast(size : Int32, rs : @splitmix.RandomState) -> @ast.TypeAst {
           Qualified(
             module_=ast_name(rs),
             module_location=ast_span(rs),
-            dot_location=ast_pick(rs, 100),
+            dot_location=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
             name=ast_opt(rs, () => {
               location: ast_span(rs),
               name: ast_upname(rs),
@@ -148,7 +151,9 @@ pub fn gen_type_ast(size : Int32, rs : @splitmix.RandomState) -> @ast.TypeAst {
           )
         },
         arguments: ast_list(rs, s, () => gen_type_ast(s, rs)),
-        start_parentheses: ast_opt(rs, () => ast_pick(rs, 100)),
+        start_parentheses: ast_opt(rs, () => {
+          @span.ByteOffset::new(ast_pick(rs, 100)).unwrap()
+        }),
       })
     1 =>
       Fn({
@@ -236,7 +241,11 @@ fn[V] gen_segment(
       13 => Little(location=loc)
       14 => Native(location=loc)
       15 => Size(location=loc, value=value(), short_form=ast_pick(rs, 2) == 0)
-      _ => Unit(location=loc, value=ast_pick(rs, 256))
+      _ =>
+        Unit(
+          location=loc,
+          value=@ast.BitArrayUnit::new(ast_pick(rs, 256)).unwrap(),
+        )
     }
     o
   }
@@ -306,7 +315,7 @@ pub fn gen_pattern(size : Int32, rs : @splitmix.RandomState) -> @ast.Pattern {
         left_location=ast_span(rs),
         left_side_assignment=ast_opt(rs, () => {
           name: ast_name(rs),
-          name_start_position: ast_pick(rs, 100),
+          name_start_position: @span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
           location: ast_span(rs),
         }),
         right_location=ast_span(rs),
@@ -368,7 +377,7 @@ pub fn gen_constant(size : Int32, rs : @splitmix.RandomState) -> @ast.Constant {
     5 =>
       Record(
         location=ast_span(rs),
-        arguments_start_position=ast_pick(rs, 100),
+        arguments_start_position=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
         module_=ast_opt(rs, () => ast_spanned(rs)),
         name=ast_upname(rs),
         arguments=ast_opt(rs, () => {
@@ -404,7 +413,7 @@ pub fn gen_constant(size : Int32, rs : @splitmix.RandomState) -> @ast.Constant {
     9 =>
       BinaryOperator(
         location=ast_span(rs),
-        operator_start=ast_pick(rs, 100),
+        operator_start=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
         operator=@ast.BinOp::all()[ast_pick(rs, 22)],
         left=gen_constant(s, rs),
         right=gen_constant(s, rs),
@@ -431,7 +440,7 @@ pub fn gen_clause_guard(
       BinaryOperator(
         location=ast_span(rs),
         operator=@ast.BinOp::all()[ast_pick(rs, 22)],
-        operator_start=ast_pick(rs, 100),
+        operator_start=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
         left=gen_clause_guard(s, rs),
         right=gen_clause_guard(s, rs),
       )
@@ -439,13 +448,15 @@ pub fn gen_clause_guard(
     5 =>
       TupleIndex(
         location=ast_span(rs),
-        index=ast_pick(rs, 5).to_uint64(),
+        index=@ast.TupleIndex::from_uint64(ast_pick(rs, 5).to_uint64()),
         tuple=gen_clause_guard(s, rs),
       )
     _ =>
       FieldAccess(
         label_location=ast_span(rs),
-        index=ast_opt(rs, () => ast_pick(rs, 5).to_uint64()),
+        index=ast_opt(rs, () => {
+          @ast.TupleIndex::from_uint64(ast_pick(rs, 5).to_uint64())
+        }),
         label=ast_name(rs),
         container=gen_clause_guard(s, rs),
       )
@@ -468,7 +479,7 @@ fn gen_statement(size : Int32, rs : @splitmix.RandomState) -> @ast.Statement {
           _ =>
             Assert(
               location=ast_span(rs),
-              assert_keyword_start=ast_pick(rs, 100),
+              assert_keyword_start=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
               message=ast_opt(rs, () => gen_expr(s, rs)),
             )
         },
@@ -528,7 +539,7 @@ pub fn gen_expr(size : Int32, rs : @splitmix.RandomState) -> @ast.Expr {
           1 => Anonymous(head=ast_span(rs))
           _ => Use(location=ast_span(rs))
         },
-        end_of_head_byte_index=ast_pick(rs, 100),
+        end_of_head_byte_index=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
         arguments=ast_list(rs, s, () => gen_arg(s, rs)),
         body=gen_body(s, rs),
         return_annotation=ast_opt(rs, () => gen_type_ast(s, rs)),
@@ -544,13 +555,13 @@ pub fn gen_expr(size : Int32, rs : @splitmix.RandomState) -> @ast.Expr {
         location=ast_span(rs),
         fun=gen_expr(s, rs),
         arguments=ast_list(rs, s, () => gen_call_arg(rs, gen_expr(s, rs))),
-        open_parenthesis=ast_pick(rs, 100),
+        open_parenthesis=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
       )
     8 =>
       BinOp(
         location=ast_span(rs),
         operator=@ast.BinOp::all()[ast_pick(rs, 22)],
-        operator_start=ast_pick(rs, 100),
+        operator_start=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
         left=gen_expr(s, rs),
         right=gen_expr(s, rs),
       )
@@ -589,7 +600,7 @@ pub fn gen_expr(size : Int32, rs : @splitmix.RandomState) -> @ast.Expr {
     13 =>
       TupleIndex(
         location=ast_span(rs),
-        index=ast_pick(rs, 5).to_uint64(),
+        index=@ast.TupleIndex::from_uint64(ast_pick(rs, 5).to_uint64()),
         tuple=gen_expr(s, rs),
       )
     14 =>
@@ -608,7 +619,7 @@ pub fn gen_expr(size : Int32, rs : @splitmix.RandomState) -> @ast.Expr {
     16 =>
       Echo(
         location=ast_span(rs),
-        keyword_end=ast_pick(rs, 100),
+        keyword_end=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
         expression=ast_opt(rs, () => gen_expr(s, rs)),
         message=ast_opt(rs, () => gen_expr(s, rs)),
       )
@@ -620,7 +631,7 @@ pub fn gen_expr(size : Int32, rs : @splitmix.RandomState) -> @ast.Expr {
     18 =>
       RecordUpdate(
         location=ast_span(rs),
-        spread_start=ast_pick(rs, 100),
+        spread_start=@span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
         constructor_=gen_expr(s, rs),
         record={ base: gen_expr(s, rs), location: ast_span(rs), },
         arguments=ast_list(rs, s, () => {
@@ -641,8 +652,10 @@ fn gen_definition(size : Int32, rs : @splitmix.RandomState) -> @ast.Definition {
     0 =>
       Function({
         location: ast_span(rs),
-        body_start: ast_opt(rs, () => ast_pick(rs, 100)),
-        end_position: ast_pick(rs, 200),
+        body_start: ast_opt(rs, () => {
+          @span.ByteOffset::new(ast_pick(rs, 100)).unwrap()
+        }),
+        end_position: @span.ByteOffset::new(ast_pick(rs, 200)).unwrap(),
         name: ast_opt(rs, () => ast_spanned(rs)),
         arguments: ast_list(rs, s, () => gen_arg(s, rs)),
         body: ast_list(rs, s, () => gen_statement(s, rs)),
@@ -667,7 +680,7 @@ fn gen_definition(size : Int32, rs : @splitmix.RandomState) -> @ast.Definition {
     2 =>
       CustomType({
         location: ast_span(rs),
-        end_position: ast_pick(rs, 200),
+        end_position: @span.ByteOffset::new(ast_pick(rs, 200)).unwrap(),
         name: ast_upname(rs),
         name_location: ast_span(rs),
         publicity: ast_publicity(rs),
@@ -704,13 +717,13 @@ fn gen_definition(size : Int32, rs : @splitmix.RandomState) -> @ast.Definition {
         unqualified_values: ast_list(rs, s, () => {
           location: ast_span(rs),
           name: ast_name(rs),
-          name_position: ast_pick(rs, 100),
+          name_position: @span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
           as_name: ast_opt(rs, () => ast_name(rs)),
         }),
         unqualified_types: ast_list(rs, s, () => {
           location: ast_span(rs),
           name: ast_upname(rs),
-          name_position: ast_pick(rs, 100),
+          name_position: @span.ByteOffset::new(ast_pick(rs, 100)).unwrap(),
           as_name: ast_opt(rs, () => ast_upname(rs)),
         }),
       })
@@ -749,7 +762,9 @@ fn gen_warning(rs : @splitmix.RandomState) -> @ast.Warning {
 
 ///|
 pub fn gen_parsed(size : Int32, rs : @splitmix.RandomState) -> @ast.Parsed {
-  let positions = () => ast_list(rs, size, () => ast_pick(rs, 300))
+  let positions = () => {
+    ast_list(rs, size, () => @span.ByteOffset::new(ast_pick(rs, 300)).unwrap())
+  }
   {
     module_: {
       definitions: ast_list(rs, size, () => {

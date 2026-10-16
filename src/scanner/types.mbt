@@ -160,12 +160,13 @@ pub(all) enum CommentKind {
 
 ///|
 /// The number of slashes that start the comment.
-pub fn CommentKind::prefix_length(self : CommentKind) -> Int32 {
-  match self {
+pub fn CommentKind::prefix_length(self : CommentKind) -> @span.ByteLength {
+  let length = match self {
     Regular => 2
     Doc => 3
     Module => 4
   }
+  @span.ByteLength::new(length).unwrap()
 }
 
 ///|
@@ -180,7 +181,10 @@ pub(all) struct Comment {
 ///|
 /// The compiler's span for the comment: its content, without the slashes.
 pub fn Comment::content_span(self : Comment) -> @span.SrcSpan {
-  @span.SrcSpan::new(self.span.start + self.kind.prefix_length(), self.span.end)
+  @span.SrcSpan::from_compiler(
+    self.span.start.shift(self.kind.prefix_length().to_int()).unwrap(),
+    self.span.end,
+  ).unwrap()
 }
 
 ///|

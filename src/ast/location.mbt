@@ -27,7 +27,7 @@ pub fn Expr::location(self : Expr) -> @span.SrcSpan {
     Pipeline(expressions~) => {
       let first = expressions[0].location()
       let last = expressions[expressions.length() - 1].location()
-      @span.SrcSpan::new(first.start, last.end)
+      @span.SrcSpan::from_compiler(first.start, last.end).unwrap()
     }
   }
 }
@@ -40,7 +40,7 @@ pub fn Expr::location(self : Expr) -> @span.SrcSpan {
 pub fn Pattern::location(self : Pattern) -> @span.SrcSpan {
   match self {
     Assign(location~, pattern~, ..) =>
-      @span.SrcSpan::new(pattern.location().start, location.end)
+      @span.SrcSpan::from_compiler(pattern.location().start, location.end).unwrap()
     Int(location~, ..)
     | Float(location~, ..)
     | String(location~, ..)
@@ -108,7 +108,10 @@ pub fn ClauseGuard::location(self : ClauseGuard) -> @span.SrcSpan {
     | Var(location~, ..)
     | TupleIndex(location~, ..) => location
     FieldAccess(label_location~, container~, ..) =>
-      @span.SrcSpan::new(container.location().start, label_location.end)
+      @span.SrcSpan::from_compiler(
+        container.location().start,
+        label_location.end,
+      ).unwrap()
     Constant(c) => c.location()
   }
 }

@@ -117,7 +117,7 @@ test "law: push_events reads one event at a time, skips only on SkipChildren and
 fn record_line(e : @syntax.Event) -> String {
   match e {
     Enter(e) =>
-      "+\{e.category}/\{e.kind} field=\{e.field.unwrap_or("-")} at=\{e.start} depth=\{e.depth} path=\{e.path}"
+      "+\{e.category}/\{e.kind} field=\{e.field.unwrap_or("-")} at=\{e.start.to_int()} depth=\{e.depth} path=\{e.path}"
     Leave(e) => "-\{tag(e.node)} depth=\{e.depth} path=\{e.path}"
   }
 }

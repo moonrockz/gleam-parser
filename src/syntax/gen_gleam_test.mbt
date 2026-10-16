@@ -54,7 +54,7 @@ fn decide(p : Policy, k : Int32) -> @syntax.Control {
 /// A node's occurrence tag: category, kind and full span.
 fn tag(n : @syntax.NodeRef) -> String {
   let s = n.span()
-  "\{n.category()}/\{n.kind()}@\{s.start}-\{s.end}"
+  "\{n.category()}/\{n.kind()}@\{s.start.to_int()}-\{s.end.to_int()}"
 }
 
 ///|

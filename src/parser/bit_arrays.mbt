@@ -7,7 +7,7 @@ fn[A] Parser::parse_bit_array_segment(
   self : Parser,
   value_parser : (Parser) -> A? raise ParseError,
   arg_parser : (Parser) -> A raise ParseError,
-  to_int_segment : (String, BigInt, Int32, Int32) -> A,
+  to_int_segment : (String, BigInt, @span.ByteOffset, @span.ByteOffset) -> A,
   location_of : (A) -> @span.SrcSpan,
 ) -> @ast.BitArraySegment[A]? raise ParseError {
   match value_parser(self) {
@@ -66,7 +66,7 @@ fn[A] bit_array_option_location(
 fn[A] Parser::parse_bit_array_option(
   self : Parser,
   arg_parser : (Parser) -> A raise ParseError,
-  to_int_segment : (String, BigInt, Int32, Int32) -> A,
+  to_int_segment : (String, BigInt, @span.ByteOffset, @span.ByteOffset) -> A,
 ) -> @ast.BitArrayOption[A]? raise ParseError {
   match self.token0 {
     Some({ kind: Name(name), span, .. }) => {
@@ -120,10 +120,10 @@ fn[A] Parser::parse_bit_array_option(
 ///|
 /// The compiler's `u8::from_str(value.replace("_", ""))` filtered to `> 0`:
 /// decimal digits only, 1 to 255.
-fn parse_unit(value : String) -> Int32? {
+fn parse_unit(value : String) -> @ast.BitArrayUnit? {
   let digits = value.replace(old="_", new="")
   match parse_u64(digits) {
-    Some(n) if n >= 1 && n <= 255 => Some(n.to_int())
+    Some(n) if n >= 1UL && n <= 255UL => @ast.BitArrayUnit::new(n.to_int())
     _ => None
   }
 }
@@ -217,8 +217,8 @@ fn Parser::parse_bit_array_size_unit(
 fn bit_array_size_int(
   value : String,
   int_value : BigInt,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> @ast.Pattern {
   BitArraySize(Int(location=sp(start, end), value~, int_value~))
 }
@@ -227,8 +227,8 @@ fn bit_array_size_int(
 fn bit_array_expression_int(
   value : String,
   int_value : BigInt,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> @ast.Expr {
   Int(location=sp(start, end), value~, int_value~)
 }
@@ -237,8 +237,8 @@ fn bit_array_expression_int(
 fn bit_array_const_int(
   value : String,
   int_value : BigInt,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> @ast.Constant {
   Int(location=sp(start, end), value~, int_value~)
 }

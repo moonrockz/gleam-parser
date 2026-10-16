@@ -3,7 +3,7 @@
 /// consumed.
 fn Parser::parse_custom_type(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
   public : Bool,
   opaque_ : Bool,
   attributes : Attributes,
@@ -11,8 +11,10 @@ fn Parser::parse_custom_type(
   let documentation = self.take_documentation(start)
   let (name_start, name, parameters, end, name_end) = self.expect_type_name()
   let name_location = sp(name_start, name_end)
-  let (constructors, end_position) : (Array[@ast.RecordConstructor], Int32) = match
-    self.token0 {
+  let (constructors, end_position) : (
+    Array[@ast.RecordConstructor],
+    @span.ByteOffset,
+  ) = match self.token0 {
     // `type Wibble {`: a custom type
     Some({ kind: LeftBrace, .. }) => {
       self.advance()
@@ -125,8 +127,8 @@ fn Parser::invalid_record_constructor_error(
   type_name : String,
   public : Bool,
   opaque_ : Bool,
-  name_start : Int32,
-  name_end : Int32,
+  name_start : @span.ByteOffset,
+  name_end : @span.ByteOffset,
 ) -> ParseError {
   let fields = try
     self.series_of(p => p.parse_record_constructor_field(), Some(Comma))
@@ -165,7 +167,7 @@ fn Parser::invalid_record_constructor_error(
 /// `(field, label: Type, …)` of a variant; `end` is 0 with no parentheses.
 fn Parser::parse_record_constructor_arguments(
   self : Parser,
-) -> (Array[@ast.RecordConstructorArg], Int32) raise ParseError {
+) -> (Array[@ast.RecordConstructorArg], @span.ByteOffset) raise ParseError {
   if self.maybe_one(LeftParen) is Some(_) {
     let arguments = self.series_of(
       p => p.parse_record_constructor_field(),
@@ -177,7 +179,7 @@ fn Parser::parse_record_constructor_arguments(
     )
     (arguments, end)
   } else {
-    ([], 0)
+    ([], @span.ByteOffset::zero())
   }
 }
 
@@ -229,7 +231,13 @@ fn Parser::parse_record_constructor_field(
 /// name), and the name's end.
 fn Parser::expect_type_name(
   self : Parser,
-) -> (Int32, String, Array[@ast.SpannedString], Int32, Int32) raise ParseError {
+) -> (
+  @span.ByteOffset,
+  String,
+  Array[@ast.SpannedString],
+  @span.ByteOffset,
+  @span.ByteOffset,
+) raise ParseError {
   let (start, upname, end) = self.expect_upname()
   match self.maybe_one(LeftParen) {
     Some((par_s, _)) => {
@@ -276,12 +284,18 @@ fn Parser::expect_type_name(
 ///|
 /// The `}` of a custom type, or `UnexpectedToken` with a hint when a
 /// function follows (Gleam has no methods).
-fn Parser::expect_custom_type_close(self : Parser) -> Int32 raise ParseError {
+fn Parser::expect_custom_type_close(
+  self : Parser,
+) -> @span.ByteOffset raise ParseError {
   match self.maybe_one(RightBrace) {
     Some((_, end)) => end
     None =>
       match self.next_token() {
-        None => parse_error(UnexpectedEof, sp(0, 0))
+        None =>
+          parse_error(
+            UnexpectedEof,
+            sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()),
+          )
         Some(t) => {
           let hint = match (t.kind, self.token0) {
             (Keyword(Fn), _)

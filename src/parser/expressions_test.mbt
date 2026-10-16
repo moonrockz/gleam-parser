@@ -14,12 +14,19 @@ test "operators reduce by precedence with the compiler's spans" {
     is BinOp(
       location~,
       operator=AddInt,
-      operator_start=2,
+      operator_start=scalar_17_22,
       left=Int(..),
-      right=BinOp(location=rl, operator=MultInt, operator_start=6, ..)
+      right=BinOp(
+        location=rl,
+        operator=MultInt,
+        operator_start=scalar_19_65,
+        ..
+      )
     ) else {
     fail("got \{@debug.to_string(e)}")
   }
+  @expect.expect(scalar_17_22.to_int()).to_equal(2)
+  @expect.expect(scalar_19_65.to_int()).to_equal(6)
   @expect.expect_all(x => {
     x.expect(location).to_equal(sp(0, 9))
     x.expect(rl).to_equal(sp(4, 9))
@@ -37,12 +44,13 @@ test "pipelines are flat and calls keep the open parenthesis" {
         location~,
         fun=Var(name="b", location=bl),
         arguments~,
-        open_parenthesis=6
+        open_parenthesis=scalar_40_26
       ),
       Var(name="c", location=cl),
     ] else {
     fail("expressions \{@debug.to_string(expressions)}")
   }
+  @expect.expect(scalar_40_26.to_int()).to_equal(6)
   @expect.expect_all(x => {
     x.expect(e.location()).to_equal(sp(0, 14))
     x.expect(location).to_equal(sp(5, 9))
@@ -60,13 +68,14 @@ test "a capture builds the compiler's anonymous function" {
     is Fn(
       location~,
       kind=Capture(hole~),
-      end_of_head_byte_index=7,
+      end_of_head_byte_index=scalar_63_30,
       arguments~,
       body~,
       return_annotation=None
     ) else {
     fail("got \{@debug.to_string(e)}")
   }
+  @expect.expect(scalar_63_30.to_int()).to_equal(7)
   guard arguments
     is [
       {
@@ -79,10 +88,18 @@ test "a capture builds the compiler's anonymous function" {
   }
   guard body
     is [
-      Expression(Call(location=cl, arguments=call_args, open_parenthesis=1, ..)),
+      Expression(
+        Call(
+          location=cl,
+          arguments=call_args,
+          open_parenthesis=scalar_82_74,
+          ..
+        )
+      ),
     ] else {
     fail("body \{@debug.to_string(body)}")
   }
+  @expect.expect(scalar_82_74.to_int()).to_equal(1)
   guard call_args
     is [
       {
@@ -114,13 +131,14 @@ test "an anonymous function has the compiler's head and body spans" {
     is Fn(
       location~,
       kind=Anonymous(head~),
-      end_of_head_byte_index=20,
+      end_of_head_byte_index=scalar_117_30,
       arguments~,
       body~,
       return_annotation=Some(_)
     ) else {
     fail("got \{@debug.to_string(e)}")
   }
+  @expect.expect(scalar_117_30.to_int()).to_equal(20)
   @expect.expect_all(x => {
     x.expect(location).to_equal(sp(0, 30))
     x.expect(head).to_equal(sp(0, 20))
@@ -164,32 +182,35 @@ test "blocks, case, record update, field access, tuple index, echo, todo, negati
   guard update
     is RecordUpdate(
       location=ul,
-      spread_start=6,
+      spread_start=scalar_167_20,
       constructor_=Var(name="Point", ..),
       record={ base: Var(name="p", ..), location: rl, },
       arguments=upd
     ) else {
     fail("got \{@debug.to_string(update)}")
   }
+  @expect.expect(scalar_167_20.to_int()).to_equal(6)
   let access = @parser.parse_expression_text("a.b.0")
   guard access
     is TupleIndex(
       location=il,
-      index=0,
+      index=scalar_178_13,
       tuple=FieldAccess(location=fl, label_location=ll, label="b", ..)
     ) else {
     fail("got \{@debug.to_string(access)}")
   }
+  @expect.expect(scalar_178_13.to_uint64()).to_equal(0UL)
   let echo_ = @parser.parse_expression_text("echo x as \"m\"")
   guard echo_
     is Echo(
       location=el,
-      keyword_end=4,
+      keyword_end=scalar_187_19,
       expression=Some(Var(..)),
       message=Some(_)
     ) else {
     fail("got \{@debug.to_string(echo_)}")
   }
+  @expect.expect(scalar_187_19.to_int()).to_equal(4)
   let todo_ = @parser.parse_expression_text("todo as \"x\"")
   guard todo_ is Todo(kind=Keyword, location=tdl, message=Some(_)) else {
     fail("got \{@debug.to_string(todo_)}")

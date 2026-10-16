@@ -84,7 +84,10 @@ impl @moonspec.World for RejectionWorld with fn configure(self, setup) {
           Some(l) => Json(l)
           None => Json::null()
         },
-        "location": { "start": Json(span.start), "end": Json(span.end) },
+        "location": {
+          "start": Json(span.start.to_int()),
+          "end": Json(span.end.to_int()),
+        },
       }
     },
   )

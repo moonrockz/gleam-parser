@@ -74,6 +74,7 @@ Feature: Canonical AST JSON
     Examples:
       | json | error |
       | {"kind":"var","location":{"start":-1,"end":0},"name":"x"} | $.location.start: expected a non-negative integer, found -1 |
+      | {"kind":"var","location":{"start":3,"end":2},"name":"x"} | $.location.end: span end precedes start |
       | {"kind":"tuple_index","location":{"start":0,"end":1},"index":-1,"tuple":{"kind":"var","location":{"start":0,"end":1},"name":"x"}} | $.index: expected an unsigned 64-bit integer, found -1 |
       | {"kind":"bit_array","location":{"start":0,"end":1},"segments":[{"location":{"start":0,"end":1},"value":{"kind":"var","location":{"start":0,"end":1},"name":"x"},"options":[{"kind":"unit","location":{"start":0,"end":1},"value":256}]}]} | $.segments[0].options[0].value: expected an integer in 0..255, found 256 |
       | {"kind":"int","location":{"start":0,"end":1},"value":"1","int_value":"01"} | $.int_value: not a canonical decimal integer |

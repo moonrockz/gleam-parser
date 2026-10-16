@@ -22,10 +22,16 @@ byte equality of this text.
 
 Decoders require every schema field, including nullable fields. They ignore
 unknown fields. A malformed value raises `DecodeError` with its JSON path.
-Byte offsets must be non-negative integers that fit `Int32`. Span ends can
-precede their starts because the compiler uses `start..0` for some EOF
-errors. Tuple and guard indexes must fit `UInt64`. A bit array `unit` must
-be an integer in `0..255`.
+Byte offsets must be non-negative integers that fit `Int32`. A span end can
+precede its start only for the compiler's `start..0` EOF sentinel. Other
+reversed spans are rejected. Tuple and guard indexes must fit `UInt64`.
+A bit array `unit` must be an integer in `0..255`.
+
+The MoonBit model uses validated domain types for these fields:
+`ByteOffset`, `TupleIndex` and `BitArrayUnit`. Their constructors check raw
+numbers at the input boundary. The encoder writes the same JSON numbers.
+See [source coordinates](cookbook/source-coordinates.mbt.md) for migration
+examples.
 
 An `int_value` string uses canonical decimal digits: `0`, or an optional
 `-` followed by a nonzero digit and more digits. Leading zeros, `-0`, `+`

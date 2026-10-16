@@ -36,7 +36,7 @@ test "law: token and trivia spans tile the text on code point boundaries" {
       let text = t.text()
       let source = @scanner.SourceText::new(text)
       let s = @scanner.tokenize(source)
-      let mut at = 0
+      let mut at = @span.ByteOffset::zero()
       let mut ok = true
       let step = (span : @span.SrcSpan) => {
         ok = ok &&
@@ -58,7 +58,7 @@ test "law: token and trivia spans tile the text on code point boundaries" {
           step(tr.span())
         }
       }
-      ok && at == source.byte_length()
+      ok && at == source.end_offset()
     },
     count=400,
     max_size=16,
@@ -107,7 +107,9 @@ test "law: a lexeme is the source text of its span" {
             source.utf16_offset_of(tok.span.end),
           ) {
           (Some(a), Some(b)) =>
-            ok = ok && text.unsafe_substring(start=a, end=b) == tok.lexeme
+            ok = ok &&
+              text.unsafe_substring(start=a.to_int(), end=b.to_int()) ==
+              tok.lexeme
           _ => ok = false
         }
       }

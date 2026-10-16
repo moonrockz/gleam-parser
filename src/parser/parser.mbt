@@ -1,6 +1,6 @@
 ///|
-fn sp(start : Int32, end : Int32) -> @span.SrcSpan {
-  @span.SrcSpan::new(start, end)
+fn sp(start : @span.ByteOffset, end : @span.ByteOffset) -> @span.SrcSpan {
+  @span.SrcSpan::from_compiler(start, end).unwrap()
 }
 
 ///|
@@ -78,13 +78,13 @@ priv struct Parser {
   mut token1 : @scanner.Token?
   /// The byte end of the farthest token loaded, `Error` tokens included:
   /// how far the compiler's lexer would have read.
-  mut farthest : Int32
+  mut farthest : @span.ByteOffset
   /// The fuel of the current scope; `nested` swaps a spent value in for
   /// the body and `Ref::protect` puts the outer one back, on return and on
   /// error alike.
   fuel : Ref[@fuel.Fuel]
   warnings : Array[@ast.Warning]
-  trailing_commas : Array[Int32]
+  trailing_commas : Array[@span.ByteOffset]
   /// Every doc comment (`///`) in order: its content span and content.
   doc_comments : Array[(@span.SrcSpan, String)]
   /// The first doc comment not yet taken.
@@ -126,7 +126,7 @@ fn Parser::new(
     index1: 0,
     token0: None,
     token1: None,
-    farthest: 0,
+    farthest: @span.ByteOffset::zero(),
     fuel: { val: @fuel.Fuel::new(budget=config.fuel), },
     warnings: [],
     trailing_commas: [],
@@ -262,7 +262,7 @@ fn Parser::at_definition_start(self : Parser, i : Int32) -> Bool {
 fn Parser::maybe_one(
   self : Parser,
   kind : @scanner.TokenKind,
-) -> (Int32, Int32)? {
+) -> (@span.ByteOffset, @span.ByteOffset)? {
   match self.token0 {
     Some(t) if t.kind == kind => {
       self.advance()
@@ -277,7 +277,7 @@ fn Parser::maybe_one(
 fn Parser::expect_one(
   self : Parser,
   kind : @scanner.TokenKind,
-) -> (Int32, Int32) raise ParseError {
+) -> (@span.ByteOffset, @span.ByteOffset) raise ParseError {
   match self.maybe_one(kind) {
     Some(r) => r
     None => self.next_token_unexpected([token_text(kind)])
@@ -290,7 +290,7 @@ fn Parser::expect_one_following_series(
   self : Parser,
   kind : @scanner.TokenKind,
   series : String,
-) -> (Int32, Int32) raise ParseError {
+) -> (@span.ByteOffset, @span.ByteOffset) raise ParseError {
   match self.maybe_one(kind) {
     Some(r) => r
     None => self.next_token_unexpected([token_text(kind), series])
@@ -317,7 +317,7 @@ fn[A] Parser::series_of_has_trailing_separator(
   sep : @scanner.TokenKind?,
 ) -> (Array[A], Bool) raise ParseError {
   let results : Array[A] = []
-  let mut final_separator : (Int32, Int32)? = None
+  let mut final_separator : (@span.ByteOffset, @span.ByteOffset)? = None
   while parser(self) is Some(result) {
     results.push(result)
     match sep {
@@ -343,7 +343,9 @@ fn[A] Parser::series_of_has_trailing_separator(
 }
 
 ///|
-fn Parser::maybe_name(self : Parser) -> (Int32, String, Int32)? {
+fn Parser::maybe_name(
+  self : Parser,
+) -> (@span.ByteOffset, String, @span.ByteOffset)? {
   match self.token0 {
     Some({ kind: Name(name), span, .. }) => {
       self.advance()
@@ -354,7 +356,9 @@ fn Parser::maybe_name(self : Parser) -> (Int32, String, Int32)? {
 }
 
 ///|
-fn Parser::maybe_upname(self : Parser) -> (Int32, String, Int32)? {
+fn Parser::maybe_upname(
+  self : Parser,
+) -> (@span.ByteOffset, String, @span.ByteOffset)? {
   match self.token0 {
     Some({ kind: UpName(name), span, .. }) => {
       self.advance()
@@ -365,7 +369,9 @@ fn Parser::maybe_upname(self : Parser) -> (Int32, String, Int32)? {
 }
 
 ///|
-fn Parser::maybe_discard_name(self : Parser) -> (Int32, String, Int32)? {
+fn Parser::maybe_discard_name(
+  self : Parser,
+) -> (@span.ByteOffset, String, @span.ByteOffset)? {
   match self.token0 {
     Some({ kind: DiscardName(name), span, .. }) => {
       self.advance()
@@ -380,7 +386,7 @@ fn Parser::maybe_discard_name(self : Parser) -> (Int32, String, Int32)? {
 fn Parser::expect_name(
   self : Parser,
   kind : IncorrectNamePosition,
-) -> (Int32, String, Int32) raise ParseError {
+) -> (@span.ByteOffset, String, @span.ByteOffset) raise ParseError {
   let (start, name, end) = self.expect_assign_name()
   match name {
     Variable(n) => (start, n, end)
@@ -394,7 +400,7 @@ fn Parser::expect_name(
 /// else `ExpectedName`, the end `UnexpectedEof`.
 fn Parser::expect_assign_name(
   self : Parser,
-) -> (Int32, @ast.AssignName, Int32) raise ParseError {
+) -> (@span.ByteOffset, @ast.AssignName, @span.ByteOffset) raise ParseError {
   match self.next_token() {
     Some({ kind: Name(name), span, .. }) =>
       (span.start, Variable(name), span.end)
@@ -405,7 +411,11 @@ fn Parser::expect_assign_name(
     Some({ kind: Keyword(_), span, .. }) =>
       parse_error(UnexpectedReservedWord, span)
     Some({ span, .. }) => parse_error(ExpectedName, span)
-    None => parse_error(UnexpectedEof, sp(0, 0))
+    None =>
+      parse_error(
+        UnexpectedEof,
+        sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()),
+      )
   }
 }
 
@@ -414,20 +424,24 @@ fn Parser::expect_assign_name(
 /// anything else `ExpectedUpName`.
 fn Parser::expect_upname(
   self : Parser,
-) -> (Int32, String, Int32) raise ParseError {
+) -> (@span.ByteOffset, String, @span.ByteOffset) raise ParseError {
   match self.next_token() {
     Some({ kind: UpName(name), span, .. }) => (span.start, name, span.end)
     Some({ kind: Name(_) | DiscardName(_), span, .. }) =>
       parse_error(IncorrectUpName, span)
     Some({ span, .. }) => parse_error(ExpectedUpName, span)
-    None => parse_error(UnexpectedEof, sp(0, 0))
+    None =>
+      parse_error(
+        UnexpectedEof,
+        sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()),
+      )
   }
 }
 
 ///|
 fn Parser::expect_string(
   self : Parser,
-) -> (Int32, String, Int32) raise ParseError {
+) -> (@span.ByteOffset, String, @span.ByteOffset) raise ParseError {
   match self.token0 {
     Some({ kind: String(value), span, .. }) => {
       self.advance()
@@ -444,7 +458,11 @@ fn[A] Parser::next_token_unexpected(
   expected : Array[String],
 ) -> A raise ParseError {
   match self.next_token() {
-    None => parse_error(UnexpectedEof, sp(0, 0))
+    None =>
+      parse_error(
+        UnexpectedEof,
+        sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()),
+      )
     Some(t) =>
       parse_error(
         UnexpectedToken(token=t.kind, expected=expected[:], hint=None),

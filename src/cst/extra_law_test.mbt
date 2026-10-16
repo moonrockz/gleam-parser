@@ -4,14 +4,15 @@
 fn line_breaks_outside_tokens(
   text : String,
   stream : @scanner.TokenStream,
-) -> Array[Int32] {
+) -> Array[@span.ByteOffset] {
   let source = @scanner.SourceText::new(text)
-  let out : Array[Int32] = []
+  let out : Array[@span.ByteOffset] = []
   let mut i = 0
   while i < text.length() {
     let c = text.code_unit_at(i).to_int()
     // Inside a surrogate pair there is no code point boundary.
-    guard source.byte_offset_of(i) is Some(byte) else {
+    guard source.byte_offset_of(@span.Utf16Offset::new(i).unwrap())
+      is Some(byte) else {
       i += 1
       continue
     }
@@ -57,12 +58,12 @@ test "law: every empty line follows a line break by one byte, and comments are s
       let breaks = extra.new_lines
       let mut ok = true
       for e in extra.empty_lines {
-        if !breaks.contains(e - 1) {
+        if !breaks.contains(e.shift(-1).unwrap()) {
           ok = false
         }
       }
       fn sorted(xs : ArrayView[@span.SrcSpan]) -> Bool {
-        let mut last = -1
+        let mut last = @span.ByteOffset::zero()
         let mut s = true
         for x in xs {
           if x.start < last {

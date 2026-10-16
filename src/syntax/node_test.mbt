@@ -5,7 +5,7 @@ fn root_of(text : String) -> @syntax.NodeRef {
 
 ///|
 fn sp(start : Int32, end : Int32) -> @span.SrcSpan {
-  @span.SrcSpan::new(start, end)
+  @span.SrcSpan::new(start, end).unwrap()
 }
 
 ///|

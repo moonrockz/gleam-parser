@@ -270,6 +270,22 @@ step when you add a code.
 a lone `\r` are one line break each. A BOM and a lone surrogate are one code
 point of three bytes each.
 
+Source coordinates use validated domain types from `src/span`:
+`ByteOffset`, `Utf16Offset`, `ByteLength`, `LineNumber`, `ColumnNumber` and
+`LineCount`. Constructors return `None` outside the domain. Raw struct
+construction is restricted to the defining package, including for `SrcSpan`
+and `Position`. Callers cannot bypass validation with struct literals.
+Ordinary spans require ordered endpoints. `SrcSpan::eof` and `from_compiler` preserve the compiler's
+`start..0` sentinel. A reversed EOF span has no byte length.
+
+AST position fields and trivia offsets use `ByteOffset`. AST tuple indexes
+use `TupleIndex`, and bit array units use `BitArrayUnit`. Syntax path indexes
+use `ChildIndex`, and traversal depths use `NodeDepth`. Keep these types
+through library APIs. Convert to raw numbers only for numeric input parsing,
+serialization, string and array operations, or independent test models.
+See `CONTEXT.md`, `docs/adr/0001-validated-source-coordinates.md` and the tested
+`docs/cookbook/source-coordinates.mbt.md` examples.
+
 ## Library Dependencies
 
 Treat `moonbitlang/core`, `moonbitlang/x` and `moonbitlang/async` as the

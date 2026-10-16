@@ -30,12 +30,12 @@ pub fn DefinitionCst::new(
   tokens~ : ArrayView[@scanner.Token],
 ) -> DefinitionCst {
   let span = if tokens.length() == 0 {
-    @span.SrcSpan::new(0, 0)
+    @span.SrcSpan::new(0, 0).unwrap()
   } else {
-    @span.SrcSpan::new(
+    @span.SrcSpan::from_compiler(
       tokens[0].span.start,
       tokens[tokens.length() - 1].span.end,
-    )
+    ).unwrap()
   }
   { kind, name, tokens, span, }
 }

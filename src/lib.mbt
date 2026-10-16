@@ -14,7 +14,16 @@ pub fn version() -> String {
 
 ///|
 /// Spans (UTF-8 byte offsets) and positions (1-based line and column).
-pub using @span {type SrcSpan, type Position}
+pub using @span {
+  type SrcSpan,
+  type Position,
+  type ByteOffset,
+  type Utf16Offset,
+  type ByteLength,
+  type LineNumber,
+  type LineCount,
+  type ColumnNumber,
+}
 
 ///|
 /// Source text with byte, UTF-16 and line/column lookups.
@@ -131,6 +140,8 @@ pub using @ast {
   type Warning,
   type OracleOutput,
   type DecodeError,
+  type TupleIndex,
+  type BitArrayUnit,
 }
 
 ///|
@@ -186,7 +197,10 @@ pub fn encode_expr(e : Expr) -> Json {
 ///
 /// ```mbt check
 /// test {
-///   let value : @gleam.Expr = Var(location=@gleam.SrcSpan::new(0, 1), name="x")
+///   let value : @gleam.Expr = Var(
+///     location=@gleam.SrcSpan::new(0, 1).unwrap(),
+///     name="x",
+///   )
 ///   assert_eq(@gleam.decode_expr(@gleam.encode_expr(value)), value)
 /// }
 /// ```
@@ -250,6 +264,8 @@ pub using @syntax {
   type NodeRef,
   type Control,
   type PathStep,
+  type ChildIndex,
+  type NodeDepth,
   type NodePath,
   type Tree,
   trait Visitor,

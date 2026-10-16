@@ -108,7 +108,7 @@ impl @moonspec.World for ScannerWorld with fn configure(self, setup) {
   ) raise {
     guard self.stream is Some(s) else { fail("no scan") }
     @expect.expect(s.diagnostics[index - 1].span).to_equal(
-      @gleam.SrcSpan::new(start, end),
+      @gleam.SrcSpan::new(start, end).unwrap(),
     )
   })
 }

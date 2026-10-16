@@ -30,8 +30,8 @@ test "the cursor loads two tokens and an Error token is a hole" {
   @expect.expect_all(e => {
     e.expect(p.token0).to_equal(None)
     e.expect(p.token1).to_equal(None)
-    e.expect(p.farthest).to_equal(5)
-    e.expect(p.here()).to_equal(@span.SrcSpan::new(5, 5))
+    e.expect(p.farthest).to_equal(@span.ByteOffset::new(5).unwrap())
+    e.expect(p.here()).to_equal(@span.SrcSpan::new(5, 5).unwrap())
   })
 }
 
@@ -41,8 +41,14 @@ test "series_of records a trailing comma and rejects an extra one" {
   let names = p.series_of(q => q.maybe_name().map(n => n.1), Some(Comma))
   @expect.expect_all(e => {
     e.expect(names).to_equal(["a", "b"])
-    e.expect(p.trailing_commas).to_equal([5])
-    e.expect(p.maybe_one(RightParen)).to_equal(Some((6, 7)))
+    e.expect(p.trailing_commas).to_equal([@span.ByteOffset::new(5).unwrap()])
+    e
+    .expect(p.maybe_one(RightParen))
+    .to_equal(
+      Some(
+        (@span.ByteOffset::new(6).unwrap(), @span.ByteOffset::new(7).unwrap()),
+      ),
+    )
   })
   let extra = parser_of("a,, b")
   let r = attempt(() => {
@@ -51,7 +57,7 @@ test "series_of records a trailing comma and rejects an extra one" {
   guard r is Err(ParseError(error=ExtraSeparator, location~)) else {
     fail("expected ExtraSeparator, got \{@debug.to_string(r)}")
   }
-  @expect.expect(location).to_equal(@span.SrcSpan::new(2, 3))
+  @expect.expect(location).to_equal(@span.SrcSpan::new(2, 3).unwrap())
 }
 
 ///|
@@ -74,10 +80,10 @@ test "expect helpers give the compiler's errors" {
     fail("expected UnexpectedEof")
   }
   @expect.expect_all(e => {
-    e.expect(l1).to_equal(@span.SrcSpan::new(0, 1))
-    e.expect(l2).to_equal(@span.SrcSpan::new(2, 5))
-    e.expect(l3).to_equal(@span.SrcSpan::new(6, 8))
-    e.expect(l4).to_equal(@span.SrcSpan::new(0, 0))
+    e.expect(l1).to_equal(@span.SrcSpan::new(0, 1).unwrap())
+    e.expect(l2).to_equal(@span.SrcSpan::new(2, 5).unwrap())
+    e.expect(l3).to_equal(@span.SrcSpan::new(6, 8).unwrap())
+    e.expect(l4).to_equal(@span.SrcSpan::new(0, 0).unwrap())
   })
   let reserved = parser_of("fn")
   let r = attempt(() => reserved.expect_assign_name())
@@ -107,7 +113,7 @@ test "nesting past the budget is TooMuchNesting at the current token, naming the
         p.nested(op_pattern, () => {
           raise ParseError(
             error=ExpectedExpr,
-            location=@span.SrcSpan::new(9, 9),
+            location=@span.SrcSpan::new(9, 9).unwrap(),
           )
         })
       })
@@ -122,7 +128,7 @@ test "nesting past the budget is TooMuchNesting at the current token, naming the
     e
     .expect(spent)
     .to_equal([{ operation: @fuel.Operation::new("expression"), levels: 2, }])
-    e.expect(location).to_equal(@span.SrcSpan::new(0, 1))
+    e.expect(location).to_equal(@span.SrcSpan::new(0, 1).unwrap())
     // the fuel is back at the full budget after the error
     e.expect(p.fuel.val.left()).to_equal(2)
   })

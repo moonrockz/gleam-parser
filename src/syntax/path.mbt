@@ -3,7 +3,7 @@
 /// that field (0 for a field that holds one node).
 pub(all) struct PathStep {
   field : String
-  index : Int32
+  index : ChildIndex
 } derive(Eq, Hash, Debug)
 
 ///|
@@ -22,31 +22,39 @@ pub(all) struct PathStep {
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let path = @syntax.NodePath::root()
-///     .child("definitions", 0)
-///     .child("body", 0)
-///     .child("expression", 0)
-///     .child("right", 0)
+///     .child("definitions", @syntax.ChildIndex::new(0).unwrap())
+///     .child("body", @syntax.ChildIndex::new(0).unwrap())
+///     .child("expression", @syntax.ChildIndex::new(0).unwrap())
+///     .child("right", @syntax.ChildIndex::new(0).unwrap())
 ///   inspect(path, content="definitions[0].body[0].expression[0].right[0]")
 ///   inspect(path.depth(), content="4")
-///   debug_inspect(path.last(), content="Some({ field: \"right\", index: 0 })")
+///   debug_inspect(
+///     path.last(),
+///     content=(
+///       #|Some({ field: "right", index: ChildIndex(0) })
+///     ),
+///   )
 ///   debug_inspect(path.resolve(root).map(n => n.kind()), content="Some(\"var\")")
 ///   let up = path.parent().unwrap()
 ///   inspect(up, content="definitions[0].body[0].expression[0]")
 ///   inspect(up.resolve(root).unwrap().kind(), content="bin_op")
-///   let missing = @syntax.NodePath::root().child("definitions", 5)
+///   let missing = @syntax.NodePath::root().child(
+///     "definitions",
+///     @syntax.ChildIndex::new(5).unwrap(),
+///   )
 ///   inspect(missing.resolve(root) is None, content="true")
 /// }
 /// ```
 pub struct NodePath {
   /// The steps, innermost first.
   priv reversed : @list.List[PathStep]
-  priv length : Int32
+  priv length : NodeDepth
 } derive(Eq, Hash)
 
 ///|
 /// The path of the start node: no steps, depth 0.
 pub fn NodePath::root() -> NodePath {
-  { reversed: @list.List([]), length: 0, }
+  { reversed: @list.List([]), length: NodeDepth::new(0).unwrap(), }
 }
 
 ///|
@@ -54,11 +62,11 @@ pub fn NodePath::root() -> NodePath {
 pub fn NodePath::child(
   self : NodePath,
   field : String,
-  index : Int32,
+  index : ChildIndex,
 ) -> NodePath {
   {
     reversed: self.reversed.prepend({ field, index, }),
-    length: self.length + 1,
+    length: NodeDepth::new(self.length.to_int() + 1).unwrap(),
   }
 }
 
@@ -69,8 +77,8 @@ pub fn NodePath::child(
 /// ```mbt check
 /// test {
 ///   let path = @syntax.NodePath::from_steps([
-///     { field: "definitions", index: 0, },
-///     { field: "body", index: 1, },
+///     { field: "definitions", index: @syntax.ChildIndex::new(0).unwrap(), },
+///     { field: "body", index: @syntax.ChildIndex::new(1).unwrap(), },
 ///   ])
 ///   inspect(path, content="definitions[0].body[1]")
 ///   debug_inspect(
@@ -97,9 +105,11 @@ pub fn NodePath::from_steps(steps : ArrayView[PathStep]) -> NodePath {
 /// ```mbt check
 /// test {
 ///   let to_body = @syntax.NodePath::root()
-///     .child("definitions", 0)
-///     .child("body", 0)
-///   let below = @syntax.NodePath::root().child("expression", 0).child("right", 0)
+///     .child("definitions", @syntax.ChildIndex::new(0).unwrap())
+///     .child("body", @syntax.ChildIndex::new(0).unwrap())
+///   let below = @syntax.NodePath::root()
+///     .child("expression", @syntax.ChildIndex::new(0).unwrap())
+///     .child("right", @syntax.ChildIndex::new(0).unwrap())
 ///   inspect(
 ///     to_body.append(below),
 ///     content="definitions[0].body[0].expression[0].right[0]",
@@ -117,7 +127,7 @@ pub fn NodePath::append(self : NodePath, rest : NodePath) -> NodePath {
 
 ///|
 /// The number of steps (0 for the start node).
-pub fn NodePath::depth(self : NodePath) -> Int32 {
+pub fn NodePath::depth(self : NodePath) -> NodeDepth {
   self.length
 }
 
@@ -137,7 +147,11 @@ pub fn NodePath::last(self : NodePath) -> PathStep? {
 /// The parent's path, or `None` for the start node.
 pub fn NodePath::parent(self : NodePath) -> NodePath? {
   match self.reversed {
-    More(_, tail~) => Some({ reversed: tail, length: self.length - 1, })
+    More(_, tail~) =>
+      Some({
+        reversed: tail,
+        length: NodeDepth::new(self.length.to_int() - 1).unwrap(),
+      })
     Empty => None
   }
 }
@@ -148,7 +162,9 @@ pub fn NodePath::parent(self : NodePath) -> NodePath? {
 pub fn NodePath::resolve(self : NodePath, start : NodeRef) -> NodeRef? {
   let mut n = start
   for step in self.steps() {
-    guard n.field(step.field).get(step.index) is Some(c) else { return None }
+    guard n.field(step.field).get(step.index.to_int()) is Some(c) else {
+      return None
+    }
     n = c
   }
   Some(n)
@@ -157,7 +173,9 @@ pub fn NodePath::resolve(self : NodePath, start : NodeRef) -> NodeRef? {
 ///|
 /// `definitions[0].body[1].value[0]`; empty for the start node.
 pub impl Show for NodePath with fn output(self, logger) {
-  logger.write_string(self.steps().map(s => "\{s.field}[\{s.index}]").join("."))
+  logger.write_string(
+    self.steps().map(s => "\{s.field}[\{s.index.to_int()}]").join("."),
+  )
 }
 
 ///|

@@ -23,9 +23,11 @@ test "let, let assert with message, use, assert" {
     ] else {
     fail("got \{@debug.to_string(s)}")
   }
-  guard a1.kind is Assert(location=kl, assert_keyword_start=19, message=Some(_)) else {
+  guard a1.kind
+    is Assert(location=kl, assert_keyword_start=scalar_26_61, message=Some(_)) else {
     fail("kind \{@debug.to_string(a1.kind)}")
   }
+  @expect.expect(scalar_26_61.to_int()).to_equal(19)
   @expect.expect_all(e => {
     e.expect(a0.location).to_equal(sp(0, 14))
     e.expect(a0.kind).to_equal(@ast.AssignmentKind::Let)

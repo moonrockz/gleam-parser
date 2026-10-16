@@ -56,9 +56,27 @@ test "precedence tables follow the compiler" {
 
 ///|
 test "expression reduction flattens pipelines and builds bin ops" {
-  let a : @ast.Expr = Var(location=sp(0, 1), name="a")
-  let b : @ast.Expr = Var(location=sp(5, 6), name="b")
-  let c : @ast.Expr = Var(location=sp(10, 11), name="c")
+  let a : @ast.Expr = Var(
+    location=sp(
+      @span.ByteOffset::new(0).unwrap(),
+      @span.ByteOffset::new(1).unwrap(),
+    ),
+    name="a",
+  )
+  let b : @ast.Expr = Var(
+    location=sp(
+      @span.ByteOffset::new(5).unwrap(),
+      @span.ByteOffset::new(6).unwrap(),
+    ),
+    name="b",
+  )
+  let c : @ast.Expr = Var(
+    location=sp(
+      @span.ByteOffset::new(10).unwrap(),
+      @span.ByteOffset::new(11).unwrap(),
+    ),
+    name="c",
+  )
   let pipe = @scanner.tokenize_text("a |> b |> c").tokens
   let estack = [a, b]
   reduce_expression(pipe[1], estack)
@@ -69,8 +87,12 @@ test "expression reduction flattens pipelines and builds bin ops" {
   let plus = @scanner.tokenize_text("a + b").tokens[1]
   let stack2 = [a, b]
   reduce_expression(plus, stack2)
-  guard stack2 is [BinOp(operator=AddInt, operator_start=2, location~, ..)] else {
+  guard stack2
+    is [BinOp(operator=AddInt, operator_start=scalar_72_58, location~, ..)] else {
     fail("bin op")
   }
-  @expect.expect(location).to_equal(sp(0, 6))
+  @expect.expect(scalar_72_58.to_int()).to_equal(2)
+  @expect.expect(location).to_equal(
+    sp(@span.ByteOffset::new(0).unwrap(), @span.ByteOffset::new(6).unwrap()),
+  )
 }

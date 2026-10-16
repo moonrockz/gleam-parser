@@ -2,8 +2,8 @@
 /// `use a, b <- call`, with `use` consumed.
 fn Parser::parse_use(
   self : Parser,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> @ast.Statement raise ParseError {
   let assignments : Array[@ast.UseAssignment] = if self.token0
     is Some({ kind: LArrow, .. }) {
@@ -36,7 +36,7 @@ fn Parser::parse_use_assignment(
 ) -> @ast.UseAssignment? raise ParseError {
   let start = match self.token0 {
     Some(t) => t.span.start
-    None => 0
+    None => @span.ByteOffset::zero()
   }
   let pattern = match self.parse_pattern() {
     Some(p) => p
@@ -55,7 +55,7 @@ fn Parser::parse_use_assignment(
 /// consumed.
 fn Parser::parse_assignment(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
 ) -> @ast.Statement raise ParseError {
   let mut kind : @ast.AssignmentKind = match self.token0 {
     Some({ kind: Keyword(Assert), span, .. }) => {
@@ -101,7 +101,7 @@ fn Parser::parse_assignment(
 /// `assert expr (as unit)?`, with `assert` consumed.
 fn Parser::parse_assert(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
 ) -> @ast.Statement raise ParseError {
   let value = self.expect_expression()
   let mut end = value.location().end
@@ -120,9 +120,9 @@ fn Parser::parse_assert(
 /// last one.
 fn Parser::parse_statement_sequence(
   self : Parser,
-) -> (Array[@ast.Statement], Int32)? raise ParseError {
+) -> (Array[@ast.Statement], @span.ByteOffset)? raise ParseError {
   let statements : Array[@ast.Statement] = []
-  let mut end = 0
+  let mut end = @span.ByteOffset::zero()
   while self.parse_statement() is Some(statement) {
     end = statement.location().end
     statements.push(statement)
@@ -173,7 +173,7 @@ fn Parser::parse_statement_errors(self : Parser) -> Unit raise ParseError {
 /// `{ statements }` with `{` consumed; an empty block is a `Todo`.
 fn Parser::parse_block(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
 ) -> @ast.Expr raise ParseError {
   let body = self.parse_statement_sequence()
   let (_, end) = self.expect_one(RightBrace)

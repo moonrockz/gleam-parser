@@ -48,7 +48,7 @@ pub fn parse_module(
   let definitions : Array[@ast.TargetedDefinition] = []
   let cst_definitions : Array[@cst.DefinitionCst] = []
   let parse_diagnostics : Array[@diagnostic.Diagnostic] = []
-  let mut first_error_lookahead : Int32? = None
+  let mut first_error_lookahead : @span.ByteOffset? = None
   fn report(e : ParseError) {
     parse_diagnostics.push(e.to_diagnostic())
     if first_error_lookahead is None {
@@ -172,8 +172,8 @@ fn Parser::recover(
 fn order_diagnostics(
   scanner : ArrayView[@diagnostic.Diagnostic],
   parser : Array[@diagnostic.Diagnostic],
-  first_error_lookahead : Int32?,
-  text_end : Int32,
+  first_error_lookahead : @span.ByteOffset?,
+  text_end : @span.ByteOffset,
 ) -> Array[@diagnostic.Diagnostic] {
   let first : Array[@diagnostic.Diagnostic] = []
   let rest : Array[@diagnostic.Diagnostic] = []
@@ -186,7 +186,7 @@ fn order_diagnostics(
   for d in parser {
     rest.push(d)
   }
-  fn key(d : @diagnostic.Diagnostic) -> Int32 {
+  fn key(d : @diagnostic.Diagnostic) -> @span.ByteOffset {
     if d.kind == "UnexpectedEof" {
       text_end
     } else {
@@ -300,9 +300,9 @@ fn Parser::parse_attributes(
 ///|
 fn Parser::parse_attribute(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
   attributes : Attributes,
-) -> Int32 raise ParseError {
+) -> @span.ByteOffset raise ParseError {
   let (_, name, end) = self.expect_name(Attribute)
   if !self.config.dialect.knows_attribute(name) {
     parse_error(UnknownAttribute, sp(start, end))
@@ -324,10 +324,10 @@ fn Parser::parse_attribute(
 ///|
 fn Parser::parse_target_attribute(
   self : Parser,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
   attributes : Attributes,
-) -> Int32 raise ParseError {
+) -> @span.ByteOffset raise ParseError {
   let (paren_start, paren_end) = self.expect_one(LeftParen)
   let target = self.expect_target(sp(paren_start, paren_end))
   if attributes.target is Some(_) {
@@ -347,7 +347,11 @@ fn Parser::expect_target(
   paren_location : @span.SrcSpan,
 ) -> @ast.Target raise ParseError {
   match self.next_token() {
-    None => parse_error(UnexpectedEof, sp(0, 0))
+    None =>
+      parse_error(
+        UnexpectedEof,
+        sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()),
+      )
     Some({ kind: Name(name), span, .. }) =>
       match name {
         "js" => {
@@ -371,10 +375,10 @@ fn Parser::expect_target(
 ///|
 fn Parser::parse_external_attribute(
   self : Parser,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
   attributes : Attributes,
-) -> Int32 raise ParseError {
+) -> @span.ByteOffset raise ParseError {
   let (_, target_name, _) = self.expect_name(Target)
   let target : @ast.Target = match @ast.Target::of(target_name) {
     Some(t) if self.config.dialect.knows_target(target_name) => t
@@ -400,10 +404,10 @@ fn Parser::parse_external_attribute(
 ///|
 fn Parser::parse_deprecated_attribute(
   self : Parser,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
   attributes : Attributes,
-) -> Int32 raise ParseError {
+) -> @span.ByteOffset raise ParseError {
   // As the compiler, `expect_one` and `expect_string` consume a token when
   // they fail (its lexer then reads one token further); the error is
   // replaced by `ExpectedDeprecationMessage`.
@@ -427,10 +431,10 @@ fn Parser::parse_deprecated_attribute(
 
 ///|
 fn parse_internal_attribute(
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
   attributes : Attributes,
-) -> Int32 raise ParseError {
+) -> @span.ByteOffset raise ParseError {
   match attributes.internal {
     Some(_) => parse_error(DuplicateAttribute, sp(start, end))
     None => {

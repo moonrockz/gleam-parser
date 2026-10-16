@@ -28,6 +28,11 @@ pub fn walk(NodeRef, (NodeRef) -> Control, leave? : (NodeRef) -> Unit) -> Unit
 // Errors
 
 // Types and methods
+pub struct ChildIndex(Int) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn ChildIndex::new(Int) -> Self?
+pub fn ChildIndex::to_int(Self) -> Int
+pub impl Show for ChildIndex
+
 pub(all) enum Control {
   Continue
   SkipChildren
@@ -38,11 +43,11 @@ pub struct EnterEvent {
   category : String
   kind : String
   field : String?
-  start : Int
-  depth : Int
+  start : @span.ByteOffset
+  depth : NodeDepth
   path : NodePath
 } derive(Eq, @debug.Debug)
-pub fn EnterEvent::new(category~ : String, kind~ : String, field~ : String?, start~ : Int, path~ : NodePath) -> Self
+pub fn EnterEvent::new(category~ : String, kind~ : String, field~ : String?, start~ : @span.ByteOffset, path~ : NodePath) -> Self
 
 pub(all) enum Event {
   Enter(EnterEvent)
@@ -60,17 +65,22 @@ pub impl EventSource for EventReader
 
 pub struct LeaveEvent {
   node : NodeRef
-  depth : Int
+  depth : NodeDepth
   path : NodePath
 } derive(Eq, @debug.Debug)
 pub fn LeaveEvent::new(node~ : NodeRef, path~ : NodePath) -> Self
+
+pub struct NodeDepth(Int) derive(Compare, Eq, Hash, @debug.Debug)
+pub fn NodeDepth::new(Int) -> Self?
+pub fn NodeDepth::to_int(Self) -> Int
+pub impl Show for NodeDepth
 
 pub struct NodePath {
   // private fields
 } derive(Eq, Hash)
 pub fn NodePath::append(Self, Self) -> Self
-pub fn NodePath::child(Self, String, Int) -> Self
-pub fn NodePath::depth(Self) -> Int
+pub fn NodePath::child(Self, String, ChildIndex) -> Self
+pub fn NodePath::depth(Self) -> NodeDepth
 pub fn NodePath::from_steps(ArrayView[PathStep]) -> Self
 pub fn NodePath::last(Self) -> PathStep?
 pub fn NodePath::parent(Self) -> Self?
@@ -122,7 +132,7 @@ pub fn NodeRef::span(Self) -> @span.SrcSpan
 
 pub(all) struct PathStep {
   field : String
-  index : Int
+  index : ChildIndex
 } derive(Eq, Hash, @debug.Debug)
 
 pub struct Tree {
@@ -131,7 +141,7 @@ pub struct Tree {
 pub fn Tree::ancestors(Self, NodeRef) -> Array[NodeRef]
 pub fn Tree::field_of(Self, NodeRef) -> String?
 pub fn Tree::new(@parser.ParseResult) -> Self
-pub fn Tree::node_at(Self, Int) -> NodeRef?
+pub fn Tree::node_at(Self, @span.ByteOffset) -> NodeRef?
 pub fn Tree::node_path(Self, NodeRef) -> NodePath?
 pub fn Tree::parent(Self, NodeRef) -> NodeRef?
 pub fn Tree::path(Self, NodeRef) -> Array[NodeRef]
@@ -143,13 +153,13 @@ pub struct TreeCursor {
   // private fields
 }
 pub fn TreeCursor::copy(Self) -> Self
-pub fn TreeCursor::depth(Self) -> Int
+pub fn TreeCursor::depth(Self) -> NodeDepth
 pub fn TreeCursor::field_name(Self) -> String?
 pub fn TreeCursor::goto_first_child(Self) -> Bool
-pub fn TreeCursor::goto_first_child_for(Self, Int) -> Bool
+pub fn TreeCursor::goto_first_child_for(Self, @span.ByteOffset) -> Bool
 pub fn TreeCursor::goto_last_child(Self) -> Bool
 pub fn TreeCursor::goto_next_sibling(Self) -> Bool
-pub fn TreeCursor::goto_node_at(Self, Int) -> Bool
+pub fn TreeCursor::goto_node_at(Self, @span.ByteOffset) -> Bool
 pub fn TreeCursor::goto_parent(Self) -> Bool
 pub fn TreeCursor::goto_previous_sibling(Self) -> Bool
 pub fn TreeCursor::new(NodeRef) -> Self

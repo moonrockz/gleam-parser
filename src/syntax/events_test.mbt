@@ -6,7 +6,7 @@ fn event_label(e : @syntax.Event) -> String {
         Some(f) => " " + f
         None => ""
       }
-      "+\{e.category}/\{e.kind}\{f} \{e.start}"
+      "+\{e.category}/\{e.kind}\{f} \{e.start.to_int()}"
     }
     Leave(e) => "-\{e.node.category()}/\{e.node.kind()}"
   }

@@ -23,19 +23,19 @@ test "the three comment kinds, content after the slashes" {
       @scanner.Trivia::Comment({
         kind: Regular,
         content: " a",
-        span: @span.SrcSpan::new(0, 4),
+        span: @span.SrcSpan::new(0, 4).unwrap(),
       }),
     )
     e
     .expect(t[1])
-    .to_equal(@scanner.Trivia::Newline("\n", @span.SrcSpan::new(4, 5)))
+    .to_equal(@scanner.Trivia::Newline("\n", @span.SrcSpan::new(4, 5).unwrap()))
     e
     .expect(t[2])
     .to_equal(
       @scanner.Trivia::Comment({
         kind: Doc,
         content: " b",
-        span: @span.SrcSpan::new(5, 10),
+        span: @span.SrcSpan::new(5, 10).unwrap(),
       }),
     )
     e
@@ -44,7 +44,7 @@ test "the three comment kinds, content after the slashes" {
       @scanner.Trivia::Comment({
         kind: Module,
         content: " c",
-        span: @span.SrcSpan::new(11, 17),
+        span: @span.SrcSpan::new(11, 17).unwrap(),
       }),
     )
     e.expect(stream(text).to_source()).to_equal(text)
@@ -55,7 +55,7 @@ test "the three comment kinds, content after the slashes" {
 test "comment content spans match the compiler (after the slashes)" {
   let t = trivia_of("/// b\n", 0)
   guard t[0] is @scanner.Trivia::Comment(c) else { fail("expected a comment") }
-  @expect.expect(c.content_span()).to_equal(@span.SrcSpan::new(3, 5))
+  @expect.expect(c.content_span()).to_equal(@span.SrcSpan::new(3, 5).unwrap())
 }
 
 ///|
@@ -68,12 +68,14 @@ test "a comment ends before a CRLF; the CR is not in it" {
       @scanner.Trivia::Comment({
         kind: Regular,
         content: " a",
-        span: @span.SrcSpan::new(0, 4),
+        span: @span.SrcSpan::new(0, 4).unwrap(),
       }),
     )
     e
     .expect(t[1])
-    .to_equal(@scanner.Trivia::Newline("\r\n", @span.SrcSpan::new(4, 6)))
+    .to_equal(
+      @scanner.Trivia::Newline("\r\n", @span.SrcSpan::new(4, 6).unwrap()),
+    )
   })
 }
 
@@ -83,11 +85,11 @@ test "a comment at the end of the text and empty comments" {
     e
     .expect(trivia_of("x //", 1))
     .to_equal([
-      @scanner.Trivia::Whitespace(" ", @span.SrcSpan::new(1, 2)),
+      @scanner.Trivia::Whitespace(" ", @span.SrcSpan::new(1, 2).unwrap()),
       @scanner.Trivia::Comment({
         kind: Regular,
         content: "",
-        span: @span.SrcSpan::new(2, 4),
+        span: @span.SrcSpan::new(2, 4).unwrap(),
       }),
     ])
     e
@@ -96,7 +98,7 @@ test "a comment at the end of the text and empty comments" {
       @scanner.Trivia::Comment({
         kind: Doc,
         content: "",
-        span: @span.SrcSpan::new(0, 3),
+        span: @span.SrcSpan::new(0, 3).unwrap(),
       }),
     ])
     e
@@ -105,7 +107,7 @@ test "a comment at the end of the text and empty comments" {
       @scanner.Trivia::Comment({
         kind: Module,
         content: "/",
-        span: @span.SrcSpan::new(0, 5),
+        span: @span.SrcSpan::new(0, 5).unwrap(),
       }),
     ])
     e.expect(stream("x // é\n").to_source()).to_equal("x // é\n")
@@ -115,5 +117,5 @@ test "a comment at the end of the text and empty comments" {
 ///|
 test "a comment with non-ASCII content has byte spans" {
   let t = trivia_of("// é\nx", 0)
-  @expect.expect(t[0].span()).to_equal(@span.SrcSpan::new(0, 5))
+  @expect.expect(t[0].span()).to_equal(@span.SrcSpan::new(0, 5).unwrap())
 }

@@ -5,13 +5,13 @@
 /// unit indexes for lexemes.
 priv struct Cursor {
   text : String
-  mut unit : Int32
-  mut byte : Int32
+  mut unit : @span.Utf16Offset
+  mut byte : @span.ByteOffset
 }
 
 ///|
 fn Cursor::new(text : String) -> Cursor {
-  { text, unit: 0, byte: 0, }
+  { text, unit: @span.Utf16Offset::zero(), byte: @span.ByteOffset::zero(), }
 }
 
 ///|
@@ -29,7 +29,11 @@ fn is_low_surrogate(c : Int32) -> Bool {
 /// UTF-16 units and in UTF-8 bytes. A surrogate pair reads as its high unit
 /// (the lexer compares with ASCII only), 2 units, 4 bytes. A lone surrogate
 /// is 1 unit, 3 bytes. `None` at or past the end.
-fn Cursor::read_at(self : Cursor, i : Int32) -> (Char, Int32, Int32)? {
+fn Cursor::read_at(
+  self : Cursor,
+  offset : @span.Utf16Offset,
+) -> (Char, Int32, Int32)? {
+  let i = offset.to_int()
   let n = self.text.length()
   if i >= n {
     return None
@@ -65,7 +69,8 @@ fn Cursor::peek(self : Cursor) -> Char? {
 fn Cursor::peek1(self : Cursor) -> Char? {
   match self.read_at(self.unit) {
     None => None
-    Some((_, units, _)) => self.read_at(self.unit + units).map(r => r.0)
+    Some((_, units, _)) =>
+      self.read_at(self.unit.shift(units).unwrap()).map(r => r.0)
   }
 }
 
@@ -75,8 +80,8 @@ fn Cursor::advance(self : Cursor) -> Unit {
   match self.read_at(self.unit) {
     None => ()
     Some((_, units, bytes)) => {
-      self.unit += units
-      self.byte += bytes
+      self.unit = self.unit.shift(units).unwrap()
+      self.byte = self.byte.shift(bytes).unwrap()
     }
   }
 }
@@ -84,22 +89,22 @@ fn Cursor::advance(self : Cursor) -> Unit {
 ///|
 /// The compiler's `get_position()`: the byte offset of `char0`, or the byte
 /// length of the text at the end.
-fn Cursor::position(self : Cursor) -> Int32 {
+fn Cursor::position(self : Cursor) -> @span.ByteOffset {
   self.byte
 }
 
 ///|
-fn Cursor::unit(self : Cursor) -> Int32 {
+fn Cursor::unit(self : Cursor) -> @span.Utf16Offset {
   self.unit
 }
 
 ///|
 fn Cursor::at_end(self : Cursor) -> Bool {
-  self.unit >= self.text.length()
+  self.unit.to_int() >= self.text.length()
 }
 
 ///|
 /// The text from unit `start_unit` to `char0`, raw (`\r\n` stays `\r\n`).
-fn Cursor::slice(self : Cursor, start_unit : Int32) -> String {
-  self.text.unsafe_substring(start=start_unit, end=self.unit)
+fn Cursor::slice(self : Cursor, start_unit : @span.Utf16Offset) -> String {
+  self.text.unsafe_substring(start=start_unit.to_int(), end=self.unit.to_int())
 }

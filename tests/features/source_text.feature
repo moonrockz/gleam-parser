@@ -19,3 +19,32 @@ Feature: Source text positions
     Given the source text 'é'
     When I look up byte offset 1
     Then there is no position
+
+  Scenario Outline: Domain constructors reject values outside their range
+    When I construct a "<kind>" from <value>
+    Then construction "<result>"
+
+    Examples:
+      | kind          | value | result   |
+      | byte offset   | -1    | fails    |
+      | byte offset   | 0     | succeeds |
+      | UTF-16 offset | -1    | fails    |
+      | UTF-16 offset | 0     | succeeds |
+      | byte length   | -1    | fails    |
+      | byte length   | 0     | succeeds |
+      | line number   | 0     | fails    |
+      | line number   | 1     | succeeds |
+      | column number | 0     | fails    |
+      | column number | 1     | succeeds |
+      | line count    | 0     | fails    |
+      | line count    | 1     | succeeds |
+      | tuple index   | -1    | fails    |
+      | tuple index   | 0     | succeeds |
+      | bit array unit | -1   | fails    |
+      | bit array unit | 0    | succeeds |
+      | bit array unit | 255  | succeeds |
+      | bit array unit | 256  | fails    |
+      | child index   | -1    | fails    |
+      | child index   | 0     | succeeds |
+      | node depth    | -1    | fails    |
+      | node depth    | 0     | succeeds |

@@ -18,8 +18,8 @@ fn Parser::parse_clause_guard_inner(
 ) -> @ast.ClauseGuard? raise ParseError {
   let opstack : Array[OpEntry] = []
   let estack : Array[@ast.ClauseGuard] = []
-  let mut last_op_start = 0
-  let mut last_op_end = 0
+  let mut last_op_start = @span.ByteOffset::zero()
+  let mut last_op_end = @span.ByteOffset::zero()
   while true {
     match self.parse_case_clause_guard_unit() {
       Some(unit) => estack.push(unit)
@@ -53,7 +53,7 @@ fn Parser::parse_clause_guard_inner(
 /// `UnexpectedToken` at the `(` with the multi-line hint).
 fn Parser::parse_function_call_in_clause_guard(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
 ) -> Unit raise ParseError {
   if self.maybe_one(LeftParen) is Some((l_paren_start, l_paren_end)) {
     let closed = try {
@@ -116,7 +116,10 @@ fn Parser::parse_case_clause_guard_unit_inner(
         guard self.maybe_one(Dot) is Some((dot_s, _)) else { return Some(unit) }
         match self.next_token() {
           Some({ kind: Int(value~, ..), span: int_span, .. }) =>
-            match parse_u64(value.replace(old="_", new="")) {
+            match
+              parse_u64(value.replace(old="_", new="")).map(
+                @ast.TupleIndex::from_uint64,
+              ) {
               Some(index) =>
                 unit = TupleIndex(
                   location=sp(dot_s, int_span.end),
@@ -157,7 +160,7 @@ fn Parser::parse_case_clause_guard_unit_inner(
 /// `{ guard }` with `{` consumed; an empty block is `EmptyGuardBlock`.
 fn Parser::parse_case_clause_guard_block(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
 ) -> @ast.ClauseGuard raise ParseError {
   match self.parse_clause_guard_inner() {
     Some(body) => {
@@ -167,7 +170,7 @@ fn Parser::parse_case_clause_guard_block(
     None => {
       let location = match self.next_token() {
         Some({ kind: RightBrace, span, .. }) => sp(start, span.end)
-        _ => sp(start, start + 1)
+        _ => sp(start, start.shift(1).unwrap())
       }
       parse_error(EmptyGuardBlock, location)
     }

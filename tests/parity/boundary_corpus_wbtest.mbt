@@ -63,10 +63,9 @@ fn crlf_text(text : String) -> String {
 fn span_in_bounds(source : @gleam.SourceText, d : @gleam.Diagnostic) -> Bool {
   let s = d.span
   let ordered = s.start <= s.end ||
-    (s.end == 0 && d.kind == "InvalidModuleTypePattern")
-  0 <= s.start &&
+    (s.end.to_int() == 0 && d.kind == "InvalidModuleTypePattern")
   ordered &&
-  s.end <= source.byte_length() &&
+  s.end <= source.end_offset() &&
   source.position_of(s.start) is Some(_) &&
   source.position_of(s.end) is Some(_)
 }
@@ -115,12 +114,13 @@ fn prefix_problems(label : String, text : String) -> Array[String] {
 /// boundary, and the end of the text; sorted, without duplicates.
 fn token_boundaries(text : String) -> Array[Int32] {
   let source = @gleam.SourceText::new(text)
-  let found = [0, source.byte_length()]
+  let found = [0, source.byte_length().to_int()]
   for t in @gleam.tokenize_text(text).tokens {
-    found.push(t.span.start)
-    found.push(t.span.end)
-    let inside = t.span.start + 1
-    if t.span.end - t.span.start > 1 && source.position_of(inside) is Some(_) {
+    found.push(t.span.start.to_int())
+    found.push(t.span.end.to_int())
+    let inside = t.span.start.to_int() + 1
+    if t.span.end.to_int() - t.span.start.to_int() > 1 &&
+      source.position_of(@gleam.ByteOffset::new(inside).unwrap()) is Some(_) {
       found.push(inside)
     }
   }
@@ -147,8 +147,8 @@ fn prefix_cuts(boundaries : Array[Int32]) -> Array[Int32] {
 /// point boundary (a token span that is not on a boundary is a scanner bug).
 fn prefix(source : @gleam.SourceText, cut : Int32) -> String? {
   source
-  .utf16_offset_of(cut)
-  .map(units => source.text().view(end_offset=units).to_owned())
+  .utf16_offset_of(@gleam.ByteOffset::new(cut).unwrap())
+  .map(units => source.text().view(end_offset=units.to_int()).to_owned())
 }
 
 ///|
@@ -227,7 +227,10 @@ test "span_in_bounds allows end 0 only for the compiler's EOF spans" {
       severity=Error,
       title="Syntax error",
       message="m",
-      span={ start, end, },
+      span=@gleam.SrcSpan::from_compiler(
+        @gleam.ByteOffset::new(start).unwrap(),
+        @gleam.ByteOffset::new(end).unwrap(),
+      ).unwrap(),
       kind~,
     )
   }
@@ -241,9 +244,7 @@ test "span_in_bounds allows end 0 only for the compiler's EOF spans" {
     s
     .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 0)))
     .to_be_false()
-    s
-    .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 4)))
-    .to_be_false()
+    s.expect(@gleam.SrcSpan::new(5, 4)).to_equal(None)
     s.expect(span_in_bounds(source, diag("UnexpectedToken", 5, 6))).to_be_true()
     s
     .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 99)))

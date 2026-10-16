@@ -141,7 +141,7 @@ fn Parser::parse_pattern_inner(self : Parser) -> @ast.Pattern? raise ParseError 
         Some(Comma),
       )
       let mut elements_after_tail : Array[@ast.Pattern]? = None
-      let mut dot_dot_location : (Int32, Int32)? = None
+      let mut dot_dot_location : (@span.ByteOffset, @span.ByteOffset)? = None
       // `Some(Some(p))`: a tail with a pattern; `Some(None)`: `..` alone.
       let tail : @ast.Pattern?? = match self.token0 {
         Some({ kind: DotDot, span: dots, .. }) => {
@@ -182,7 +182,7 @@ fn Parser::parse_pattern_inner(self : Parser) -> @ast.Pattern? raise ParseError 
           Some(
             Discard(
               location=sp(
-                closing_square_bracket_end - 1,
+                closing_square_bracket_end.shift(-1).unwrap(),
                 closing_square_bracket_end,
               ),
               name="_",
@@ -253,7 +253,7 @@ fn Parser::reject_suffix_literal(
 /// `UpName( args )`, with an optional module prefix already consumed.
 fn Parser::expect_constructor_pattern(
   self : Parser,
-  module_ : (Int32, String, Int32)?,
+  module_ : (@span.ByteOffset, String, @span.ByteOffset)?,
 ) -> @ast.Pattern raise ParseError {
   let (name_start, name, name_end) = self.expect_upname()
   let (arguments, spread, end) = self.parse_constructor_pattern_arguments(
@@ -280,8 +280,8 @@ fn Parser::expect_constructor_pattern(
 /// `( args )` of a constructor pattern: arguments, spread span and end.
 fn Parser::parse_constructor_pattern_arguments(
   self : Parser,
-  upname_end : Int32,
-) -> (Array[@ast.CallArg[@ast.Pattern]], @span.SrcSpan?, Int32) raise ParseError {
+  upname_end : @span.ByteOffset,
+) -> (Array[@ast.CallArg[@ast.Pattern]], @span.SrcSpan?, @span.ByteOffset) raise ParseError {
   if self.maybe_one(LeftParen) is Some(_) {
     let (arguments, arguments_end_with_comma) = self.series_of_has_trailing_separator(
       p => p.parse_constructor_pattern_argument(),

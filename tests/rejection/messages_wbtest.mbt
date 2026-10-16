@@ -56,7 +56,7 @@ fn identity_text(identity : (String, String?, @gleam.SrcSpan)) -> String {
     Some(l) => " (\{l})"
     None => ""
   }
-  "\{kind}\{lexical_text} \{span.start}..\{span.end}"
+  "\{kind}\{lexical_text} \{span.start.to_int()}..\{span.end.to_int()}"
 }
 
 ///|

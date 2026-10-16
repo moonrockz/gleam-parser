@@ -21,15 +21,23 @@ fn fixture(text : String) -> Formatter {
 test "pop_comments returns comments and coalesced empty lines before the limit, in order" {
   // bytes: "// a\n" 0..5, "\n" 5, "\n" 6, "// b\n" 7..12, "c" at 12
   let f = fixture("// a\n\n\n// b\nconst x = 1\n")
-  let popped = f.pop_comments_with_position(13)
+  let popped = f.pop_comments_with_position(@span.ByteOffset::new(13).unwrap())
   @expect.expect_all(s => {
     s.expect(popped.length()).to_equal(3)
-    s.expect((popped[0].0, show(popped[0].1))).to_equal((2, "T: a"))
-    s.expect((popped[1].0, show(popped[1].1))).to_equal((5, "E"))
-    s.expect((popped[2].0, show(popped[2].1))).to_equal((9, "T: b"))
+    s
+    .expect((popped[0].0, show(popped[0].1)))
+    .to_equal((@span.ByteOffset::new(2).unwrap(), "T: a"))
+    s
+    .expect((popped[1].0, show(popped[1].1)))
+    .to_equal((@span.ByteOffset::new(5).unwrap(), "E"))
+    s
+    .expect((popped[2].0, show(popped[2].1)))
+    .to_equal((@span.ByteOffset::new(9).unwrap(), "T: b"))
     // Nothing is left before the limit; the cursor moved.
-    s.expect(f.any_comments(13)).to_equal(false)
-    s.expect(f.any_empty_lines(13)).to_equal(false)
+    s.expect(f.any_comments(@span.ByteOffset::new(13).unwrap())).to_equal(false)
+    s
+    .expect(f.any_empty_lines(@span.ByteOffset::new(13).unwrap()))
+    .to_equal(false)
   })
 }
 
@@ -37,13 +45,15 @@ test "pop_comments returns comments and coalesced empty lines before the limit, 
 test "leading empty lines are dropped and doc comments drop every empty line" {
   let f = fixture("\n\n// a\n\n/// d\n\n/// e\nconst x = 1\n")
   @expect.expect_all(s => {
-    let comments = f.pop_comments(100)
+    let comments = f.pop_comments(@span.ByteOffset::new(100).unwrap())
     // The empty lines after `// a` are popped too (one per gap, as the
     // compiler coalesces only consecutive ones).
     s.expect(comments.map(show)).to_equal(["T: a", "E", "E"])
-    let docs = f.pop_doc_comments(100)
+    let docs = f.pop_doc_comments(@span.ByteOffset::new(100).unwrap())
     s.expect(docs).to_equal([" d", " e"])
-    s.expect(f.any_empty_lines(100)).to_equal(false)
+    s
+    .expect(f.any_empty_lines(@span.ByteOffset::new(100).unwrap()))
+    .to_equal(false)
   })
 }
 
@@ -51,13 +61,45 @@ test "leading empty lines are dropped and doc comments drop every empty line" {
 test "pop_empty_lines, spans_multiple_lines and has_trailing_comma" {
   let f = fixture("const x = [\n  1,\n\n  2,\n]\n")
   @expect.expect_all(s => {
-    s.expect(f.pop_empty_lines(30)).to_equal(true)
-    s.expect(f.pop_empty_lines(30)).to_equal(false)
-    s.expect(f.spans_multiple_lines(10, 15)).to_equal(true)
-    s.expect(f.spans_multiple_lines(14, 15)).to_equal(false)
+    s
+    .expect(f.pop_empty_lines(@span.ByteOffset::new(30).unwrap()))
+    .to_equal(true)
+    s
+    .expect(f.pop_empty_lines(@span.ByteOffset::new(30).unwrap()))
+    .to_equal(false)
+    s
+    .expect(
+      f.spans_multiple_lines(
+        @span.ByteOffset::new(10).unwrap(),
+        @span.ByteOffset::new(15).unwrap(),
+      ),
+    )
+    .to_equal(true)
+    s
+    .expect(
+      f.spans_multiple_lines(
+        @span.ByteOffset::new(14).unwrap(),
+        @span.ByteOffset::new(15).unwrap(),
+      ),
+    )
+    .to_equal(false)
     // the comma after `2` is a trailing comma of the list
-    s.expect(f.has_trailing_comma(20, 24)).to_equal(true)
-    s.expect(f.has_trailing_comma(0, 9)).to_equal(false)
+    s
+    .expect(
+      f.has_trailing_comma(
+        @span.ByteOffset::new(20).unwrap(),
+        @span.ByteOffset::new(24).unwrap(),
+      ),
+    )
+    .to_equal(true)
+    s
+    .expect(
+      f.has_trailing_comma(
+        @span.ByteOffset::new(0).unwrap(),
+        @span.ByteOffset::new(9).unwrap(),
+      ),
+    )
+    .to_equal(false)
   })
 }
 

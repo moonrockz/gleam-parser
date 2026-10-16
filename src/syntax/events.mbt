@@ -7,8 +7,8 @@ pub struct EnterEvent {
   category : String
   kind : String
   field : String?
-  start : Int32
-  depth : Int32
+  start : @span.ByteOffset
+  depth : NodeDepth
   path : NodePath
 } derive(Eq, Debug)
 
@@ -17,7 +17,7 @@ pub struct EnterEvent {
 /// of its `Enter`.
 pub struct LeaveEvent {
   node : NodeRef
-  depth : Int32
+  depth : NodeDepth
   path : NodePath
 } derive(Eq, Debug)
 
@@ -28,12 +28,15 @@ pub struct LeaveEvent {
 ///
 /// ```mbt check
 /// test {
-///   let path = @syntax.NodePath::root().child("definitions", 0)
+///   let path = @syntax.NodePath::root().child(
+///     "definitions",
+///     @syntax.ChildIndex::new(0).unwrap(),
+///   )
 ///   let e = @syntax.EnterEvent::new(
 ///     category="definition",
 ///     kind="function",
 ///     field=Some("definitions"),
-///     start=0,
+///     start=@span.ByteOffset::zero(),
 ///     path~,
 ///   )
 ///   inspect(e.depth, content="1")
@@ -44,7 +47,7 @@ pub fn EnterEvent::new(
   category~ : String,
   kind~ : String,
   field~ : String?,
-  start~ : Int32,
+  start~ : @span.ByteOffset,
   path~ : NodePath,
 ) -> EnterEvent {
   { category, kind, field, start, depth: path.depth(), path, }

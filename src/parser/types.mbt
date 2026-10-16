@@ -106,8 +106,8 @@ fn Parser::parse_type_inner(self : Parser) -> @ast.TypeAst? raise ParseError {
 /// The `( ... )` of a type name, or the angle-bracket error.
 fn Parser::parse_type_name_finish(
   self : Parser,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
   name : @ast.TypeAstConstructorName,
 ) -> @ast.TypeAst? raise ParseError {
   match self.maybe_one(LeftParen) {

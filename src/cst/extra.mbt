@@ -10,10 +10,10 @@ pub fn trivia_extra(stream : @scanner.TokenStream) -> @ast.ModuleExtra {
   let module_comments : Array[@span.SrcSpan] = []
   let doc_comments : Array[@span.SrcSpan] = []
   let comments : Array[@span.SrcSpan] = []
-  let new_lines : Array[Int32] = []
-  let empty_lines : Array[Int32] = []
+  let new_lines : Array[@span.ByteOffset] = []
+  let empty_lines : Array[@span.ByteOffset] = []
   fn gap(trivia : ArrayView[@scanner.Trivia]) -> Unit {
-    let mut previous_newline : Int32? = None
+    let mut previous_newline : @span.ByteOffset? = None
     for t in trivia {
       match t {
         Comment(c) => {
@@ -27,7 +27,7 @@ pub fn trivia_extra(stream : @scanner.TokenStream) -> @ast.ModuleExtra {
         Newline(_, span) => {
           new_lines.push(span.start)
           if previous_newline is Some(start) {
-            empty_lines.push(start + 1)
+            empty_lines.push(start.shift(1).unwrap())
           }
           previous_newline = Some(span.start)
         }

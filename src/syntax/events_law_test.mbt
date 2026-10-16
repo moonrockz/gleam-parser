@@ -1,7 +1,11 @@
 ///|
 /// What an `Enter` can show of a node: category/kind@start (no end yet).
-fn start_tag(category : String, kind : String, start : Int32) -> String {
-  "\{category}/\{kind}@\{start}"
+fn start_tag(
+  category : String,
+  kind : String,
+  start : @span.ByteOffset,
+) -> String {
+  "\{category}/\{kind}@\{start.to_int()}"
 }
 
 ///|
@@ -262,7 +266,7 @@ test "law: under any Control policy, each event's depth and path lead to its nod
         match e {
           Enter(e) => {
             ok = ok &&
-              e.depth == open.length() &&
+              e.depth == @syntax.NodeDepth::new(open.length()).unwrap() &&
               e.depth == e.path.depth() &&
               e.path.parent() == open.last().map(o => o.path) &&
               e.path.last().map(s => s.field) == e.field &&
@@ -328,13 +332,25 @@ test "law: a path resolves exactly the field slot it names, and nothing else" {
         for f in n.fields() {
           let slots = n.field(f)
           for i, child in slots {
-            ok = ok && p.child(f, i).resolve(root).map(tag) == Some(tag(child))
+            ok = ok &&
+              p
+              .child(f, @syntax.ChildIndex::new(i).unwrap())
+              .resolve(root)
+              .map(tag) ==
+              Some(tag(child))
           }
           ok = ok &&
-            p.child(f, -1).resolve(root) is None &&
-            p.child(f, slots.length()).resolve(root) is None
+            @syntax.ChildIndex::new(-1) is None &&
+            p
+            .child(f, @syntax.ChildIndex::new(slots.length()).unwrap())
+            .resolve(root)
+            is None
         }
-        ok = ok && p.child("no such field", 0).resolve(root) is None
+        ok = ok &&
+          p
+          .child("no such field", @syntax.ChildIndex::new(0).unwrap())
+          .resolve(root)
+          is None
       }
       ok
     },

@@ -98,13 +98,23 @@ pub using @ast {type BitArraySegment}
 
 pub using @ast {type BitArraySize}
 
+pub using @ast {type BitArrayUnit}
+
 pub using @fuel {type Budget}
 
+pub using @span {type ByteLength}
+
+pub using @span {type ByteOffset}
+
 pub using @ast {type CallArg}
+
+pub using @syntax {type ChildIndex}
 
 pub using @ast {type Clause}
 
 pub using @ast {type ClauseGuard}
+
+pub using @span {type ColumnNumber}
 
 pub using @scanner {type Comment}
 
@@ -176,6 +186,10 @@ pub using @syntax {type LeaveEvent}
 
 pub using @scanner {type LexicalErrorType}
 
+pub using @span {type LineCount}
+
+pub using @span {type LineNumber}
+
 pub using @ast {type Module}
 
 pub using @ast {type ModuleConstant}
@@ -183,6 +197,8 @@ pub using @ast {type ModuleConstant}
 pub using @cst {type ModuleCst}
 
 pub using @ast {type ModuleExtra}
+
+pub using @syntax {type NodeDepth}
 
 pub using @syntax {type NodePath}
 
@@ -258,6 +274,8 @@ pub using @syntax {type TreeCursor}
 
 pub using @scanner {type Trivia}
 
+pub using @ast {type TupleIndex}
+
 pub using @ast {type TypeAlias}
 
 pub using @ast {type TypeAst}
@@ -281,6 +299,8 @@ pub using @ast {type UnqualifiedImport}
 pub using @ast {type Use}
 
 pub using @ast {type UseAssignment}
+
+pub using @span {type Utf16Offset}
 
 pub using @ast {type Warning}
 
