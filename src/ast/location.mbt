@@ -56,6 +56,7 @@ pub fn Pattern::location(self : Pattern) -> @span.SrcSpan {
 }
 
 ///|
+/// Return the byte span of a bit array size expression.
 pub fn BitArraySize::location(self : BitArraySize) -> @span.SrcSpan {
   match self {
     Int(location~, ..)
@@ -66,6 +67,7 @@ pub fn BitArraySize::location(self : BitArraySize) -> @span.SrcSpan {
 }
 
 ///|
+/// Return the byte span of a type annotation.
 pub fn TypeAst::location(self : TypeAst) -> @span.SrcSpan {
   match self {
     Constructor(c) => c.location
@@ -77,6 +79,7 @@ pub fn TypeAst::location(self : TypeAst) -> @span.SrcSpan {
 }
 
 ///|
+/// Return the byte span of a constant.
 pub fn Constant::location(self : Constant) -> @span.SrcSpan {
   match self {
     Int(location~, ..)
@@ -111,6 +114,8 @@ pub fn ClauseGuard::location(self : ClauseGuard) -> @span.SrcSpan {
 }
 
 ///|
+/// Return the byte span of a statement.
+/// An expression statement uses the expression's span.
 pub fn Statement::location(self : Statement) -> @span.SrcSpan {
   match self {
     Expression(e) => e.location()

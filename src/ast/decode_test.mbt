@@ -4,6 +4,150 @@ fn parse(text : String) -> Json raise {
 }
 
 ///|
+fn[A] decoding_error(
+  json : Json,
+  decode : (Json) -> A raise @ast.DecodeError,
+) -> String {
+  try {
+    decode(json) |> ignore
+    "no error"
+  } catch {
+    @ast.DecodeError(path~, message~) => "\{path}: \{message}"
+  }
+}
+
+///|
+test "bit array units fit the compiler's byte range" {
+  @expect.expect_all(e => {
+    for unit in [-1, 0, 1, 255, 256] {
+      let value : @ast.Expr = BitArray(
+        location=sp0(),
+        segments=[
+            @ast.BitArraySegment::{
+              location: sp0(),
+              value: var_x(),
+              options: [@ast.Unit(location=sp0(), value=unit)][:],
+            },
+          ][:],
+      )
+      let json = @ast.encode_expr(value)
+      if unit >= 0 && unit <= 255 {
+        e.expect(@ast.decode_expr(json)).to_equal(value)
+      } else {
+        let message = if unit < 0 {
+          "expected a non-negative integer, found \{unit}"
+        } else {
+          "expected an integer in 0..255, found \{unit}"
+        }
+        e
+        .expect(decoding_error(json, @ast.decode_expr))
+        .to_equal("$.segments[0].options[0].value: \{message}")
+      }
+    }
+  })
+}
+
+///|
+test "positions reject negative and out-of-range integers at their JSON path" {
+  @expect.expect_all(e => {
+    for
+      (number, message) in [
+        ("-1", "expected a non-negative integer, found -1"),
+        ("1.5", "expected an integer, found 1.5"),
+        ("2147483648", "expected an integer, found 2147483648"),
+      ] {
+      let text =
+        $|{"kind":"var","location":{"start":\{number},"end":0},"name":"x"}
+      let got = try {
+        @ast.decode_expr(parse(text)) |> ignore
+        "no error"
+      } catch {
+        @ast.DecodeError(path~, message~) => "\{path}: \{message}"
+        _ => "other error"
+      }
+      e.expect(got).to_equal("$.location.start: \{message}")
+    }
+    for start in [0, 2147483647] {
+      // An end of zero is the compiler's sentinel for an inner EOF error.
+      let value : @ast.Expr = Var(
+        location=@span.SrcSpan::new(start, 0),
+        name="x",
+      )
+      e.expect(@ast.decode_expr(@ast.encode_expr(value))).to_equal(value)
+    }
+  })
+}
+
+///|
+test "int_value uses canonical decimal digits" {
+  @expect.expect_all(e => {
+    for
+      digits in [
+        "", "-", "00", "01", "-01", "-0", "+1", "1_0", " 1", "1.0", "0x1",
+      ] {
+      let text =
+        $|{"kind":"int","location":{"start":0,"end":1},"value":"1","int_value":"\{digits}"}
+      e
+      .expect(decoding_error(parse(text), @ast.decode_expr))
+      .to_equal("$.int_value: not a canonical decimal integer")
+    }
+    for
+      digits in [
+        "0", "1", "-1", "123456789012345678901234567890", "-123456789012345678901234567890",
+      ] {
+      let text =
+        $|{"kind":"int","location":{"start":0,"end":1},"value":"\{digits}","int_value":"\{digits}"}
+      e
+      .expect(@ast.canonical(@ast.encode_expr(@ast.decode_expr(parse(text)))))
+      .to_equal(@ast.canonical(parse(text)))
+    }
+  })
+}
+
+///|
+test "float nodes require a complete Gleam float lexeme" {
+  @expect.expect_all(e => {
+    for
+      value in [
+        "1", "1e3", ".5", "+1.0", "1.0E3", "1.0e+3", "_1.0", "1_.0", "1.0_", "1__0.5",
+        "1.0e", "1.0e_", "inf", "NaN", " 1.0", "1.0 ", "1.0 // comment",
+      ] {
+      let text =
+        $|{"kind":"float","location":{"start":0,"end":1},"value":"\{value}"}
+      let json = parse(text)
+      e
+      .expect(decoding_error(json, @ast.decode_expr))
+      .to_equal("$.value: not a float literal")
+      e
+      .expect(decoding_error(json, @ast.decode_pattern))
+      .to_equal("$.value: not a float literal")
+      e
+      .expect(decoding_error(json, @ast.decode_constant))
+      .to_equal("$.value: not a float literal")
+    }
+    // The lexer permits a separator before fractional or exponent digits.
+    for
+      value in [
+        "0.", "-0.0", "1.5", "1.e3", "1_0.5", "1._2", "1.0e_2", "1.0e-3", "1.0e99999999999",
+        "1.0e-99999999999",
+      ] {
+      let text =
+        $|{"kind":"float","location":{"start":0,"end":1},"value":"\{value}"}
+      let json = parse(text)
+      e
+      .expect(@ast.canonical(@ast.encode_expr(@ast.decode_expr(json))))
+      .to_equal(@ast.canonical(json))
+      e
+      .expect(@ast.canonical(@ast.encode_pattern(@ast.decode_pattern(json))))
+      .to_equal(@ast.canonical(json))
+      e
+      .expect(@ast.canonical(@ast.encode_constant(@ast.decode_constant(json))))
+      .to_equal(@ast.canonical(json))
+    }
+  })
+}
+
+///|
 test "decode after encode gives the value back" {
   let sp = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
   let e : @ast.Expr = Call(
@@ -69,7 +213,7 @@ test "errors name the path and the problem" {
     ),
     (
       "{\"int_value\":\"1x\",\"kind\":\"int\",\"location\":{\"end\":1,\"start\":0},\"value\":\"1\"}",
-      "$.int_value: not a decimal integer",
+      "$.int_value: not a canonical decimal integer",
     ),
     (
       "{\"kind\":\"float\",\"location\":{\"end\":1,\"start\":0},\"value\":\"abc\"}",
@@ -124,6 +268,52 @@ test "a parsed module decodes with its extra and warnings" {
       @ast.canonical(parse(text)),
     )
   })
+}
+
+///|
+test "tuple and guard indexes reject negatives, fractions and overflow" {
+  @expect.expect_all(e => {
+    for index in ["-1", "1.5", "18446744073709551616"] {
+      let tuple =
+        $|{"kind":"tuple_index","location":{"start":0,"end":1},"index":\{index},"tuple":{"kind":"var","location":{"start":0,"end":1},"name":"x"}}
+      let field =
+        $|{"kind":"field_access","label_location":{"start":0,"end":1},"index":\{index},"label":"a","container":{"kind":"var","location":{"start":0,"end":1},"name":"x"}}
+      let expected = "$.index: expected an unsigned 64-bit integer, found \{index}"
+      e
+      .expect(decoding_error(parse(tuple), @ast.decode_expr))
+      .to_equal(expected)
+      e
+      .expect(decoding_error(parse(tuple), @ast.decode_clause_guard))
+      .to_equal(expected)
+      e
+      .expect(decoding_error(parse(field), @ast.decode_clause_guard))
+      .to_equal(expected)
+    }
+  })
+}
+
+///|
+test "law: negative positions and indexes always fail decoding" {
+  @quickcheck.check(
+    (seed : Int32) => {
+      let negative = -(seed % 2147483647).abs() - 1
+      let position =
+        $|{"kind":"var","location":{"start":0,"end":\{negative}},"name":"x"}
+      let index =
+        $|{"kind":"tuple_index","location":{"start":0,"end":1},"index":\{negative},"tuple":{"kind":"var","location":{"start":0,"end":1},"name":"x"}}
+      let extra =
+        $|{"comments":[],"doc_comments":[],"module_comments":[],"empty_lines":[],"new_lines":[\{negative}],"trailing_commas":[]}
+      decoding_error(parse(position), @ast.decode_expr).has_prefix(
+        "$.location.end:",
+      ) &&
+      decoding_error(parse(index), @ast.decode_expr).has_prefix("$.index:") &&
+      decoding_error(parse(extra), @ast.decode_extra).has_prefix(
+        "$.new_lines[0]:",
+      )
+    },
+    count=100,
+    seed=2047,
+  )
 }
 
 ///|

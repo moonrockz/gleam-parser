@@ -33,6 +33,7 @@ pub(all) enum Target {
 } derive(Eq, Debug, Hash)
 
 ///|
+/// Return the target's JSON name, `erlang` or `javascript`.
 pub fn Target::name(self : Target) -> String {
   match self {
     Erlang => "erlang"
@@ -41,6 +42,7 @@ pub fn Target::name(self : Target) -> String {
 }
 
 ///|
+/// Read a target's JSON name. Return `None` for an unknown name.
 pub fn Target::of(name : String) -> Target? {
   match name {
     "erlang" => Some(Erlang)
@@ -425,6 +427,7 @@ pub(all) enum ImplicitCallArgOrigin {
 } derive(Eq, Debug, Hash)
 
 ///|
+/// Return the implicit argument origin's snake_case JSON name.
 pub fn ImplicitCallArgOrigin::name(self : ImplicitCallArgOrigin) -> String {
   match self {
     Use => "use"
@@ -436,6 +439,8 @@ pub fn ImplicitCallArgOrigin::name(self : ImplicitCallArgOrigin) -> String {
 }
 
 ///|
+/// Read an implicit argument origin's JSON name.
+/// Return `None` for an unknown name.
 pub fn ImplicitCallArgOrigin::of(name : String) -> ImplicitCallArgOrigin? {
   match name {
     "use" => Some(Use)
@@ -503,6 +508,7 @@ pub fn BinOp::all() -> Array[BinOp] {
 }
 
 ///|
+/// Return the binary operator's snake_case JSON name.
 pub fn BinOp::name(self : BinOp) -> String {
   match self {
     And => "and"
@@ -531,6 +537,7 @@ pub fn BinOp::name(self : BinOp) -> String {
 }
 
 ///|
+/// Read a binary operator's JSON name. Return `None` for an unknown name.
 pub fn BinOp::of(name : String) -> BinOp? {
   for op in BinOp::all() {
     if op.name() == name {
@@ -647,6 +654,7 @@ pub(all) enum IntOperator {
 } derive(Eq, Debug, Hash)
 
 ///|
+/// Return the integer operator's snake_case JSON name.
 pub fn IntOperator::name(self : IntOperator) -> String {
   match self {
     Add => "add"
@@ -658,6 +666,7 @@ pub fn IntOperator::name(self : IntOperator) -> String {
 }
 
 ///|
+/// Read an integer operator's JSON name. Return `None` for an unknown name.
 pub fn IntOperator::of(name : String) -> IntOperator? {
   match name {
     "add" => Some(Add)
@@ -775,6 +784,7 @@ pub(all) struct ModuleExtra {
 } derive(Eq, Debug)
 
 ///|
+/// Create trivia metadata with no comments, line ends or trailing commas.
 pub fn ModuleExtra::empty() -> ModuleExtra {
   {
     module_comments: [][:],

@@ -236,7 +236,7 @@ fn[V] gen_segment(
       13 => Little(location=loc)
       14 => Native(location=loc)
       15 => Size(location=loc, value=value(), short_form=ast_pick(rs, 2) == 0)
-      _ => Unit(location=loc, value=1 + ast_pick(rs, 256))
+      _ => Unit(location=loc, value=ast_pick(rs, 256))
     }
     o
   }

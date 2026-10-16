@@ -4,10 +4,29 @@ struct AstWorld {
   mut fixture : String
   mut decoded : @gleam.OracleOutput?
   mut encoded : String
+  mut decode_error : String
 } derive(Default)
 
 ///|
 impl @moonspec.World for AstWorld with fn configure(self, setup) {
+  setup.given("the expression JSON:", fn(ctx) raise {
+    guard ctx[0] is { value: @moonspec.StepValue::DocStringVal(doc), .. } else {
+      fail("expected expression JSON")
+    }
+    self.fixture = doc.content
+  })
+  setup.when("I decode the expression", fn(_ctx) raise {
+    let json = @json.parse(self.fixture)
+    self.decode_error = try {
+      @gleam.decode_expr(json) |> ignore
+      "no error"
+    } catch {
+      @gleam.DecodeError::DecodeError(path~, message~) => "\{path}: \{message}"
+    }
+  })
+  setup.then1("the decode error is {string}", fn(expected : String) raise {
+    @expect.expect(self.decode_error).to_equal(expected)
+  })
   setup.given1("the AST fixture {string}", fn(name : String) raise {
     self.fixture = @fs.read_file_to_string("fixtures/ast/\{name}.json")
   })

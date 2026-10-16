@@ -41,8 +41,6 @@ test "law: the canonical text is a fixpoint through decode" {
 }
 
 ///|
-
-///|
 /// Code-unit order, as serde_json's BTreeMap sorts bytes (ASCII keys).
 fn byte_less(a : String, b : String) -> Bool {
   let n = if a.length() < b.length() { a.length() } else { b.length() }

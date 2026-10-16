@@ -97,10 +97,22 @@ fn dec_int(j : Json, path : Path) -> Int32 raise DecodeError {
       if i.to_double() != d {
         fail(path, "expected an integer, found \{d}")
       }
+      if i < 0 {
+        fail(path, "expected a non-negative integer, found \{d}")
+      }
       i
     }
     other => fail(path, "expected a number, found \{json_kind(other)}")
   }
+}
+
+///|
+fn dec_unit(j : Json, path : Path) -> Int32 raise DecodeError {
+  let value = dec_int(j, path)
+  if value > 255 {
+    fail(path, "expected an integer in 0..255, found \{value}")
+  }
+  value
 }
 
 ///|
@@ -237,13 +249,14 @@ fn dec_kind_of(j : Json, path : Path) -> String raise DecodeError {
 fn dec_big_int(j : Json, path : Path) -> BigInt raise DecodeError {
   let s = dec_string(j, path)
   let digits = if s.has_prefix("-") { s[1:] } else { s[:] }
-  if digits.length() == 0 {
-    fail(path, "not a decimal integer")
+  if digits.length() == 0 ||
+    (digits.has_prefix("0") && (digits.length() > 1 || s.has_prefix("-"))) {
+    fail(path, "not a canonical decimal integer")
   }
   for i = 0; i < digits.length(); i = i + 1 {
     let c = digits.code_unit_at(i).to_int()
     if c < '0'.to_int() || c > '9'.to_int() {
-      fail(path, "not a decimal integer")
+      fail(path, "not a canonical decimal integer")
     }
   }
   BigInt::from_string(s)
@@ -358,13 +371,33 @@ fn dec_implicit(
 ///|
 /// A `Float` node's double, derived from its lexeme.
 fn dec_float_value(value : String, path : Path) -> Double raise DecodeError {
-  match @scanner.parse_float_value(value) {
-    Some(d) => d
-    None => fail(Key(path, "value"), "not a float literal")
+  // Reuse the lexer so separators and exponents have exactly Gleam's shape.
+  // Numeric conversion alone also accepts integers and other non-lexemes.
+  let stream = @scanner.tokenize_text(value)
+  if !stream.has_errors() && stream.tokens.length() == 1 {
+    let token = stream.tokens[0]
+    if token.lexeme == value && token.kind is Float(float_value~, ..) {
+      return float_value
+    }
   }
+  fail(Key(path, "value"), "not a float literal")
 }
 
 ///|
+/// Decode a module with its trivia positions and parse-time warnings.
+/// Raise `DecodeError` at the invalid field when JSON does not fit the schema.
+/// The decoder uses no recursive calls and has no depth limit.
+///
+/// ```mbt check
+/// test {
+///   let p = @ast.Parsed::{
+///     module_: { definitions: [][:], },
+///     extra: @ast.ModuleExtra::empty(),
+///     warnings: [][:],
+///   }
+///   assert_eq(@ast.decode_parsed(@ast.encode_parsed(p)), p)
+/// }
+/// ```
 pub fn decode_parsed(json : Json) -> Parsed raise DecodeError {
   run_decode(dec_parsed(json, Root, v => Decoded(v)))
 }
@@ -385,6 +418,8 @@ fn[R] dec_parsed(
 }
 
 ///|
+/// Decode a module from its JSON object.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_module(json : Json) -> Module raise DecodeError {
   run_decode(dec_module(json, Root, v => Decoded(v)))
 }
@@ -415,6 +450,8 @@ fn[R] dec_targeted_definition(
 }
 
 ///|
+/// Decode one definition from its tagged JSON object.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_definition(json : Json) -> Definition raise DecodeError {
   run_decode(dec_definition(json, Root, v => Decoded(v)))
 }
@@ -700,6 +737,9 @@ fn dec_arg_names(j : Json, path : Path) -> ArgNames raise DecodeError {
 }
 
 ///|
+/// Decode a type annotation from its tagged JSON object.
+/// A qualified name can be `null` when the source ends at the module dot.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_type_ast(json : Json) -> TypeAst raise DecodeError {
   run_decode(dec_type_ast(json, Root, v => Decoded(v)))
 }
@@ -784,6 +824,8 @@ fn dec_type_ast_constructor_name(
 }
 
 ///|
+/// Decode a statement from its tagged JSON object.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_statement(json : Json) -> Statement raise DecodeError {
   run_decode(dec_statement(json, Root, v => Decoded(v)))
 }
@@ -975,7 +1017,7 @@ fn[V, R] dec_bit_array_option(
       })
     }
     "unit" =>
-      yield_(k, Unit(location~, value=dec_field(j, path, "value", dec_int)))
+      yield_(k, Unit(location~, value=dec_field(j, path, "value", dec_unit)))
     other => fail(Key(path, "kind"), "unknown bit array option \"\{other}\"")
   }
 }
@@ -1009,6 +1051,16 @@ fn dec_function_literal_kind(
 }
 
 ///|
+/// Decode an expression from its tagged JSON object.
+/// Derive a float value from a complete Gleam float lexeme.
+/// Raise `DecodeError` with the field path for malformed input.
+///
+/// ```mbt check
+/// test {
+///   let value : @ast.Expr = Var(location=@span.SrcSpan::new(0, 1), name="x")
+///   assert_eq(@ast.decode_expr(@ast.encode_expr(value)), value)
+/// }
+/// ```
 pub fn decode_expr(json : Json) -> Expr raise DecodeError {
   run_decode(dec_expr(json, Root, v => Decoded(v)))
 }
@@ -1261,6 +1313,9 @@ fn[R] dec_clause(
 }
 
 ///|
+/// Decode a clause guard from its tagged JSON object.
+/// Tuple and field indexes must fit an unsigned 64-bit integer.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_clause_guard(json : Json) -> ClauseGuard raise DecodeError {
   run_decode(dec_clause_guard(json, Root, v => Decoded(v)))
 }
@@ -1329,6 +1384,8 @@ fn[R] dec_clause_guard(
 }
 
 ///|
+/// Decode a pattern from its tagged JSON object.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_pattern(json : Json) -> Pattern raise DecodeError {
   run_decode(dec_pattern(json, Root, v => Decoded(v)))
 }
@@ -1526,6 +1583,8 @@ fn[R] dec_bit_array_size(
 }
 
 ///|
+/// Decode a constant from its tagged JSON object.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_constant(json : Json) -> Constant raise DecodeError {
   run_decode(dec_constant(json, Root, v => Decoded(v)))
 }
@@ -1696,6 +1755,9 @@ fn[R] dec_constant(
 }
 
 ///|
+/// Decode comment spans, line offsets and trailing comma offsets.
+/// Offsets must be non-negative integers that fit `Int32`.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_extra(json : Json) -> ModuleExtra raise DecodeError {
   dec_extra(json, Root)
 }
@@ -1723,6 +1785,8 @@ fn dec_extra(j : Json, path : Path) -> ModuleExtra raise DecodeError {
 }
 
 ///|
+/// Decode a parse-time warning from its tagged JSON object.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_warning(json : Json) -> Warning raise DecodeError {
   dec_warning(json, Root)
 }
