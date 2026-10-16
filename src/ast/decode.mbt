@@ -106,7 +106,7 @@ fn dec_int(j : Json, path : Path) -> Int32 raise DecodeError {
 ///|
 fn dec_offset(j : Json, path : Path) -> @span.ByteOffset raise DecodeError {
   let value = dec_int(j, path)
-  match @span.ByteOffset::new(value) {
+  match @span.ByteOffset::from_int(value) {
     Some(offset) => offset
     None => fail(path, "expected a non-negative integer, found \{value}")
   }
@@ -115,7 +115,7 @@ fn dec_offset(j : Json, path : Path) -> @span.ByteOffset raise DecodeError {
 ///|
 fn dec_unit(j : Json, path : Path) -> BitArrayUnit raise DecodeError {
   let value = dec_int(j, path)
-  match BitArrayUnit::new(value) {
+  match BitArrayUnit::from_int(value) {
     Some(unit) => unit
     None =>
       if value < 0 {
@@ -1076,7 +1076,7 @@ fn dec_function_literal_kind(
 /// ```mbt check
 /// test {
 ///   let value : @ast.Expr = Var(
-///     location=@span.SrcSpan::new(0, 1).unwrap(),
+///     location=@span.SrcSpan::from_ints(0, 1).unwrap(),
 ///     name="x",
 ///   )
 ///   assert_eq(@ast.decode_expr(@ast.encode_expr(value)), value)

@@ -22,16 +22,16 @@ pub(all) struct PathStep {
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let path = @syntax.NodePath::root()
-///     .child("definitions", @syntax.ChildIndex::new(0).unwrap())
-///     .child("body", @syntax.ChildIndex::new(0).unwrap())
-///     .child("expression", @syntax.ChildIndex::new(0).unwrap())
-///     .child("right", @syntax.ChildIndex::new(0).unwrap())
+///     .child("definitions", @syntax.ChildIndex::from_int(0).unwrap())
+///     .child("body", @syntax.ChildIndex::from_int(0).unwrap())
+///     .child("expression", @syntax.ChildIndex::from_int(0).unwrap())
+///     .child("right", @syntax.ChildIndex::from_int(0).unwrap())
 ///   inspect(path, content="definitions[0].body[0].expression[0].right[0]")
 ///   inspect(path.depth(), content="4")
 ///   debug_inspect(
 ///     path.last(),
 ///     content=(
-///       #|Some({ field: "right", index: ChildIndex(0) })
+///       #|Some({ field: "right", index: { value: 0 } })
 ///     ),
 ///   )
 ///   debug_inspect(path.resolve(root).map(n => n.kind()), content="Some(\"var\")")
@@ -40,7 +40,7 @@ pub(all) struct PathStep {
 ///   inspect(up.resolve(root).unwrap().kind(), content="bin_op")
 ///   let missing = @syntax.NodePath::root().child(
 ///     "definitions",
-///     @syntax.ChildIndex::new(5).unwrap(),
+///     @syntax.ChildIndex::from_int(5).unwrap(),
 ///   )
 ///   inspect(missing.resolve(root) is None, content="true")
 /// }
@@ -54,7 +54,7 @@ pub struct NodePath {
 ///|
 /// The path of the start node: no steps, depth 0.
 pub fn NodePath::root() -> NodePath {
-  { reversed: @list.List([]), length: NodeDepth::new(0).unwrap(), }
+  { reversed: @list.List([]), length: NodeDepth::from_int(0).unwrap(), }
 }
 
 ///|
@@ -66,7 +66,7 @@ pub fn NodePath::child(
 ) -> NodePath {
   {
     reversed: self.reversed.prepend({ field, index, }),
-    length: NodeDepth::new(self.length.to_int() + 1).unwrap(),
+    length: NodeDepth::from_int(self.length.to_int() + 1).unwrap(),
   }
 }
 
@@ -77,8 +77,8 @@ pub fn NodePath::child(
 /// ```mbt check
 /// test {
 ///   let path = @syntax.NodePath::from_steps([
-///     { field: "definitions", index: @syntax.ChildIndex::new(0).unwrap(), },
-///     { field: "body", index: @syntax.ChildIndex::new(1).unwrap(), },
+///     { field: "definitions", index: @syntax.ChildIndex::from_int(0).unwrap(), },
+///     { field: "body", index: @syntax.ChildIndex::from_int(1).unwrap(), },
 ///   ])
 ///   inspect(path, content="definitions[0].body[1]")
 ///   debug_inspect(
@@ -105,11 +105,11 @@ pub fn NodePath::from_steps(steps : ArrayView[PathStep]) -> NodePath {
 /// ```mbt check
 /// test {
 ///   let to_body = @syntax.NodePath::root()
-///     .child("definitions", @syntax.ChildIndex::new(0).unwrap())
-///     .child("body", @syntax.ChildIndex::new(0).unwrap())
+///     .child("definitions", @syntax.ChildIndex::from_int(0).unwrap())
+///     .child("body", @syntax.ChildIndex::from_int(0).unwrap())
 ///   let below = @syntax.NodePath::root()
-///     .child("expression", @syntax.ChildIndex::new(0).unwrap())
-///     .child("right", @syntax.ChildIndex::new(0).unwrap())
+///     .child("expression", @syntax.ChildIndex::from_int(0).unwrap())
+///     .child("right", @syntax.ChildIndex::from_int(0).unwrap())
 ///   inspect(
 ///     to_body.append(below),
 ///     content="definitions[0].body[0].expression[0].right[0]",
@@ -150,7 +150,7 @@ pub fn NodePath::parent(self : NodePath) -> NodePath? {
     More(_, tail~) =>
       Some({
         reversed: tail,
-        length: NodeDepth::new(self.length.to_int() - 1).unwrap(),
+        length: NodeDepth::from_int(self.length.to_int() - 1).unwrap(),
       })
     Empty => None
   }

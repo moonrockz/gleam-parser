@@ -32,7 +32,7 @@ pub fn DefinitionCst::DefinitionCst(
   tokens~ : ArrayView[@scanner.Token],
 ) -> DefinitionCst {
   let span = if tokens.length() == 0 {
-    @span.SrcSpan::new(0, 0).unwrap()
+    @span.SrcSpan::from_ints(0, 0).unwrap()
   } else {
     @span.SrcSpan::from_compiler(
       tokens[0].span.start,

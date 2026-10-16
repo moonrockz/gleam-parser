@@ -55,8 +55,8 @@ impl @moonspec.World for ScannerWorld with fn configure(self, setup) {
       "module" => Module
       _ => fail("unknown comment kind: \{name}")
     }
-    self.comment = @gleam.SrcSpan::new(0, length).bind(span => {
-      @gleam.Comment::new(kind~, content="", span~)
+    self.comment = @gleam.SrcSpan::from_ints(0, length).bind(span => {
+      @gleam.Comment::from_parts(kind~, content="", span~)
     })
   })
   setup.then("comment construction is rejected", fn(_ctx) raise {
@@ -67,7 +67,7 @@ impl @moonspec.World for ScannerWorld with fn configure(self, setup) {
     end : Int32,
   ) raise {
     @expect.expect(self.comment.map(c => c.content_span())).to_equal(
-      @gleam.SrcSpan::new(start, end),
+      @gleam.SrcSpan::from_ints(start, end),
     )
   })
   setup.given("the Gleam source:", fn(ctx) {
@@ -134,7 +134,7 @@ impl @moonspec.World for ScannerWorld with fn configure(self, setup) {
   ) raise {
     guard self.stream is Some(s) else { fail("no scan") }
     @expect.expect(s.diagnostics[index - 1].span).to_equal(
-      @gleam.SrcSpan::new(start, end).unwrap(),
+      @gleam.SrcSpan::from_ints(start, end).unwrap(),
     )
   })
 }

@@ -1,17 +1,19 @@
 ///|
 test "a budget is at least one unit" {
   @expect.expect_all(e => {
-    e.expect(@fuel.Budget::new(1).map(b => b.units())).to_equal(Some(1))
-    e.expect(@fuel.Budget::new(100).map(b => b.units())).to_equal(Some(100))
-    e.expect(@fuel.Budget::new(0)).to_equal(None)
-    e.expect(@fuel.Budget::new(-5)).to_equal(None)
+    e.expect(@fuel.Budget::from_int(1).map(b => b.units())).to_equal(Some(1))
+    e
+    .expect(@fuel.Budget::from_int(100).map(b => b.units()))
+    .to_equal(Some(100))
+    e.expect(@fuel.Budget::from_int(0)).to_equal(None)
+    e.expect(@fuel.Budget::from_int(-5)).to_equal(None)
     e.expect(@fuel.default_budget.units()).to_equal(100)
   })
 }
 
 ///|
 test "spend takes one unit per nested entry and keeps the receiver" {
-  let b = @fuel.Budget::new(3).unwrap()
+  let b = @fuel.Budget::from_int(3).unwrap()
   let f0 = @fuel.Fuel(budget=b)
   let f1 = f0.spend(@fuel.Operation("expression"))
   let f2 = f1.spend(@fuel.Operation("expression"))
@@ -34,7 +36,7 @@ test "spend takes one unit per nested entry and keeps the receiver" {
 
 ///|
 test "spending past the budget raises FuelExhausted with the budget and the stack" {
-  let b = @fuel.Budget::new(2).unwrap()
+  let b = @fuel.Budget::from_int(2).unwrap()
   let f = @fuel.Fuel(budget=b)
     .spend(@fuel.Operation("expression"))
     .spend(@fuel.Operation("expression"))

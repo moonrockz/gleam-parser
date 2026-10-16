@@ -11,7 +11,7 @@ fn line_breaks_outside_tokens(
   while i < text.length() {
     let c = text.code_unit_at(i).to_int()
     // Inside a surrogate pair there is no code point boundary.
-    guard source.byte_offset_of(@span.Utf16Offset::new(i).unwrap())
+    guard source.byte_offset_of(@span.Utf16Offset::from_int(i).unwrap())
       is Some(byte) else {
       i += 1
       continue

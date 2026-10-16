@@ -17,7 +17,7 @@ pub(all) enum OracleOutput {
 ///   let value : @ast.OracleOutput = Error(
 ///     kind="UnexpectedEof",
 ///     lexical_kind=None,
-///     location=@span.SrcSpan::new(0, 0).unwrap(),
+///     location=@span.SrcSpan::from_ints(0, 0).unwrap(),
 ///   )
 ///   assert_eq(@ast.decode_oracle_output(@ast.encode_oracle_output(value)), value)
 /// }

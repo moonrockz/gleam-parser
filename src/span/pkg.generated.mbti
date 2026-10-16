@@ -8,52 +8,89 @@ import {
 // Values
 
 // Errors
+pub(all) suberror CoordinateError {
+  InvalidByteOffset(Int)
+  InvalidUtf16Offset(Int)
+  InvalidByteLength(Int)
+  InvalidLineNumber(Int)
+  InvalidColumnNumber(Int)
+  InvalidLineCount(Int)
+  ReversedSpan(start~ : Int, end~ : Int)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
-pub struct ByteLength(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn ByteLength::new(Int) -> Self?
+pub struct ByteLength {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn ByteLength::ByteLength(Int) -> Self raise CoordinateError
+#alias(new, deprecated)
+pub fn ByteLength::from_int(Int) -> Self?
 pub fn ByteLength::to_int(Self) -> Int
 
-pub struct ByteOffset(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn ByteOffset::new(Int) -> Self?
+pub struct ByteOffset {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn ByteOffset::ByteOffset(Int) -> Self raise CoordinateError
+#alias(new, deprecated)
+pub fn ByteOffset::from_int(Int) -> Self?
 pub fn ByteOffset::shift(Self, Int) -> Self?
 pub fn ByteOffset::to_int(Self) -> Int
 pub fn ByteOffset::zero() -> Self
 
-pub struct ColumnNumber(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn ColumnNumber::new(Int) -> Self?
+pub struct ColumnNumber {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn ColumnNumber::ColumnNumber(Int) -> Self raise CoordinateError
+#alias(new, deprecated)
+pub fn ColumnNumber::from_int(Int) -> Self?
 pub fn ColumnNumber::to_int(Self) -> Int
 
-pub struct LineCount(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn LineCount::new(Int) -> Self?
+pub struct LineCount {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn LineCount::LineCount(Int) -> Self raise CoordinateError
+#alias(new, deprecated)
+pub fn LineCount::from_int(Int) -> Self?
 pub fn LineCount::to_int(Self) -> Int
 
-pub struct LineNumber(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn LineNumber::new(Int) -> Self?
+pub struct LineNumber {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn LineNumber::LineNumber(Int) -> Self raise CoordinateError
+#alias(new, deprecated)
+pub fn LineNumber::from_int(Int) -> Self?
 pub fn LineNumber::to_int(Self) -> Int
 
 pub struct Position {
   line : LineNumber
   column : ColumnNumber
 } derive(Eq, Hash, @debug.Debug)
-#alias(at, deprecated)
-pub fn Position::Position(LineNumber, ColumnNumber) -> Self
-pub fn Position::new(Int, Int) -> Self?
+pub fn Position::Position(Int, Int) -> Self raise CoordinateError
+pub fn Position::at(LineNumber, ColumnNumber) -> Self
+#alias(new, deprecated)
+pub fn Position::from_ints(Int, Int) -> Self?
 
 pub struct SrcSpan {
   start : ByteOffset
   end : ByteOffset
 } derive(Eq, Hash, @debug.Debug)
-pub fn SrcSpan::between(ByteOffset, ByteOffset) -> Self?
+pub fn SrcSpan::SrcSpan(Int, Int) -> Self raise CoordinateError
 pub fn SrcSpan::contains(Self, ByteOffset) -> Bool
 pub fn SrcSpan::eof(ByteOffset) -> Self
 pub fn SrcSpan::from_compiler(ByteOffset, ByteOffset) -> Self?
+#alias(new, deprecated)
+pub fn SrcSpan::from_ints(Int, Int) -> Self?
+#alias(between, deprecated)
+pub fn SrcSpan::from_offsets(ByteOffset, ByteOffset) -> Self?
 pub fn SrcSpan::is_eof(Self) -> Bool
 pub fn SrcSpan::length(Self) -> ByteLength?
-pub fn SrcSpan::new(Int, Int) -> Self?
 
-pub struct Utf16Offset(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn Utf16Offset::new(Int) -> Self?
+pub struct Utf16Offset {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn Utf16Offset::Utf16Offset(Int) -> Self raise CoordinateError
+#alias(new, deprecated)
+pub fn Utf16Offset::from_int(Int) -> Self?
 pub fn Utf16Offset::shift(Self, Int) -> Self?
 pub fn Utf16Offset::to_int(Self) -> Int
 pub fn Utf16Offset::zero() -> Self

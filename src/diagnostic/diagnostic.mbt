@@ -48,7 +48,7 @@ pub(all) struct Diagnostic {
 ///     severity=Error,
 ///     title="Syntax error",
 ///     message="I don't know what this character means",
-///     span=@span.SrcSpan::new(2, 3).unwrap(),
+///     span=@span.SrcSpan::from_ints(2, 3).unwrap(),
 ///   )
 ///   debug_inspect(d.is_error(), content="true")
 ///   debug_inspect(d.labels.length(), content="0")

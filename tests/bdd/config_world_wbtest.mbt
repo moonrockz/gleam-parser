@@ -28,7 +28,7 @@ impl @moonspec.World for ConfigWorld with fn configure(self, setup) {
     }
   })
   setup.given1("the caller sets the fuel to {int}", fn(n : Int32) {
-    self.caller = { ..self.caller, fuel: @gleam.Budget::new(n), }
+    self.caller = { ..self.caller, fuel: @gleam.Budget::from_int(n), }
   })
   setup.when("I resolve the configuration", fn(_ctx) {
     self.result = Some(

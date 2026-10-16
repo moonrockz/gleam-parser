@@ -404,7 +404,7 @@ fn[V] option_span(o : @ast.BitArrayOption[V]) -> @span.SrcSpan {
 ///   debug_inspect(
 ///     def.span(),
 ///     content=(
-///       #|{ start: ByteOffset(0), end: ByteOffset(21) }
+///       #|{ start: { value: 0 }, end: { value: 21 } }
 ///     ),
 ///   )
 /// }
@@ -413,7 +413,7 @@ pub fn NodeRef::span(self : NodeRef) -> @span.SrcSpan {
   match self {
     Module(_, cst) =>
       match cst.tokens {
-        [] => @span.SrcSpan::new(0, 0).unwrap()
+        [] => @span.SrcSpan::from_ints(0, 0).unwrap()
         [.., last] =>
           @span.SrcSpan::from_compiler(@span.ByteOffset::zero(), last.span.end).unwrap()
       }

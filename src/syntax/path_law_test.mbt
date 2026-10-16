@@ -20,7 +20,7 @@ fn steps_of(xs : ArrayView[(Bool, UInt32)]) -> Array[@syntax.PathStep] {
     } else {
       "b"
     },
-    index: @syntax.ChildIndex::new(x.1.reinterpret_as_int()).unwrap(),
+    index: @syntax.ChildIndex::from_int(x.1.reinterpret_as_int()).unwrap(),
   })
 }
 
@@ -40,7 +40,7 @@ test "law: a child path's parent is the path, and its steps grow by the new step
           } else {
             "b"
           },
-          index: @syntax.ChildIndex::new(x.1.reinterpret_as_int()).unwrap(),
+          index: @syntax.ChildIndex::from_int(x.1.reinterpret_as_int()).unwrap(),
         }
         let next = path.child(step.field, step.index)
         built.push(step)
@@ -72,7 +72,7 @@ test "law: from_steps builds the path whose steps it gets" {
       let path = @syntax.NodePath::from_steps(steps)
       path.steps() == steps &&
       path == built &&
-      path.depth() == @syntax.NodeDepth::new(steps.length()).unwrap()
+      path.depth() == @syntax.NodeDepth::from_int(steps.length()).unwrap()
     },
     count=100,
     max_size=24,
@@ -95,12 +95,12 @@ test "law: append puts the steps of its argument after its own" {
       let root = @syntax.NodePath::root()
       pa.append(pb).steps() == [..a, ..b] &&
       pa.append(pb).depth() ==
-      @syntax.NodeDepth::new(a.length() + b.length()).unwrap() &&
+      @syntax.NodeDepth::from_int(a.length() + b.length()).unwrap() &&
       pa.append(root) == pa &&
       root.append(pa) == pa &&
       pa.append(pb).append(pc) == pa.append(pb.append(pc)) &&
-      pa.append(root.child("a", @syntax.ChildIndex::new(1).unwrap())) ==
-      pa.child("a", @syntax.ChildIndex::new(1).unwrap())
+      pa.append(root.child("a", @syntax.ChildIndex::from_int(1).unwrap())) ==
+      pa.child("a", @syntax.ChildIndex::from_int(1).unwrap())
     },
     count=100,
     max_size=24,

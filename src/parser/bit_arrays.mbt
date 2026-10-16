@@ -123,7 +123,7 @@ fn[A] Parser::parse_bit_array_option(
 fn parse_unit(value : String) -> @ast.BitArrayUnit? {
   let digits = value.replace(old="_", new="")
   match parse_u64(digits) {
-    Some(n) if n >= 1UL && n <= 255UL => @ast.BitArrayUnit::new(n.to_int())
+    Some(n) if n >= 1UL && n <= 255UL => @ast.BitArrayUnit::from_int(n.to_int())
     _ => None
   }
 }

@@ -349,7 +349,7 @@ fn Parser::take_documentation(
   until : @span.ByteOffset,
 ) -> @ast.Documentation? {
   let content = StringBuilder()
-  let mut doc_start = @span.ByteOffset::new(2147483647).unwrap()
+  let mut doc_start = @span.ByteOffset::from_int(2147483647).unwrap()
   while self.doc_head < self.doc_comments.length() {
     let (span, line) = self.doc_comments[self.doc_head]
     if span.start < doc_start {

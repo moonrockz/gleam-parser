@@ -2,6 +2,29 @@ Feature: Source text positions
   gleam-parser keeps spans as UTF-8 byte offsets, as the Gleam compiler does,
   and maps them to 1-based lines and columns that count code points.
 
+  Scenario Outline: Native constructors report invalid coordinates
+    When I construct a native "<kind>" from <first> and <second>
+    Then construction raises "<error>"
+
+    Examples:
+      | kind     | first | second | error                 |
+      | span     | -1    | 2      | invalid byte offset   |
+      | span     | 0     | -1     | invalid byte offset   |
+      | span     | 3     | 2      | reversed span         |
+      | span     | 3     | 0      | reversed span         |
+      | position | 0     | 1      | invalid line number   |
+      | position | 1     | 0      | invalid column number |
+
+  Scenario Outline: Native constructors accept valid coordinates
+    When I construct a native "<kind>" from <first> and <second>
+    Then construction "succeeds"
+
+    Examples:
+      | kind     | first | second |
+      | span     | 0     | 0      |
+      | span     | 1     | 2      |
+      | position | 1     | 1      |
+
   Scenario Outline: Position of a byte offset
     Given the source text '<text>'
     When I look up byte offset <byte>

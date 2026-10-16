@@ -58,22 +58,22 @@ test "precedence tables follow the compiler" {
 test "expression reduction flattens pipelines and builds bin ops" {
   let a : @ast.Expr = Var(
     location=sp(
-      @span.ByteOffset::new(0).unwrap(),
-      @span.ByteOffset::new(1).unwrap(),
+      @span.ByteOffset::from_int(0).unwrap(),
+      @span.ByteOffset::from_int(1).unwrap(),
     ),
     name="a",
   )
   let b : @ast.Expr = Var(
     location=sp(
-      @span.ByteOffset::new(5).unwrap(),
-      @span.ByteOffset::new(6).unwrap(),
+      @span.ByteOffset::from_int(5).unwrap(),
+      @span.ByteOffset::from_int(6).unwrap(),
     ),
     name="b",
   )
   let c : @ast.Expr = Var(
     location=sp(
-      @span.ByteOffset::new(10).unwrap(),
-      @span.ByteOffset::new(11).unwrap(),
+      @span.ByteOffset::from_int(10).unwrap(),
+      @span.ByteOffset::from_int(11).unwrap(),
     ),
     name="c",
   )
@@ -93,6 +93,9 @@ test "expression reduction flattens pipelines and builds bin ops" {
   }
   @expect.expect(scalar_72_58.to_int()).to_equal(2)
   @expect.expect(location).to_equal(
-    sp(@span.ByteOffset::new(0).unwrap(), @span.ByteOffset::new(6).unwrap()),
+    sp(
+      @span.ByteOffset::from_int(0).unwrap(),
+      @span.ByteOffset::from_int(6).unwrap(),
+    ),
   )
 }

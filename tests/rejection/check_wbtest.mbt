@@ -88,8 +88,8 @@ fn oracle_error(v : Map[String, Json]) -> (String, String?, @gleam.SrcSpan)? {
       kind,
       lexical_kind,
       @gleam.SrcSpan::from_compiler(
-        @gleam.ByteOffset::new(start.to_int()).unwrap(),
-        @gleam.ByteOffset::new(end.to_int()).unwrap(),
+        @gleam.ByteOffset::from_int(start.to_int()).unwrap(),
+        @gleam.ByteOffset::from_int(end.to_int()).unwrap(),
       ).unwrap(),
     ),
   )

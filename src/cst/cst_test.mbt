@@ -19,7 +19,7 @@ test "definitions tile the tokens and to_source rebuilds the text" {
     e.expect(cst.definitions.length()).to_equal(2)
     e
     .expect(cst.definitions[0].span)
-    .to_equal(@span.SrcSpan::new(0, 15).unwrap())
+    .to_equal(@span.SrcSpan::from_ints(0, 15).unwrap())
     // Trivia between two tokens belongs to the second token.
     e.expect(cst.definitions[0].to_source()).to_equal("import gleam/io")
     e
@@ -27,7 +27,7 @@ test "definitions tile the tokens and to_source rebuilds the text" {
     .to_be_true()
     e
     .expect(cst.definitions[1].span.start)
-    .to_equal(@span.ByteOffset::new(22).unwrap())
+    .to_equal(@span.ByteOffset::from_int(22).unwrap())
     e.expect(cst.definitions[1].kind).to_equal(@cst.DefinitionKind::Function)
   })
 }
@@ -45,7 +45,7 @@ test "a module with no tokens keeps its trivia" {
 ///|
 test "an empty definition has the empty span" {
   let d = @cst.DefinitionCst(kind=Skipped, name=None, tokens=[][:])
-  @expect.expect(d.span).to_equal(@span.SrcSpan::new(0, 0).unwrap())
+  @expect.expect(d.span).to_equal(@span.SrcSpan::from_ints(0, 0).unwrap())
 }
 
 ///|

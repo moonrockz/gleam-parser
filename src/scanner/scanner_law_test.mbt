@@ -29,7 +29,7 @@ test "law: scanned comments reconstruct through the checked constructor and slic
         }
         guard trivia.get(0) is Some(Comment(comment)) else { return false }
         match
-          @scanner.Comment::new(
+          @scanner.Comment::from_parts(
             kind=comment.kind,
             content=comment.content,
             span=comment.span,

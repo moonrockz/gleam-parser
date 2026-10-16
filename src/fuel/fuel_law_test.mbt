@@ -30,7 +30,7 @@ test "law: fuel chains budget times, fails on budget + 1, and counts every push"
   @quickcheck.check(
     (t : Trace) => {
       let Trace(budget, ops) = t
-      let b = @fuel.Budget::new(budget).unwrap()
+      let b = @fuel.Budget::from_int(budget).unwrap()
       let mut f = @fuel.Fuel(budget=b)
       let mut ok = true
       for i, name in ops {

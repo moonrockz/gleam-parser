@@ -199,7 +199,7 @@ test "tr: a cursor and a tree" {
   let cursor = @gleam.TreeCursor(tree.root())
   @expect.expect_all(e => {
     e
-    .expect(cursor.goto_node_at(@gleam.ByteOffset::new(23).unwrap()))
+    .expect(cursor.goto_node_at(@gleam.ByteOffset::from_int(23).unwrap()))
     .to_be_true()
     e.expect(cursor.node().kind()).to_equal("bin_op")
     e
@@ -207,7 +207,7 @@ test "tr: a cursor and a tree" {
     .to_equal("definitions[0].body[0].expression[0]")
     e.expect(cursor.goto_first_child()).to_be_true()
     e.expect(cursor.field_name()).to_equal(Some("left"))
-    let plus = tree.node_at(@gleam.ByteOffset::new(23).unwrap()).unwrap()
+    let plus = tree.node_at(@gleam.ByteOffset::from_int(23).unwrap()).unwrap()
     e.expect(tree.parent(plus).map(n => n.kind())).to_equal(Some("expression"))
     e
     .expect(tree.node_path(plus).map(p => p.to_string()))

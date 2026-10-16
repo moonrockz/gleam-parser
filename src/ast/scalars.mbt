@@ -11,7 +11,8 @@ pub(all) struct TupleIndex(UInt64) derive(Eq, Compare, Hash, Debug)
 
 ///|
 /// Validate a signed input. Return `None` for a negative index.
-pub fn TupleIndex::new(value : Int64) -> TupleIndex? {
+#alias(new, deprecated="Use `TupleIndex::from_int64(...)` instead")
+pub fn TupleIndex::from_int64(value : Int64) -> TupleIndex? {
   if value < 0L {
     None
   } else {
@@ -27,20 +28,24 @@ pub fn TupleIndex::to_uint64(self : TupleIndex) -> UInt64 {
 
 ///|
 /// A bit array segment's unit, in the compiler's byte range `0..255`.
-pub struct BitArrayUnit(Int32) derive(Eq, Compare, Hash, Debug)
+#valtype
+pub struct BitArrayUnit {
+  priv value : Int32
+} derive(Eq, Compare, Hash, Debug)
 
 ///|
 /// Validate a bit array unit. Return `None` outside `0..255`.
 ///
 /// ```mbt check
 /// test {
-///   debug_inspect(@ast.BitArrayUnit::new(256), content="None")
-///   assert_eq(@ast.BitArrayUnit::new(255).unwrap().to_int(), 255)
+///   debug_inspect(@ast.BitArrayUnit::from_int(256), content="None")
+///   assert_eq(@ast.BitArrayUnit::from_int(255).unwrap().to_int(), 255)
 /// }
 /// ```
-pub fn BitArrayUnit::new(value : Int32) -> BitArrayUnit? {
+#alias(new, deprecated="Use `BitArrayUnit::from_int(...)` instead")
+pub fn BitArrayUnit::from_int(value : Int32) -> BitArrayUnit? {
   if value >= 0 && value <= 255 {
-    Some(BitArrayUnit(value))
+    Some({ value, })
   } else {
     None
   }
@@ -49,5 +54,29 @@ pub fn BitArrayUnit::new(value : Int32) -> BitArrayUnit? {
 ///|
 /// The unit value for serialization or formatting.
 pub fn BitArrayUnit::to_int(self : BitArrayUnit) -> Int32 {
-  self.0
+  self.value
+}
+
+///|
+/// A bit array unit falls outside the byte range `0..255`.
+pub(all) suberror InvalidBitArrayUnit {
+  InvalidBitArrayUnit(Int32)
+} derive(Eq, Debug)
+
+///|
+/// Create a bit array unit. Raise `InvalidBitArrayUnit` outside `0..255`.
+/// Use `from_int` to get `Option`.
+///
+/// ```mbt check
+/// test {
+///   assert_eq(@ast.BitArrayUnit(255).to_int(), 255)
+/// }
+/// ```
+pub fn BitArrayUnit::BitArrayUnit(
+  value : Int32,
+) -> BitArrayUnit raise InvalidBitArrayUnit {
+  guard BitArrayUnit::from_int(value) is Some(unit) else {
+    raise InvalidBitArrayUnit(value)
+  }
+  unit
 }

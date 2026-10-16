@@ -23,6 +23,7 @@ pub using @span {
   type LineNumber,
   type LineCount,
   type ColumnNumber,
+  type CoordinateError,
 }
 
 ///|
@@ -50,6 +51,7 @@ pub using @scanner {
   type Trivia,
   type Comment,
   type CommentKind,
+  type CommentError,
   type LexicalErrorType,
   type UnicodeEscapeError,
 }
@@ -142,6 +144,7 @@ pub using @ast {
   type DecodeError,
   type TupleIndex,
   type BitArrayUnit,
+  type InvalidBitArrayUnit,
 }
 
 ///|
@@ -198,7 +201,7 @@ pub fn encode_expr(e : Expr) -> Json {
 /// ```mbt check
 /// test {
 ///   let value : @gleam.Expr = Var(
-///     location=@gleam.SrcSpan::new(0, 1).unwrap(),
+///     location=@gleam.SrcSpan::from_ints(0, 1).unwrap(),
 ///     name="x",
 ///   )
 ///   assert_eq(@gleam.decode_expr(@gleam.encode_expr(value)), value)
@@ -231,6 +234,7 @@ pub using @dialect {type Dialect, type Rule}
 /// and the error `FuelExhausted`.
 pub using @fuel {
   type Budget,
+  type InvalidBudget,
   type Operation,
   type Spent,
   type Fuel,
@@ -266,6 +270,7 @@ pub using @syntax {
   type PathStep,
   type ChildIndex,
   type NodeDepth,
+  type TraversalValueError,
   type NodePath,
   type Tree,
   trait Visitor,

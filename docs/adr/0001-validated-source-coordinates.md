@@ -8,11 +8,21 @@ through checked factories and leave at serialization, string and array boundarie
 Changing the MoonBit API is necessary to prevent callers from mixing units
 or creating values outside their domain. Keep the oracle JSON unchanged.
 
-Use MoonBit's native constructors when the arguments already guarantee the
-invariant. `Position(line, column)` accepts validated coordinates.
+Provide MoonBit native smart constructors that raise typed validation
+errors. Pair them with named `from_*` factories that return `Option` for
+the same valid inputs. Errors retain the rejected value or endpoints.
+Use `from_int` for one integer and `from_ints` for a coordinate pair.
+`Position::at` accepts validated coordinates without failure.
 `TupleIndex(value)` accepts any `UInt64`, whose entire range is valid.
-Factories that validate raw values keep their `Option` result. This avoids
-adding raised errors only to support constructor syntax.
+Its optional `from_int64` factory rejects negative signed inputs.
+
+Validated scalar wrappers use `#valtype` records with private fields. A tuple struct
+already has a generated constructor with the type's name. Private record
+fields allow a custom constructor with that name and keep raw values
+behind validation. Keep `derive(Debug)` and update debug examples to the
+record representation. Value types preserve the parser's WebAssembly stack
+budget; boxed records made the deep-function rejection fixture overflow.
+Canonical JSON does not change.
 
 A normal source span must have non-negative, ordered endpoints. Preserve the
 Gleam compiler's reversed `start..0` EOF location through a named constructor

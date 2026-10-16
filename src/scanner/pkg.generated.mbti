@@ -22,6 +22,10 @@ pub fn tokenize_text(String) -> TokenStream
 pub fn wrap(String) -> String
 
 // Errors
+pub(all) suberror CommentError {
+  CommentAtEof(@span.SrcSpan)
+  CommentPrefixTooShort(kind~ : CommentKind, span~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
 pub struct Comment {
@@ -29,8 +33,10 @@ pub struct Comment {
   content : String
   span : @span.SrcSpan
 } derive(Eq, @debug.Debug)
+pub fn Comment::Comment(kind~ : CommentKind, content~ : String, span~ : @span.SrcSpan) -> Self raise CommentError
 pub fn Comment::content_span(Self) -> @span.SrcSpan
-pub fn Comment::new(kind~ : CommentKind, content~ : String, span~ : @span.SrcSpan) -> Self?
+#alias(new, deprecated)
+pub fn Comment::from_parts(kind~ : CommentKind, content~ : String, span~ : @span.SrcSpan) -> Self?
 
 pub(all) enum CommentKind {
   Regular

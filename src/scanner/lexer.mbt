@@ -1012,9 +1012,9 @@ fn Lexer::lex_comment(
     self.cursor.advance()
   }
   let content = self.cursor.slice(content_unit)
-  let span = @span.SrcSpan::between(start, self.cursor.position()).unwrap()
+  let span = @span.SrcSpan::from_offsets(start, self.cursor.position()).unwrap()
   // The lexer consumed the prefix before it read the content.
-  let comment = Comment::new(kind~, content~, span~).unwrap()
+  let comment = Comment::from_parts(kind~, content~, span~).unwrap()
   self.trivia(Comment(comment))
 }
 

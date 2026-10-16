@@ -22,23 +22,25 @@ test "keywords are the compiler's 22 words" {
 
 ///|
 test "comment spans exclude the slashes" {
-  let c = @scanner.Comment::new(
+  let c = @scanner.Comment::from_parts(
     kind=Doc,
     content=" hi",
-    span=@span.SrcSpan::new(10, 16).unwrap(),
+    span=@span.SrcSpan::from_ints(10, 16).unwrap(),
   ).unwrap()
   @expect.expect_all(e => {
     e.expect(@scanner.CommentKind::Regular.prefix_length().to_int()).to_equal(2)
     e.expect(@scanner.CommentKind::Doc.prefix_length().to_int()).to_equal(3)
     e.expect(@scanner.CommentKind::Module.prefix_length().to_int()).to_equal(4)
-    e.expect(c.content_span()).to_equal(@span.SrcSpan::new(13, 16).unwrap())
+    e
+    .expect(c.content_span())
+    .to_equal(@span.SrcSpan::from_ints(13, 16).unwrap())
     e.expect(@scanner.Trivia::Comment(c).text()).to_equal("/// hi")
     e
     .expect(@scanner.Trivia::Comment(c).span())
-    .to_equal(@span.SrcSpan::new(10, 16).unwrap())
+    .to_equal(@span.SrcSpan::from_ints(10, 16).unwrap())
     e
     .expect(
-      @scanner.Trivia::Newline("\r\n", @span.SrcSpan::new(0, 2).unwrap()).text(),
+      @scanner.Trivia::Newline("\r\n", @span.SrcSpan::from_ints(0, 2).unwrap()).text(),
     )
     .to_equal("\r\n")
   })
@@ -52,42 +54,44 @@ test "comment construction rejects spans shorter than the prefix" {
       for length in 0..<prefix {
         e
         .expect(
-          @scanner.Comment::new(
+          @scanner.Comment::from_parts(
             kind~,
             content="",
-            span=@span.SrcSpan::new(0, length).unwrap(),
+            span=@span.SrcSpan::from_ints(0, length).unwrap(),
           ),
         )
         .to_equal(None)
       }
       e
       .expect(
-        @scanner.Comment::new(
+        @scanner.Comment::from_parts(
           kind~,
           content="",
-          span=@span.SrcSpan::eof(@span.ByteOffset::new(10).unwrap()),
+          span=@span.SrcSpan::eof(@span.ByteOffset::from_int(10).unwrap()),
         ),
       )
       .to_equal(None)
       for start in [0, 10, 2147483647 - prefix] {
-        guard @scanner.Comment::new(
+        guard @scanner.Comment::from_parts(
             kind~,
             content="",
-            span=@span.SrcSpan::new(start, start + prefix).unwrap(),
+            span=@span.SrcSpan::from_ints(start, start + prefix).unwrap(),
           )
           is Some(comment) else {
           fail("valid empty comment was rejected")
         }
         e
         .expect(comment.content_span())
-        .to_equal(@span.SrcSpan::new(start + prefix, start + prefix).unwrap())
+        .to_equal(
+          @span.SrcSpan::from_ints(start + prefix, start + prefix).unwrap(),
+        )
       }
       e
       .expect(
-        @scanner.Comment::new(
+        @scanner.Comment::from_parts(
           kind~,
           content="",
-          span=@span.SrcSpan::new(2147483647, 2147483647).unwrap(),
+          span=@span.SrcSpan::from_ints(2147483647, 2147483647).unwrap(),
         ),
       )
       .to_equal(None)
@@ -97,7 +101,7 @@ test "comment construction rejects spans shorter than the prefix" {
 
 ///|
 test "a token and a stream rebuild their source" {
-  let sp = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b).unwrap()
+  let sp = (a : Int32, b : Int32) => @span.SrcSpan::from_ints(a, b).unwrap()
   let t1 = @scanner.Token::{
     kind: Keyword(Fn),
     lexeme: "fn",
@@ -129,7 +133,7 @@ test "a stream with only trivia rebuilds from its trivia" {
   let stream = @scanner.TokenStream::{
     tokens: [][:],
     trivia: [
-      @scanner.Trivia::Whitespace(" ", @span.SrcSpan::new(0, 1).unwrap()),
+      @scanner.Trivia::Whitespace(" ", @span.SrcSpan::from_ints(0, 1).unwrap()),
     ][:],
     diagnostics: [][:],
   }

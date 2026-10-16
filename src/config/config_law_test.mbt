@@ -15,8 +15,8 @@ fn pick_dialect(i : Int32) -> @dialect.Dialect? {
 fn pick_fuel(i : Int32) -> @fuel.Budget? {
   match i % 4 {
     0 => None
-    1 => @fuel.Budget::new(1)
-    2 => @fuel.Budget::new(7)
+    1 => @fuel.Budget::from_int(1)
+    2 => @fuel.Budget::from_int(7)
     _ => Some(@fuel.default_budget)
   }
 }

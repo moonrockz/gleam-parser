@@ -16,7 +16,7 @@ test "cf: a small budget names what nests" {
   let deep = "fn f() {\n  [[[[[1]]]]]\n}\n"
   let r = @gleam.parse_text(deep, config={
     ..@gleam.Config::default(),
-    fuel: @gleam.Budget::new(3).unwrap(),
+    fuel: @gleam.Budget::from_int(3).unwrap(),
   })
   @expect.expect_all(e => {
     e.expect(r.diagnostics.map(d => d.code)).to_equal(["GL-PARSE-004"])
@@ -41,11 +41,11 @@ test "cf: a larger budget on a large stack" {
   let deep = "fn f() {\n  [[[[[1]]]]]\n}\n"
   let r = @gleam.parse_text(deep, config={
     ..@gleam.Config::default(),
-    fuel: @gleam.Budget::new(500).unwrap(),
+    fuel: @gleam.Budget::from_int(500).unwrap(),
   })
   @expect.expect_all(e => {
     e.expect(r.has_errors()).to_be_false()
-    e.expect(@gleam.Budget::new(0)).to_equal(None)
+    e.expect(@gleam.Budget::from_int(0)).to_equal(None)
   })
 }
 ```

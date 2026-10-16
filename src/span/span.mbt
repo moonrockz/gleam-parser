@@ -7,26 +7,50 @@ pub struct SrcSpan {
 } derive(Eq, Debug, Hash)
 
 ///|
+/// Create an ordered byte range. Raise `CoordinateError` for negative
+/// offsets or an end before the start. Use `from_ints` to get `Option`.
+///
+/// ```mbt check
+/// test {
+///   let span = @span.SrcSpan(2, 5)
+///   assert_eq(span.length().map(n => n.to_int()), Some(3))
+/// }
+/// ```
+pub fn SrcSpan::SrcSpan(
+  start : Int32,
+  end : Int32,
+) -> SrcSpan raise CoordinateError {
+  let start_offset = ByteOffset(start)
+  let end_offset = ByteOffset(end)
+  guard SrcSpan::from_offsets(start_offset, end_offset) is Some(span) else {
+    raise ReversedSpan(start~, end~)
+  }
+  span
+}
+
+///|
 /// Create an ordered range from raw byte offsets.
 /// Return `None` for negative offsets or an end before the start.
 ///
 /// ```mbt check
 /// test {
-///   debug_inspect(@span.SrcSpan::new(3, 2), content="None")
-///   let span = @span.SrcSpan::new(2, 5).unwrap()
+///   debug_inspect(@span.SrcSpan::from_ints(3, 2), content="None")
+///   let span = @span.SrcSpan::from_ints(2, 5).unwrap()
 ///   debug_inspect(span.length().map(n => n.to_int()), content="Some(3)")
 /// }
 /// ```
-pub fn SrcSpan::new(start : Int32, end : Int32) -> SrcSpan? {
-  match (ByteOffset::new(start), ByteOffset::new(end)) {
-    (Some(start), Some(end)) => SrcSpan::between(start, end)
+#alias(new, deprecated="Use `SrcSpan::from_ints(...)` instead")
+pub fn SrcSpan::from_ints(start : Int32, end : Int32) -> SrcSpan? {
+  match (ByteOffset::from_int(start), ByteOffset::from_int(end)) {
+    (Some(start), Some(end)) => SrcSpan::from_offsets(start, end)
     _ => None
   }
 }
 
 ///|
 /// Create an ordered range. Return `None` when the end precedes the start.
-pub fn SrcSpan::between(start : ByteOffset, end : ByteOffset) -> SrcSpan? {
+#alias(between, deprecated="Use `SrcSpan::from_offsets(...)` instead")
+pub fn SrcSpan::from_offsets(start : ByteOffset, end : ByteOffset) -> SrcSpan? {
   if start <= end {
     Some({ start, end, })
   } else {
@@ -41,7 +65,7 @@ pub fn SrcSpan::between(start : ByteOffset, end : ByteOffset) -> SrcSpan? {
 ///
 /// ```mbt check
 /// test {
-///   let location = @span.SrcSpan::eof(@span.ByteOffset::new(5).unwrap())
+///   let location = @span.SrcSpan::eof(@span.ByteOffset::from_int(5).unwrap())
 ///   assert_eq(location.is_eof(), true)
 ///   assert_eq(location.length(), None)
 /// }
@@ -57,7 +81,7 @@ pub fn SrcSpan::from_compiler(start : ByteOffset, end : ByteOffset) -> SrcSpan? 
   if start > end && end == ByteOffset::zero() {
     Some(SrcSpan::eof(start))
   } else {
-    SrcSpan::between(start, end)
+    SrcSpan::from_offsets(start, end)
   }
 }
 
@@ -80,7 +104,7 @@ pub fn SrcSpan::length(self : SrcSpan) -> ByteLength? {
   if self.is_eof() {
     None
   } else {
-    ByteLength::new(self.end.to_int() - self.start.to_int())
+    ByteLength::from_int(self.end.to_int() - self.start.to_int())
   }
 }
 
@@ -92,18 +116,37 @@ pub struct Position {
 } derive(Eq, Debug, Hash)
 
 ///|
+/// Create a one-based position from raw coordinates.
+/// Raise `CoordinateError` for a line or column below one.
+/// Use `from_ints` to get `Option`, or `at` with validated coordinates.
+///
+/// ```mbt check
+/// test {
+///   let position = @span.Position(2, 1)
+///   assert_eq(position.line.to_int(), 2)
+/// }
+/// ```
+pub fn Position::Position(
+  line : Int32,
+  column : Int32,
+) -> Position raise CoordinateError {
+  Position::at(LineNumber(line), ColumnNumber(column))
+}
+
+///|
 /// Create a position from raw coordinates. Return `None` below one.
 ///
 /// ```mbt check
 /// test {
-///   debug_inspect(@span.Position::new(0, 1), content="None")
-///   let position = @span.Position::new(1, 2).unwrap()
+///   debug_inspect(@span.Position::from_ints(0, 1), content="None")
+///   let position = @span.Position::from_ints(1, 2).unwrap()
 ///   assert_eq(position.column.to_int(), 2)
 /// }
 /// ```
-pub fn Position::new(line : Int32, column : Int32) -> Position? {
-  match (LineNumber::new(line), ColumnNumber::new(column)) {
-    (Some(line), Some(column)) => Some(Position(line, column))
+#alias(new, deprecated="Use `Position::from_ints(...)` instead")
+pub fn Position::from_ints(line : Int32, column : Int32) -> Position? {
+  match (LineNumber::from_int(line), ColumnNumber::from_int(column)) {
+    (Some(line), Some(column)) => Some(Position::at(line, column))
     _ => None
   }
 }
@@ -113,14 +156,13 @@ pub fn Position::new(line : Int32, column : Int32) -> Position? {
 ///
 /// ```mbt check
 /// test {
-///   let position = @span.Position(
-///     @span.LineNumber::new(2).unwrap(),
-///     @span.ColumnNumber::new(1).unwrap(),
+///   let position = @span.Position::at(
+///     @span.LineNumber::from_int(2).unwrap(),
+///     @span.ColumnNumber::from_int(1).unwrap(),
 ///   )
-///   assert_eq(position, @span.Position::new(2, 1).unwrap())
+///   assert_eq(position, @span.Position::from_ints(2, 1).unwrap())
 /// }
 /// ```
-#alias(at, deprecated="Use `Position(line, column)` instead")
-pub fn Position::Position(line : LineNumber, column : ColumnNumber) -> Position {
+pub fn Position::at(line : LineNumber, column : ColumnNumber) -> Position {
   { line, column, }
 }

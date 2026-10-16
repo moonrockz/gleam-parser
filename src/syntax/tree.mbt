@@ -90,7 +90,7 @@ pub fn Tree::parent(self : Tree, n : NodeRef) -> NodeRef? {
 ///   debug_inspect(
 ///     tree.step(b),
 ///     content=(
-///       #|Some({ field: "arguments", index: ChildIndex(1) })
+///       #|Some({ field: "arguments", index: { value: 1 } })
 ///     ),
 ///   )
 ///   debug_inspect(tree.field_of(b), content="Some(\"arguments\")")
@@ -153,7 +153,7 @@ pub fn Tree::path(self : Tree, n : NodeRef) -> Array[NodeRef] {
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   // Byte 25 is the `b` in `a + b`.
-///   let b = tree.node_at(@span.ByteOffset::new(25).unwrap()).unwrap()
+///   let b = tree.node_at(@span.ByteOffset::from_int(25).unwrap()).unwrap()
 ///   inspect("\{b.category()}/\{b.kind()}", content="expression/var")
 ///   inspect(
 ///     tree.node_path(b).unwrap(),

@@ -46,10 +46,10 @@ test "tk: token position" {
   let stream = @gleam.tokenize(source)
   let equal = stream.tokens[2]
   @expect.expect_all(e => {
-    e.expect(equal.span).to_equal(@gleam.SrcSpan::new(7, 8).unwrap())
+    e.expect(equal.span).to_equal(@gleam.SrcSpan::from_ints(7, 8).unwrap())
     e
     .expect(source.position_of(equal.span.start))
-    .to_equal(Some(@gleam.Position::new(1, 7).unwrap()))
+    .to_equal(Some(@gleam.Position::from_ints(1, 7).unwrap()))
   })
 }
 ```

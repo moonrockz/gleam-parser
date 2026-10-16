@@ -1,26 +1,26 @@
 ///|
 test "coordinate constructors reject invalid values" {
   @expect.expect_all(e => {
-    e.expect(@span.ByteOffset::new(-1)).to_equal(None)
-    e.expect(@span.Utf16Offset::new(-1)).to_equal(None)
-    e.expect(@span.ByteLength::new(-1)).to_equal(None)
-    e.expect(@span.LineNumber::new(0)).to_equal(None)
-    e.expect(@span.ColumnNumber::new(0)).to_equal(None)
-    e.expect(@span.LineNumber::new(-1)).to_equal(None)
-    e.expect(@span.ColumnNumber::new(-1)).to_equal(None)
-    e.expect(@span.LineCount::new(0)).to_equal(None)
-    e.expect(@span.LineCount::new(-1)).to_equal(None)
-    e.expect(@span.LineCount::new(1).unwrap().to_int()).to_equal(1)
-    e.expect(@span.ByteOffset::new(0).unwrap().to_int()).to_equal(0)
-    e.expect(@span.LineNumber::new(1).unwrap().to_int()).to_equal(1)
-    e.expect(@span.ColumnNumber::new(1).unwrap().to_int()).to_equal(1)
+    e.expect(@span.ByteOffset::from_int(-1)).to_equal(None)
+    e.expect(@span.Utf16Offset::from_int(-1)).to_equal(None)
+    e.expect(@span.ByteLength::from_int(-1)).to_equal(None)
+    e.expect(@span.LineNumber::from_int(0)).to_equal(None)
+    e.expect(@span.ColumnNumber::from_int(0)).to_equal(None)
+    e.expect(@span.LineNumber::from_int(-1)).to_equal(None)
+    e.expect(@span.ColumnNumber::from_int(-1)).to_equal(None)
+    e.expect(@span.LineCount::from_int(0)).to_equal(None)
+    e.expect(@span.LineCount::from_int(-1)).to_equal(None)
+    e.expect(@span.LineCount::from_int(1).unwrap().to_int()).to_equal(1)
+    e.expect(@span.ByteOffset::from_int(0).unwrap().to_int()).to_equal(0)
+    e.expect(@span.LineNumber::from_int(1).unwrap().to_int()).to_equal(1)
+    e.expect(@span.ColumnNumber::from_int(1).unwrap().to_int()).to_equal(1)
   })
 }
 
 ///|
 test "offset arithmetic checks underflow and overflow" {
-  let zero = @span.ByteOffset::new(0).unwrap()
-  let last = @span.ByteOffset::new(2147483647).unwrap()
+  let zero = @span.ByteOffset::from_int(0).unwrap()
+  let last = @span.ByteOffset::from_int(2147483647).unwrap()
   @expect.expect_all(e => {
     e.expect(zero.shift(-1)).to_equal(None)
     e.expect(last.shift(1)).to_equal(None)
@@ -32,25 +32,25 @@ test "offset arithmetic checks underflow and overflow" {
 ///|
 test "spans validate ranges and represent compiler EOF spans explicitly" {
   @expect.expect_all(e => {
-    e.expect(@span.SrcSpan::new(-1, 3)).to_equal(None)
-    e.expect(@span.SrcSpan::new(3, 2)).to_equal(None)
-    e.expect(@span.SrcSpan::new(3, 0)).to_equal(None)
-    e.expect(@span.Position::new(0, 1)).to_equal(None)
-    e.expect(@span.Position::new(1, 0)).to_equal(None)
-    let eof = @span.SrcSpan::eof(@span.ByteOffset::new(3).unwrap())
+    e.expect(@span.SrcSpan::from_ints(-1, 3)).to_equal(None)
+    e.expect(@span.SrcSpan::from_ints(3, 2)).to_equal(None)
+    e.expect(@span.SrcSpan::from_ints(3, 0)).to_equal(None)
+    e.expect(@span.Position::from_ints(0, 1)).to_equal(None)
+    e.expect(@span.Position::from_ints(1, 0)).to_equal(None)
+    let eof = @span.SrcSpan::eof(@span.ByteOffset::from_int(3).unwrap())
     e.expect(eof.is_eof()).to_be_true()
     e.expect(eof.start.to_int()).to_equal(3)
     e.expect(eof.end.to_int()).to_equal(0)
     e.expect(eof.length()).to_equal(None)
-    e.expect(eof.contains(@span.ByteOffset::new(3).unwrap())).to_be_false()
+    e.expect(eof.contains(@span.ByteOffset::from_int(3).unwrap())).to_be_false()
     let at_zero = @span.SrcSpan::eof(@span.ByteOffset::zero())
-    e.expect(at_zero).to_equal(@span.SrcSpan::new(0, 0).unwrap())
+    e.expect(at_zero).to_equal(@span.SrcSpan::from_ints(0, 0).unwrap())
     e.expect(at_zero.length().map(n => n.to_int())).to_equal(Some(0))
     e
     .expect(
       @span.SrcSpan::from_compiler(
-        @span.ByteOffset::new(3).unwrap(),
-        @span.ByteOffset::new(2).unwrap(),
+        @span.ByteOffset::from_int(3).unwrap(),
+        @span.ByteOffset::from_int(2).unwrap(),
       ),
     )
     .to_equal(None)
@@ -61,17 +61,17 @@ test "spans validate ranges and represent compiler EOF spans explicitly" {
 test "law: coordinate constructors preserve exactly the valid integers" {
   @quickcheck.check(
     (value : Int32) => {
-      @span.ByteOffset::new(value).map(x => x.to_int()) ==
+      @span.ByteOffset::from_int(value).map(x => x.to_int()) ==
       (if value >= 0 { Some(value) } else { None }) &&
-      @span.Utf16Offset::new(value).map(x => x.to_int()) ==
+      @span.Utf16Offset::from_int(value).map(x => x.to_int()) ==
       (if value >= 0 { Some(value) } else { None }) &&
-      @span.ByteLength::new(value).map(x => x.to_int()) ==
+      @span.ByteLength::from_int(value).map(x => x.to_int()) ==
       (if value >= 0 { Some(value) } else { None }) &&
-      @span.LineNumber::new(value).map(x => x.to_int()) ==
+      @span.LineNumber::from_int(value).map(x => x.to_int()) ==
       (if value >= 1 { Some(value) } else { None }) &&
-      @span.ColumnNumber::new(value).map(x => x.to_int()) ==
+      @span.ColumnNumber::from_int(value).map(x => x.to_int()) ==
       (if value >= 1 { Some(value) } else { None }) &&
-      @span.LineCount::new(value).map(x => x.to_int()) ==
+      @span.LineCount::from_int(value).map(x => x.to_int()) ==
       (if value >= 1 { Some(value) } else { None })
     },
     count=200,
@@ -91,9 +91,15 @@ test "law: offset shifts agree with signed wide arithmetic" {
       } else {
         None
       }
-      @span.ByteOffset::new(value).unwrap().shift(delta).map(x => x.to_int()) ==
+      @span.ByteOffset::from_int(value)
+      .unwrap()
+      .shift(delta)
+      .map(x => x.to_int()) ==
       expected &&
-      @span.Utf16Offset::new(value).unwrap().shift(delta).map(x => x.to_int()) ==
+      @span.Utf16Offset::from_int(value)
+      .unwrap()
+      .shift(delta)
+      .map(x => x.to_int()) ==
       expected
     },
     count=200,
@@ -106,7 +112,7 @@ test "law: ordinary spans exist exactly for non-negative ordered endpoints" {
   @quickcheck.check(
     (input : (Int32, Int32)) => {
       let (start, end) = input
-      match @span.SrcSpan::new(start, end) {
+      match @span.SrcSpan::from_ints(start, end) {
         None => start < 0 || end < start
         Some(span) =>
           start >= 0 &&

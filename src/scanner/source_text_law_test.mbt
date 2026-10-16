@@ -72,10 +72,11 @@ test "law: byte_offset_of and utf16_offset_of are inverse at every boundary" {
       let st = @scanner.SourceText(text)
       let mut ok = true
       for i = 0; i <= text.length(); i = i + 1 {
-        match st.byte_offset_of(@span.Utf16Offset::new(i).unwrap()) {
+        match st.byte_offset_of(@span.Utf16Offset::from_int(i).unwrap()) {
           Some(b) =>
             ok = ok &&
-              st.utf16_offset_of(b) == Some(@span.Utf16Offset::new(i).unwrap())
+              st.utf16_offset_of(b) ==
+              Some(@span.Utf16Offset::from_int(i).unwrap())
           None => {
             // Only the low unit of a surrogate pair has no boundary.
             let low = i > 0 &&
@@ -105,7 +106,7 @@ test "law: positions are monotonic and columns restart after a line break" {
       let mut ok = true
       let mut previous : @span.Position? = None
       for b = 0; b <= st.byte_length().to_int(); b = b + 1 {
-        match @span.ByteOffset::new(b).bind(x => st.position_of(x)) {
+        match @span.ByteOffset::from_int(b).bind(x => st.position_of(x)) {
           None => ()
           Some(p) => {
             if previous is Some(prev) {
@@ -115,7 +116,7 @@ test "law: positions are monotonic and columns restart after a line break" {
                 p.column.to_int() == 1
               ok = ok && (same_line || next_line)
             } else {
-              ok = ok && p == @span.Position::new(1, 1).unwrap()
+              ok = ok && p == @span.Position::from_ints(1, 1).unwrap()
             }
             previous = Some(p)
           }
@@ -135,9 +136,9 @@ test "law: no byte offset makes a lookup panic" {
     (u : @lawkit.Units) => {
       let st = @scanner.SourceText(u.text())
       for b = -2; b <= st.byte_length().to_int() + 2; b = b + 1 {
-        @span.ByteOffset::new(b).bind(x => st.position_of(x)) |> ignore
-        @span.ByteOffset::new(b).bind(x => st.utf16_offset_of(x)) |> ignore
-        @span.Utf16Offset::new(b).bind(x => st.byte_offset_of(x)) |> ignore
+        @span.ByteOffset::from_int(b).bind(x => st.position_of(x)) |> ignore
+        @span.ByteOffset::from_int(b).bind(x => st.utf16_offset_of(x)) |> ignore
+        @span.Utf16Offset::from_int(b).bind(x => st.byte_offset_of(x)) |> ignore
       }
       true
     },
@@ -158,7 +159,7 @@ fn reference_position(text : String, byte : Int32) -> @span.Position? {
   let mut i = 0
   while true {
     if bytes == byte {
-      return Some(@span.Position::new(line, column).unwrap())
+      return Some(@span.Position::from_ints(line, column).unwrap())
     }
     if i >= text.length() || bytes > byte {
       return None
@@ -175,7 +176,7 @@ fn reference_position(text : String, byte : Int32) -> @span.Position? {
       if i < text.length() && text.code_unit_at(i).to_int() == '\n'.to_int() {
         // The boundary between `\r` and `\n` is still on the old line.
         if bytes == byte {
-          return Some(@span.Position::new(line, column + 1).unwrap())
+          return Some(@span.Position::from_ints(line, column + 1).unwrap())
         }
         bytes += 1
         i += 1
@@ -217,7 +218,7 @@ test "law: position_of agrees with a reference count over the source" {
       let mut ok = true
       for b = 0; b <= st.byte_length().to_int(); b = b + 1 {
         ok = ok &&
-          @span.ByteOffset::new(b).bind(x => st.position_of(x)) ==
+          @span.ByteOffset::from_int(b).bind(x => st.position_of(x)) ==
           reference_position(text, b)
       }
       ok

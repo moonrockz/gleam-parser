@@ -1,15 +1,49 @@
 # Work with source coordinates
 
-Byte offsets and UTF-16 offsets use different units. Construct each with
-its own checked constructor. A negative input returns `None`.
+Byte offsets and UTF-16 offsets use different units. Native constructors
+raise typed errors for invalid input. Use a `from_*` factory when the
+caller needs `Option` instead.
 
 ```mbt check
 ///|
 test {
-  @expect.expect(@gleam.ByteOffset::new(-1)).to_equal(None)
-  @expect.expect(@gleam.Utf16Offset::new(-1)).to_equal(None)
-  @expect.expect(@gleam.Position::new(0, 1)).to_equal(None)
-  @expect.expect(@gleam.SrcSpan::new(3, 2)).to_equal(None)
+  let span = @gleam.SrcSpan(2, 5)
+  let position = @gleam.Position(1, 2)
+  let offset = @gleam.ByteOffset(2)
+  @expect.expect_all(e => {
+    e.expect(span.start).to_equal(offset)
+    e.expect(position.column.to_int()).to_equal(2)
+  })
+}
+```
+
+Handle the error when the caller needs the reason for rejection. Error
+cases retain the input that failed validation.
+
+```mbt check
+///|
+test {
+  let error = try {
+    ignore(@gleam.SrcSpan(3, 2))
+    None
+  } catch {
+    error => Some(error)
+  }
+  @expect.expect(error).to_equal(
+    Some(@gleam.CoordinateError::ReversedSpan(start=3, end=2)),
+  )
+}
+```
+
+The optional factories reject the same invalid input with `None`.
+
+```mbt check
+///|
+test {
+  @expect.expect(@gleam.ByteOffset::from_int(-1)).to_equal(None)
+  @expect.expect(@gleam.Utf16Offset::from_int(-1)).to_equal(None)
+  @expect.expect(@gleam.Position::from_ints(0, 1)).to_equal(None)
+  @expect.expect(@gleam.SrcSpan::from_ints(3, 2)).to_equal(None)
 }
 ```
 
@@ -17,16 +51,16 @@ Use the typed offsets to query a source. Line and column numbers start at
 one. Use `to_int()` when an editor protocol, JSON encoder or string API
 needs a raw number.
 
-Use `Position(line, column)` when both coordinates are already valid.
-This constructor takes domain types and needs no validation.
+Use `Position::at(line, column)` when both coordinates are already valid.
+This method takes domain types and needs no validation.
 
 ```mbt check
 ///|
 test {
-  let line = @gleam.LineNumber::new(2).unwrap()
-  let column = @gleam.ColumnNumber::new(1).unwrap()
-  let position = @gleam.Position(line, column)
-  @expect.expect(position).to_equal(@gleam.Position::new(2, 1).unwrap())
+  let line = @gleam.LineNumber::from_int(2).unwrap()
+  let column = @gleam.ColumnNumber::from_int(1).unwrap()
+  let position = @gleam.Position::at(line, column)
+  @expect.expect(position).to_equal(@gleam.Position::from_ints(2, 1).unwrap())
 }
 ```
 
@@ -34,7 +68,9 @@ test {
 ///|
 test {
   let source = @gleam.SourceText("é\n𝄞")
-  guard @gleam.ByteOffset::new(3) is Some(byte) else { fail("invalid offset") }
+  guard @gleam.ByteOffset::from_int(3) is Some(byte) else {
+    fail("invalid offset")
+  }
   guard source.utf16_offset_of(byte) is Some(utf16) else {
     fail("not a boundary")
   }
@@ -49,7 +85,7 @@ test {
     e.expect(source.byte_length().to_int()).to_equal(7)
     e.expect(source.line_count().to_int()).to_equal(2)
   })
-  guard @gleam.SrcSpan::between(byte, source.end_offset()) is Some(span) else {
+  guard @gleam.SrcSpan::from_offsets(byte, source.end_offset()) is Some(span) else {
     fail("reversed range")
   }
   @expect.expect(source.slice(span)).to_equal(Some("𝄞"))
@@ -64,14 +100,14 @@ the source. Source lookups return `None` at those offsets.
 ///|
 test {
   let source = @gleam.SourceText("é")
-  let inside = @gleam.ByteOffset::new(1).unwrap()
-  let outside = @gleam.ByteOffset::new(3).unwrap()
+  let inside = @gleam.ByteOffset::from_int(1).unwrap()
+  let outside = @gleam.ByteOffset::from_int(3).unwrap()
   @expect.expect_all(e => {
     e.expect(source.position_of(inside)).to_equal(None)
     e.expect(source.position_of(outside)).to_equal(None)
     e.expect(@gleam.ByteOffset::zero().shift(-1)).to_equal(None)
     e
-    .expect(@gleam.ByteOffset::new(2147483647).unwrap().shift(1))
+    .expect(@gleam.ByteOffset::from_int(2147483647).unwrap().shift(1))
     .to_equal(None)
   })
 }
@@ -85,7 +121,7 @@ no byte offsets. EOF at zero shares the empty range's representation.
 ```mbt check
 ///|
 test {
-  let start = @gleam.ByteOffset::new(5).unwrap()
+  let start = @gleam.ByteOffset::from_int(5).unwrap()
   let location = @gleam.SrcSpan::eof(start)
   @expect.expect_all(e => {
     e.expect(location.is_eof()).to_be_true()
@@ -98,8 +134,9 @@ test {
 
 ## Migrate callers that used raw integers
 
-- `SrcSpan::new` and `Position::new` now return `Option`. Handle `None` at
-  the input boundary. Direct struct construction is no longer available.
+- Use `SrcSpan(start, end)` and `Position(line, column)` with raw integers
+  to raise `CoordinateError` on invalid input. Use `from_ints` to get
+  `Option`. Direct struct construction is no longer available.
 - `SrcSpan::length` returns `ByteLength?`. It returns `None` for a reversed
   EOF location. `contains` takes a `ByteOffset`.
 - Span endpoints and AST source positions are `ByteOffset`. Source lookups,
@@ -112,9 +149,10 @@ test {
   `BitArrayUnit`.
 - `PathStep.index` and `NodePath::child` use `ChildIndex`. Traversal depths
   use `NodeDepth`. Their constructors reject negative integers.
-- Construct comments with `Comment::new(kind~, content~, span~)`. It returns
-  `None` for an EOF sentinel or a span shorter than the slash prefix.
-  Direct comment struct construction is no longer available.
+- Construct comments with `Comment(kind~, content~, span~)` to raise
+  `CommentError`, or use `Comment::from_parts` to get `Option`. Both reject
+  an EOF sentinel or a span shorter than the slash prefix. Direct comment
+  struct construction is no longer available.
 
 ## Use MoonBit constructors
 
@@ -123,14 +161,29 @@ Use `SourceText(text)`, `Tree(result)`, `TreeCursor(root)` and
 and `Operation(name)` for recursion fuel. These constructors return the
 value directly. The old `::new` methods are deprecated aliases.
 
-`Position(line, column)` replaces `Position::at`. `TupleIndex(value)`
-replaces `TupleIndex::from_uint64`. The old methods remain deprecated.
+`TupleIndex(value)` replaces the deprecated `TupleIndex::from_uint64`.
 If the tuple index constructor is ambiguous with the AST node variant,
 use `TupleIndex::TupleIndex(value)` or supply an expected `TupleIndex` type.
 
-The checked `::new` factories for coordinates, ranges, comments, budgets
-and bounded AST values still return `Option`. Handle `None` when raw input
-is invalid. A MoonBit constructor must return its own type, so these
-factories keep their explicit validation result.
+For validated values, choose how the caller handles invalid input:
+
+| Raising constructor | Optional factory | Error type |
+| --- | --- | --- |
+| `SrcSpan(start, end)` | `SrcSpan::from_ints(start, end)` | `CoordinateError` |
+| `Position(line, column)` | `Position::from_ints(line, column)` | `CoordinateError` |
+| `ByteOffset(value)`, `Utf16Offset(value)` | `from_int(value)` on each type | `CoordinateError` |
+| `ByteLength(value)`, `LineCount(value)` | `from_int(value)` on each type | `CoordinateError` |
+| `LineNumber(value)`, `ColumnNumber(value)` | `from_int(value)` on each type | `CoordinateError` |
+| `Budget(units)` | `Budget::from_int(units)` | `InvalidBudget` |
+| `BitArrayUnit(value)` | `BitArrayUnit::from_int(value)` | `InvalidBitArrayUnit` |
+| `ChildIndex(value)`, `NodeDepth(value)` | `from_int(value)` on each type | `TraversalValueError` |
+| `Comment(kind~, content~, span~)` | `Comment::from_parts(kind~, content~, span~)` | `CommentError` |
+
+`SrcSpan::from_offsets(start, end)` takes validated offsets and returns
+`None` for reversed endpoints. It replaces the deprecated `between`.
+Use `Position::at` for total construction from a `LineNumber` and
+`ColumnNumber`. The old optional `::new` methods remain deprecated aliases
+for the named factories. `TupleIndex::from_int64` validates signed indexes;
+the native `TupleIndex(UInt64)` constructor accepts every unsigned value.
 
 The AST JSON schema and the text of formatted Gleam remain unchanged.

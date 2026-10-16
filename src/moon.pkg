@@ -17,4 +17,5 @@ import {
 import {
   "moonrockz/gleam-parser" @gleam,
   "moonrockz/expect",
+  "moonbitlang/core/quickcheck",
 } for "test"

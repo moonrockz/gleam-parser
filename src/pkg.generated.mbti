@@ -118,6 +118,8 @@ pub using @span {type ColumnNumber}
 
 pub using @scanner {type Comment}
 
+pub using @scanner {type CommentError}
+
 pub using @scanner {type CommentKind}
 
 pub using @config {type Config}
@@ -127,6 +129,8 @@ pub using @config {type ConfigError}
 pub using @ast {type Constant}
 
 pub using @syntax {type Control}
+
+pub using @span {type CoordinateError}
 
 pub using @ast {type CustomType}
 
@@ -177,6 +181,10 @@ pub using @ast {type ImportAlias}
 pub using @parser {type IncorrectNamePosition}
 
 pub using @ast {type IntOperator}
+
+pub using @ast {type InvalidBitArrayUnit}
+
+pub using @fuel {type InvalidBudget}
 
 pub using @scanner {type Keyword}
 
@@ -267,6 +275,8 @@ pub using @scanner {type Token}
 pub using @scanner {type TokenKind}
 
 pub using @scanner {type TokenStream}
+
+pub using @syntax {type TraversalValueError}
 
 pub using @syntax {type Tree}
 

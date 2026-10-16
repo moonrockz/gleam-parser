@@ -175,8 +175,8 @@ fn golden_matches(
           kind~,
           lexical_kind~,
           location=@gleam.SrcSpan::from_compiler(
-            @gleam.ByteOffset::new(start).unwrap(),
-            @gleam.ByteOffset::new(end).unwrap(),
+            @gleam.ByteOffset::from_int(start).unwrap(),
+            @gleam.ByteOffset::from_int(end).unwrap(),
           ).unwrap(),
         ),
       )
@@ -391,7 +391,7 @@ test "first_error_matches compares kind, lexical kind and location" {
         Error(
           kind=d.kind,
           lexical_kind=None,
-          location=@gleam.SrcSpan::new(0, 0).unwrap(),
+          location=@gleam.SrcSpan::from_ints(0, 0).unwrap(),
         ),
       ),
     )

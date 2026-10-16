@@ -6,11 +6,15 @@ test "trivia_extra agrees with the oracle on comments_only" {
     e
     .expect(extra.module_comments)
     .to_equal([
-      @span.SrcSpan::new(4, 26).unwrap(),
-      @span.SrcSpan::new(31, 41).unwrap(),
+      @span.SrcSpan::from_ints(4, 26).unwrap(),
+      @span.SrcSpan::from_ints(31, 41).unwrap(),
     ])
-    e.expect(extra.comments).to_equal([@span.SrcSpan::new(45, 64).unwrap()])
-    e.expect(extra.doc_comments).to_equal([@span.SrcSpan::new(69, 93).unwrap()])
+    e
+    .expect(extra.comments)
+    .to_equal([@span.SrcSpan::from_ints(45, 64).unwrap()])
+    e
+    .expect(extra.doc_comments)
+    .to_equal([@span.SrcSpan::from_ints(69, 93).unwrap()])
     e
     .expect(extra.new_lines.iter().map(x => x.to_int()).collect())
     .to_equal([26, 41, 42, 64, 65, 93])

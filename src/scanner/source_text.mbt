@@ -34,12 +34,14 @@ fn is_low(c : Int32) -> Bool {
 ///   debug_inspect(st.byte_length().to_int(), content="4")
 ///   debug_inspect(
 ///     st
-///     .position_of(@span.ByteOffset::new(3).unwrap())
+///     .position_of(@span.ByteOffset::from_int(3).unwrap())
 ///     .map(p => (p.line.to_int(), p.column.to_int())),
 ///     content="Some((2, 1))",
 ///   )
 ///   debug_inspect(
-///     st.utf16_offset_of(@span.ByteOffset::new(3).unwrap()).map(o => o.to_int()),
+///     st
+///     .utf16_offset_of(@span.ByteOffset::from_int(3).unwrap())
+///     .map(o => o.to_int()),
 ///     content="Some(2)",
 ///   )
 /// }
@@ -64,7 +66,7 @@ pub fn SourceText::SourceText(text : String) -> SourceText {
         byte = byte.shift(1).unwrap()
         i += 1
         bound_bytes.push(byte)
-        bound_units.push(@span.Utf16Offset::new(i).unwrap())
+        bound_units.push(@span.Utf16Offset::from_int(i).unwrap())
       }
       byte = byte.shift(1).unwrap()
       i += 1
@@ -86,7 +88,7 @@ pub fn SourceText::SourceText(text : String) -> SourceText {
       i += 1
     }
     bound_bytes.push(byte)
-    bound_units.push(@span.Utf16Offset::new(i).unwrap())
+    bound_units.push(@span.Utf16Offset::from_int(i).unwrap())
   }
   { text, bound_bytes, bound_units, line_bounds, }
 }
@@ -99,7 +101,7 @@ pub fn SourceText::text(self : SourceText) -> String {
 ///|
 /// The length of the text in UTF-8 bytes.
 pub fn SourceText::byte_length(self : SourceText) -> @span.ByteLength {
-  @span.ByteLength::new(self.end_offset().to_int()).unwrap()
+  @span.ByteLength::from_int(self.end_offset().to_int()).unwrap()
 }
 
 ///|
@@ -111,7 +113,7 @@ pub fn SourceText::end_offset(self : SourceText) -> @span.ByteOffset {
 ///|
 /// The number of lines: one more than the number of line breaks.
 pub fn SourceText::line_count(self : SourceText) -> @span.LineCount {
-  @span.LineCount::new(self.line_bounds.length()).unwrap()
+  @span.LineCount::from_int(self.line_bounds.length()).unwrap()
 }
 
 ///|
@@ -178,7 +180,7 @@ pub fn SourceText::position_of(
 ) -> @span.Position? {
   find(self.bound_bytes, byte).map(k => {
     let line = floor_index(self.line_bounds, k)
-    @span.Position::new(line + 1, k - self.line_bounds[line] + 1).unwrap()
+    @span.Position::from_ints(line + 1, k - self.line_bounds[line] + 1).unwrap()
   })
 }
 

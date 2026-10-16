@@ -135,12 +135,15 @@ test "doc comments attach, detach and are shared as the compiler does" {
     e
     .expect(g.documentation)
     .to_equal(
-      Some({ start: @span.ByteOffset::new(30).unwrap(), text: " c\n", }),
+      Some({ start: @span.ByteOffset::from_int(30).unwrap(), text: " c\n", }),
     )
     e
     .expect(h.documentation)
     .to_equal(
-      Some({ start: @span.ByteOffset::new(61).unwrap(), text: " inside\n", }),
+      Some({
+        start: @span.ByteOffset::from_int(61).unwrap(),
+        text: " inside\n",
+      }),
     )
     e.expect(kinds(r)).to_equal(["GL-PARSE-003 DetachedDocComment"])
     e.expect(r.diagnostics[0].span).to_equal(sp(3, 5))
@@ -175,7 +178,7 @@ test "attributes and targets" {
     e.expect(f.body_start).to_equal(None)
     // A function without a body ends at its `)`.
     e.expect(f.location).to_equal(sp(98, 108))
-    e.expect(f.end_position).to_equal(@span.ByteOffset::new(108).unwrap())
+    e.expect(f.end_position).to_equal(@span.ByteOffset::from_int(108).unwrap())
     e.expect(kinds(r)).to_equal(["GL-PARSE-002 DeprecatedTargetShorthand"])
   })
 }
@@ -305,6 +308,6 @@ test "a skipped definition keeps its doc comments; the next definition gets only
     fail("definitions \{@debug.to_string(r.module_.definitions)}")
   }
   @expect.expect(g.documentation).to_equal(
-    Some({ start: @span.ByteOffset::new(23).unwrap(), text: " doc g\n", }),
+    Some({ start: @span.ByteOffset::from_int(23).unwrap(), text: " doc g\n", }),
   )
 }

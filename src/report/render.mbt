@@ -111,7 +111,7 @@ fn line_starts(source : @scanner.SourceText) -> Array[@span.ByteOffset] {
   let text = source.text()
   for i in 0..<text.length() {
     if text.code_unit_at(i) == '\n'.to_int().to_uint16() {
-      match source.byte_offset_of(@span.Utf16Offset::new(i + 1).unwrap()) {
+      match source.byte_offset_of(@span.Utf16Offset::from_int(i + 1).unwrap()) {
         Some(b) => starts.push(b)
         None => ()
       }
@@ -290,7 +290,7 @@ fn render(
       None => {
         let (s, e) = line_range(i)
         let l : Line = {
-          number: @span.LineNumber::new(i + 1).unwrap(),
+          number: @span.LineNumber::from_int(i + 1).unwrap(),
           start: s,
           end: e,
           single: [],
@@ -313,11 +313,11 @@ fn render(
     outer_padding = @cmp.maximum(outer_padding, digits(end_line + 1))
     if start_line == end_line {
       let line = line_at(start_line)
-      let label_start = @span.ByteOffset::new(
+      let label_start = @span.ByteOffset::from_int(
         span.start.to_int() - line.start.to_int(),
       ).unwrap()
       let label_end = @cmp.maximum(
-        @span.ByteOffset::new(span.end.to_int() - line.start.to_int()).unwrap(),
+        @span.ByteOffset::from_int(span.end.to_int() - line.start.to_int()).unwrap(),
         label_start.shift(1).unwrap(),
       )
       // Sorted by (start, end); equal ranges keep later labels first.
@@ -342,7 +342,7 @@ fn render(
         index: label_index,
         style,
         label: Top(
-          @span.ByteOffset::new(span.start.to_int() - first.start.to_int()).unwrap(),
+          @span.ByteOffset::from_int(span.start.to_int() - first.start.to_int()).unwrap(),
         ),
       })
       first.must_render = true
@@ -359,7 +359,7 @@ fn render(
         index: label_index,
         style,
         label: Bottom(
-          @span.ByteOffset::new(span.end.to_int() - last.start.to_int()).unwrap(),
+          @span.ByteOffset::from_int(span.end.to_int() - last.start.to_int()).unwrap(),
           message,
         ),
       })
@@ -409,7 +409,7 @@ fn render(
           // One line between: print it, with its multi-label gutter.
           let (s, e) = line_range(k + 1)
           let between : Line = {
-            number: @span.LineNumber::new(k + 2).unwrap(),
+            number: @span.LineNumber::from_int(k + 2).unwrap(),
             start: s,
             end: e,
             single: [],

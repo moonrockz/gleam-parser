@@ -78,8 +78,14 @@ pub fn Partial::empty() -> Partial {
 ///
 /// ```mbt check
 /// test {
-///   let file : @config.Partial = { dialect: None, fuel: @fuel.Budget::new(500), }
-///   let env : @config.Partial = { dialect: None, fuel: @fuel.Budget::new(2000), }
+///   let file : @config.Partial = {
+///     dialect: None,
+///     fuel: @fuel.Budget::from_int(500),
+///   }
+///   let env : @config.Partial = {
+///     dialect: None,
+///     fuel: @fuel.Budget::from_int(2000),
+///   }
 ///   let c = env.with_fallback(file).to_config(@config.Config::default())
 ///   inspect(c.fuel.units(), content="2000")
 /// }

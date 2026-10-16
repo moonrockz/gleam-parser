@@ -68,7 +68,7 @@ fn[A] Parser::finish_snippet(
 ///   debug_inspect(
 ///     t.location(),
 ///     content=(
-///       #|{ start: ByteOffset(0), end: ByteOffset(7) }
+///       #|{ start: { value: 0 }, end: { value: 7 } }
 ///     ),
 ///   )
 /// }
@@ -118,7 +118,7 @@ pub fn parse_constant_text(
 ///   debug_inspect(
 ///     e.location(),
 ///     content=(
-///       #|{ start: ByteOffset(0), end: ByteOffset(5) }
+///       #|{ start: { value: 0 }, end: { value: 5 } }
 ///     ),
 ///   )
 /// }

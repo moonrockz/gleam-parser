@@ -87,7 +87,7 @@ pub fn TreeCursor::path(self : TreeCursor) -> NodePath {
 /// The number of `goto_*` steps below the start node (0 at the start
 /// node).
 pub fn TreeCursor::depth(self : TreeCursor) -> NodeDepth {
-  NodeDepth::new(self.frames.length() - 1).unwrap()
+  NodeDepth::from_int(self.frames.length() - 1).unwrap()
 }
 
 ///|
@@ -182,7 +182,7 @@ pub fn TreeCursor::goto_parent(self : TreeCursor) -> Bool {
 ///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let p = @span.ByteOffset::new(23).unwrap() // the `+` in `a + b`
+///   let p = @span.ByteOffset::from_int(23).unwrap() // the `+` in `a + b`
 ///   let contains = (s : @span.SrcSpan) => s.start <= p && p < s.end
 ///   let cursor = @syntax.TreeCursor(tree.root())
 ///   while cursor.goto_first_child_for(p) {
@@ -243,14 +243,14 @@ pub fn TreeCursor::goto_first_child_for(
 ///   )
 ///   let cursor = @syntax.TreeCursor(tree.root())
 ///   inspect(
-///     cursor.goto_node_at(@span.ByteOffset::new(23).unwrap()),
+///     cursor.goto_node_at(@span.ByteOffset::from_int(23).unwrap()),
 ///     content="true",
 ///   )
 ///   inspect(cursor.node().kind(), content="bin_op")
 ///   inspect(cursor.path(), content="definitions[0].body[0].expression[0]")
 ///   // `pub` is outside the current node: the cursor stays.
 ///   inspect(
-///     cursor.goto_node_at(@span.ByteOffset::new(0).unwrap()),
+///     cursor.goto_node_at(@span.ByteOffset::from_int(0).unwrap()),
 ///     content="false",
 ///   )
 ///   inspect(cursor.node().kind(), content="bin_op")

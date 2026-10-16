@@ -56,7 +56,7 @@ test "law: node_at is a smallest node that contains the offset: deepest among eq
             holders.push(i)
           }
         }
-        match tree.node_at(@span.ByteOffset::new(p).unwrap()) {
+        match tree.node_at(@span.ByteOffset::from_int(p).unwrap()) {
           None => holders.is_empty()
           Some(found) => {
             guard nodes.search_by(n => n == found) is Some(fi) else {
@@ -91,20 +91,24 @@ test "law: tokens_in keeps exactly the whole tokens inside the span" {
       let candidates : Array[@span.SrcSpan] = nodes.map(n => n.span())
       for i, r in all {
         candidates.push(r)
-        candidates.push(@span.SrcSpan::between(r.start, r.start).unwrap())
+        candidates.push(@span.SrcSpan::from_offsets(r.start, r.start).unwrap())
         if r.end.to_int() - r.start.to_int() >= 2 {
           candidates.push(
-            @span.SrcSpan::between(r.start.shift(1).unwrap(), r.end).unwrap(),
+            @span.SrcSpan::from_offsets(r.start.shift(1).unwrap(), r.end).unwrap(),
           )
           candidates.push(
-            @span.SrcSpan::between(r.start, r.end.shift(-1).unwrap()).unwrap(),
+            @span.SrcSpan::from_offsets(r.start, r.end.shift(-1).unwrap()).unwrap(),
           )
         }
         if all.get(i + 1) is Some(next) {
-          candidates.push(@span.SrcSpan::between(r.start, next.end).unwrap())
-          candidates.push(@span.SrcSpan::between(r.start, next.start).unwrap())
           candidates.push(
-            @span.SrcSpan::between(
+            @span.SrcSpan::from_offsets(r.start, next.end).unwrap(),
+          )
+          candidates.push(
+            @span.SrcSpan::from_offsets(r.start, next.start).unwrap(),
+          )
+          candidates.push(
+            @span.SrcSpan::from_offsets(
               r.end.shift(-1).unwrap(),
               next.start.shift(1).unwrap(),
             ).unwrap(),

@@ -1,6 +1,6 @@
 ///|
 fn budget(n : Int32) -> @fuel.Budget {
-  @fuel.Budget::new(n).unwrap()
+  @fuel.Budget::from_int(n).unwrap()
 }
 
 ///|

@@ -106,7 +106,9 @@ test "string prefix patterns" {
     e.expect(location).to_equal(sp(0, 18))
     e.expect(left_location).to_equal(sp(0, 10))
     e.expect(a.name).to_equal("p")
-    e.expect(a.name_start_position).to_equal(@span.ByteOffset::new(9).unwrap())
+    e
+    .expect(a.name_start_position)
+    .to_equal(@span.ByteOffset::from_int(9).unwrap())
     e.expect(a.location).to_equal(sp(5, 10))
     e.expect(right_location).to_equal(sp(14, 18))
   })

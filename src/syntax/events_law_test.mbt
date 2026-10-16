@@ -266,7 +266,7 @@ test "law: under any Control policy, each event's depth and path lead to its nod
         match e {
           Enter(e) => {
             ok = ok &&
-              e.depth == @syntax.NodeDepth::new(open.length()).unwrap() &&
+              e.depth == @syntax.NodeDepth::from_int(open.length()).unwrap() &&
               e.depth == e.path.depth() &&
               e.path.parent() == open.last().map(o => o.path) &&
               e.path.last().map(s => s.field) == e.field &&
@@ -334,21 +334,21 @@ test "law: a path resolves exactly the field slot it names, and nothing else" {
           for i, child in slots {
             ok = ok &&
               p
-              .child(f, @syntax.ChildIndex::new(i).unwrap())
+              .child(f, @syntax.ChildIndex::from_int(i).unwrap())
               .resolve(root)
               .map(tag) ==
               Some(tag(child))
           }
           ok = ok &&
-            @syntax.ChildIndex::new(-1) is None &&
+            @syntax.ChildIndex::from_int(-1) is None &&
             p
-            .child(f, @syntax.ChildIndex::new(slots.length()).unwrap())
+            .child(f, @syntax.ChildIndex::from_int(slots.length()).unwrap())
             .resolve(root)
             is None
         }
         ok = ok &&
           p
-          .child("no such field", @syntax.ChildIndex::new(0).unwrap())
+          .child("no such field", @syntax.ChildIndex::from_int(0).unwrap())
           .resolve(root)
           is None
       }

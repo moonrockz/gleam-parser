@@ -5,10 +5,10 @@ test "a diagnostic keeps its fields and knows its severity" {
     severity=Error,
     title="Syntax error",
     message="I was expecting a '=' after this",
-    span=@span.SrcSpan::new(4, 5).unwrap(),
+    span=@span.SrcSpan::from_ints(4, 5).unwrap(),
     labels=[
       @diagnostic.Label::{
-        span: @span.SrcSpan::new(4, 5).unwrap(),
+        span: @span.SrcSpan::from_ints(4, 5).unwrap(),
         text: "I was expecting a '=' after this",
       },
     ],
@@ -28,7 +28,7 @@ test "a warning is not an error" {
     severity=Warning,
     title="Deprecated syntax",
     message="This syntax is deprecated",
-    span=@span.SrcSpan::new(0, 1).unwrap(),
+    span=@span.SrcSpan::from_ints(0, 1).unwrap(),
   )
   @expect.expect(d.is_error()).to_be_false()
 }
@@ -59,7 +59,7 @@ test "a diagnostic carries the compiler's error kind" {
     severity=Error,
     title="Syntax error",
     message="I can't figure out what to do with this character",
-    span=@span.SrcSpan::new(0, 0).unwrap(),
+    span=@span.SrcSpan::from_ints(0, 0).unwrap(),
   )
   @expect.expect(d.kind).to_equal("UnrecognizedToken")
 }
@@ -71,7 +71,7 @@ test "the kind defaults to the empty string" {
     severity=Error,
     title="Syntax error",
     message="Too much nesting",
-    span=@span.SrcSpan::new(0, 0).unwrap(),
+    span=@span.SrcSpan::from_ints(0, 0).unwrap(),
   )
   @expect.expect(d.kind).to_equal("")
 }
@@ -83,14 +83,14 @@ test "a diagnostic carries the compiler's body text; the default is empty" {
     severity=Error,
     title="Syntax error",
     message="I was not expecting this",
-    span=@span.SrcSpan::new(0, 1).unwrap(),
+    span=@span.SrcSpan::from_ints(0, 1).unwrap(),
   )
   let with_text = @diagnostic.Diagnostic(
     code="GL-PARSE-001",
     severity=Error,
     title="Syntax error",
     message="I was not expecting this",
-    span=@span.SrcSpan::new(0, 1).unwrap(),
+    span=@span.SrcSpan::from_ints(0, 1).unwrap(),
     text="Found an Int, expected one of: \n- `=`",
     hint=Some("Try removing it?"),
   )

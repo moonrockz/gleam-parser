@@ -120,7 +120,8 @@ fn token_boundaries(text : String) -> Array[Int32] {
     found.push(t.span.end.to_int())
     let inside = t.span.start.to_int() + 1
     if t.span.end.to_int() - t.span.start.to_int() > 1 &&
-      source.position_of(@gleam.ByteOffset::new(inside).unwrap()) is Some(_) {
+      source.position_of(@gleam.ByteOffset::from_int(inside).unwrap())
+      is Some(_) {
       found.push(inside)
     }
   }
@@ -147,7 +148,7 @@ fn prefix_cuts(boundaries : Array[Int32]) -> Array[Int32] {
 /// point boundary (a token span that is not on a boundary is a scanner bug).
 fn prefix(source : @gleam.SourceText, cut : Int32) -> String? {
   source
-  .utf16_offset_of(@gleam.ByteOffset::new(cut).unwrap())
+  .utf16_offset_of(@gleam.ByteOffset::from_int(cut).unwrap())
   .map(units => source.text().view(end_offset=units.to_int()).to_owned())
 }
 
@@ -228,8 +229,8 @@ test "span_in_bounds allows end 0 only for the compiler's EOF spans" {
       title="Syntax error",
       message="m",
       span=@gleam.SrcSpan::from_compiler(
-        @gleam.ByteOffset::new(start).unwrap(),
-        @gleam.ByteOffset::new(end).unwrap(),
+        @gleam.ByteOffset::from_int(start).unwrap(),
+        @gleam.ByteOffset::from_int(end).unwrap(),
       ).unwrap(),
       kind~,
     )
@@ -244,7 +245,7 @@ test "span_in_bounds allows end 0 only for the compiler's EOF spans" {
     s
     .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 0)))
     .to_be_false()
-    s.expect(@gleam.SrcSpan::new(5, 4)).to_equal(None)
+    s.expect(@gleam.SrcSpan::from_ints(5, 4)).to_equal(None)
     s.expect(span_in_bounds(source, diag("UnexpectedToken", 5, 6))).to_be_true()
     s
     .expect(span_in_bounds(source, diag("UnexpectedToken", 5, 99)))

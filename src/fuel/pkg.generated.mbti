@@ -14,9 +14,17 @@ pub(all) suberror FuelExhausted {
   FuelExhausted(budget~ : Budget, spent~ : Array[Spent])
 } derive(Eq, @debug.Debug)
 
+pub(all) suberror InvalidBudget {
+  InvalidBudget(Int)
+} derive(Eq, @debug.Debug)
+
 // Types and methods
-pub struct Budget(Int) derive(Compare, Eq, @debug.Debug)
-pub fn Budget::new(Int) -> Self?
+pub struct Budget {
+  // private fields
+} derive(Compare, Eq, @debug.Debug)
+pub fn Budget::Budget(Int) -> Self raise InvalidBudget
+#alias(new, deprecated)
+pub fn Budget::from_int(Int) -> Self?
 pub fn Budget::units(Self) -> Int
 
 pub struct Fuel {

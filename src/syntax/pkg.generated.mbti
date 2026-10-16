@@ -26,10 +26,18 @@ pub fn[A] reduce_with_fields(NodeRef, (NodeRef, ArrayView[(PathStep, A)]) -> A) 
 pub fn walk(NodeRef, (NodeRef) -> Control, leave? : (NodeRef) -> Unit) -> Unit
 
 // Errors
+pub(all) suberror TraversalValueError {
+  InvalidChildIndex(Int)
+  InvalidNodeDepth(Int)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
-pub struct ChildIndex(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn ChildIndex::new(Int) -> Self?
+pub struct ChildIndex {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn ChildIndex::ChildIndex(Int) -> Self raise TraversalValueError
+#alias(new, deprecated)
+pub fn ChildIndex::from_int(Int) -> Self?
 pub fn ChildIndex::to_int(Self) -> Int
 pub impl Show for ChildIndex
 
@@ -73,8 +81,12 @@ pub struct LeaveEvent {
 #alias(new, deprecated)
 pub fn LeaveEvent::LeaveEvent(node~ : NodeRef, path~ : NodePath) -> Self
 
-pub struct NodeDepth(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn NodeDepth::new(Int) -> Self?
+pub struct NodeDepth {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn NodeDepth::NodeDepth(Int) -> Self raise TraversalValueError
+#alias(new, deprecated)
+pub fn NodeDepth::from_int(Int) -> Self?
 pub fn NodeDepth::to_int(Self) -> Int
 pub impl Show for NodeDepth
 

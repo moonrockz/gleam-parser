@@ -69,6 +69,10 @@ pub(all) suberror DecodeError {
   DecodeError(path~ : String, message~ : String)
 } derive(Eq, @debug.Debug)
 
+pub(all) suberror InvalidBitArrayUnit {
+  InvalidBitArrayUnit(Int)
+} derive(Eq, @debug.Debug)
+
 // Types and methods
 pub(all) struct Arg {
   names : ArgNames
@@ -170,8 +174,12 @@ pub(all) enum BitArraySize {
 } derive(Eq, @debug.Debug)
 pub fn BitArraySize::location(Self) -> @span.SrcSpan
 
-pub struct BitArrayUnit(Int) derive(Compare, Eq, Hash, @debug.Debug)
-pub fn BitArrayUnit::new(Int) -> Self?
+pub struct BitArrayUnit {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn BitArrayUnit::BitArrayUnit(Int) -> Self raise InvalidBitArrayUnit
+#alias(new, deprecated)
+pub fn BitArrayUnit::from_int(Int) -> Self?
 pub fn BitArrayUnit::to_int(Self) -> Int
 
 pub(all) struct CallArg[A] {
@@ -465,9 +473,10 @@ pub(all) enum TodoKind {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct TupleIndex(UInt64) derive(Compare, Eq, Hash, @debug.Debug)
+#alias(new, deprecated)
+pub fn TupleIndex::from_int64(Int64) -> Self?
 #deprecated
 pub fn TupleIndex::from_uint64(UInt64) -> Self
-pub fn TupleIndex::new(Int64) -> Self?
 pub fn TupleIndex::to_uint64(Self) -> UInt64
 
 pub(all) struct TypeAlias {

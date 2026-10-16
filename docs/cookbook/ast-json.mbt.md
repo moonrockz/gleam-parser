@@ -7,9 +7,9 @@ the parser lands, build an AST by hand or read one that the oracle wrote.
 ```mbt check
 ///|
 test "aj: encode a tiny module and read it back" {
-  let span = @gleam.SrcSpan::new(0, 9).unwrap()
+  let span = @gleam.SrcSpan::from_ints(0, 9).unwrap()
   let value : @gleam.Constant = Int(
-    location=@gleam.SrcSpan::new(10, 11).unwrap(),
+    location=@gleam.SrcSpan::from_ints(10, 11).unwrap(),
     value="1",
     int_value=BigInt::from_int(1),
   )
@@ -22,7 +22,7 @@ test "aj: encode a tiny module and read it back" {
             location: span,
             publicity: @gleam.Publicity::Private,
             name: "x",
-            name_location: @gleam.SrcSpan::new(6, 7).unwrap(),
+            name_location: @gleam.SrcSpan::from_ints(6, 7).unwrap(),
             annotation: None,
             value,
             deprecation: @gleam.Deprecation::NotDeprecated,

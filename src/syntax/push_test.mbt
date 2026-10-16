@@ -90,7 +90,7 @@ test "an outside event source builds events with new, and push_events reads it" 
       category="module",
       kind="module",
       field=None,
-      start=@span.ByteOffset::new(0).unwrap(),
+      start=@span.ByteOffset::from_int(0).unwrap(),
       path~,
     )
     let source : Replay = {
@@ -100,6 +100,6 @@ test "an outside event source builds events with new, and push_events reads it" 
     let h : Recording = { pushed: [], }
     @syntax.push_events(source, h)
     s.expect(h.pushed).to_equal(["+module/module 0", "-module/module"])
-    s.expect(enter.depth).to_equal(@syntax.NodeDepth::new(0).unwrap())
+    s.expect(enter.depth).to_equal(@syntax.NodeDepth::from_int(0).unwrap())
   })
 }

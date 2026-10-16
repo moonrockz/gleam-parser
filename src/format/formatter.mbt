@@ -379,7 +379,7 @@ fn Formatter::format_module(
     None
   }
   let comments = printed_comments(
-    self.pop_comments(@span.ByteOffset::new(0x7fffffff).unwrap())[:],
+    self.pop_comments(@span.ByteOffset::from_int(0x7fffffff).unwrap())[:],
     false,
   )
   let module_comments = if self.module_comments.is_empty() {

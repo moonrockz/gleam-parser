@@ -30,7 +30,7 @@ pub struct LeaveEvent {
 /// test {
 ///   let path = @syntax.NodePath::root().child(
 ///     "definitions",
-///     @syntax.ChildIndex::new(0).unwrap(),
+///     @syntax.ChildIndex::from_int(0).unwrap(),
 ///   )
 ///   let e = @syntax.EnterEvent(
 ///     category="definition",

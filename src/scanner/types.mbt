@@ -166,13 +166,13 @@ pub fn CommentKind::prefix_length(self : CommentKind) -> @span.ByteLength {
     Doc => 3
     Module => 4
   }
-  @span.ByteLength::new(length).unwrap()
+  @span.ByteLength::from_int(length).unwrap()
 }
 
 ///|
 /// A comment. `span` covers the slashes and the text up to the line break
 /// (not included); `content` is the text after the slashes.
-/// Construct with `new` so the span can contain the comment's prefix.
+/// Construction checks that the span can contain the comment's prefix.
 pub struct Comment {
   kind : CommentKind
   content : String
@@ -186,32 +186,69 @@ pub struct Comment {
 ///
 /// ```mbt check
 /// test {
-///   let span = @span.SrcSpan::new(0, 1).unwrap()
+///   let span = @span.SrcSpan::from_ints(0, 1).unwrap()
 ///   debug_inspect(
-///     @scanner.Comment::new(kind=Regular, content="", span~),
+///     @scanner.Comment::from_parts(kind=Regular, content="", span~),
 ///     content="None",
 ///   )
-///   let span = @span.SrcSpan::new(0, 6).unwrap()
-///   let comment = @scanner.Comment::new(kind=Doc, content=" hi", span~).unwrap()
-///   assert_eq(comment.content_span(), @span.SrcSpan::new(3, 6).unwrap())
+///   let span = @span.SrcSpan::from_ints(0, 6).unwrap()
+///   let comment = @scanner.Comment::from_parts(kind=Doc, content=" hi", span~).unwrap()
+///   assert_eq(comment.content_span(), @span.SrcSpan::from_ints(3, 6).unwrap())
 /// }
 /// ```
-pub fn Comment::new(
+#alias(new, deprecated="Use `Comment::from_parts(...)` instead")
+pub fn Comment::from_parts(
   kind~ : CommentKind,
   content~ : String,
   span~ : @span.SrcSpan,
 ) -> Comment? {
-  guard span.length() is Some(length) && length >= kind.prefix_length() else {
-    return None
+  Some(Comment::Comment(kind~, content~, span~)) catch {
+    _ => None
   }
-  Some({ kind, content, span, })
+}
+
+///|
+/// A comment span is an EOF location or cannot contain its slash prefix.
+pub(all) suberror CommentError {
+  CommentAtEof(@span.SrcSpan)
+  CommentPrefixTooShort(kind~ : CommentKind, span~ : @span.SrcSpan)
+} derive(Eq, Debug)
+
+///|
+/// Create a comment. Raise `CommentError` for an EOF location or a span
+/// shorter than the slash prefix. Use `from_parts` to get `Option`.
+///
+/// ```mbt check
+/// test {
+///   let comment : @scanner.Comment = @scanner.Comment(
+///     kind=Regular,
+///     content="hi",
+///     span=@span.SrcSpan(0, 4),
+///   )
+///   assert_eq(comment.content_span(), @span.SrcSpan(2, 4))
+/// }
+/// ```
+pub fn Comment::Comment(
+  kind~ : CommentKind,
+  content~ : String,
+  span~ : @span.SrcSpan,
+) -> Comment raise CommentError {
+  match span.length() {
+    None => raise CommentAtEof(span)
+    Some(length) => {
+      guard length >= kind.prefix_length() else {
+        raise CommentPrefixTooShort(kind~, span~)
+      }
+    }
+  }
+  { kind, content, span, }
 }
 
 ///|
 /// The compiler's span for the comment: its content, without the slashes.
 /// Construction proves that the shifted start is in the ordered span.
 pub fn Comment::content_span(self : Comment) -> @span.SrcSpan {
-  @span.SrcSpan::between(
+  @span.SrcSpan::from_offsets(
     self.span.start.shift(self.kind.prefix_length().to_int()).unwrap(),
     self.span.end,
   ).unwrap()

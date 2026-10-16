@@ -904,7 +904,7 @@ fn function_literal_kind(k : FunctionLiteralKind) -> Json {
 /// ```mbt check
 /// test {
 ///   let value : @ast.Expr = Var(
-///     location=@span.SrcSpan::new(0, 1).unwrap(),
+///     location=@span.SrcSpan::from_ints(0, 1).unwrap(),
 ///     name="x",
 ///   )
 ///   assert_eq(@ast.decode_expr(@ast.encode_expr(value)), value)
