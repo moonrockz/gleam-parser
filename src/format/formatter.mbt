@@ -326,14 +326,6 @@ fn Formatter::statement_fn(
 }
 
 ///|
-fn Formatter::type_alias(
-  self : Formatter,
-  _a : @ast.TypeAlias,
-) -> @pretty.Doc raise FormatError {
-  t("todo")
-}
-
-///|
 fn Formatter::custom_type(
   self : Formatter,
   _c : @ast.CustomType,
