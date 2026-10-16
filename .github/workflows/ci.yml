@@ -155,6 +155,24 @@ jobs:
       - name: Score Gleam parity
         run: mise run test:parity
 
+      - name: Score format parity
+        run: mise run test:format
+
+      - name: Add the format summary to the job summary
+        if: always()
+        run: |
+          if [ -f _build/reports/format/summary.md ]; then
+            cat _build/reports/format/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload format report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: format-report
+          path: _build/reports/format
+          if-no-files-found: ignore
+
       - name: Add the summary to the job summary
         if: always()
         run: |

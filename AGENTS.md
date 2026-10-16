@@ -82,7 +82,19 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   `tokens_in`. One documented gap: a descent with `goto_first_child_for`
   stops at a function capture's generated argument; `goto_node_at` reaches
   the hole.
-- **Printer and formatter** (v0.3) — Gleam source with `gleam format` parity.
+- **Formatter** (v0.3) — `src/format`: a port of the compiler's
+  `format/src/lib.rs` on `moonrockz/pretty` (its pretty-arena forms:
+  `group_alone`, `break_`, `flex_break`, `lines`, `force_break`,
+  `next_break_fits`, `nest_if_broken`, `set_nesting`, `zero_width`,
+  `raw_text`; `render(doc, width=80, start=Unbroken)`). `format(text,
+  config?)` and `format_parsed(result, config?)` give `gleam format`'s
+  text; `FormatError` is `ParseFailed` (the error diagnostics) or
+  `OutOfFuel` (`type_ast` and `const_expr` spend fuel). A private
+  `Formatter` keeps the comment arrays of `ModuleExtra` with forward
+  cursors, as the compiler pops slices; comment text comes from the CST
+  source (`ModuleCst::to_source()`). Every compiler function keeps its name
+  (`module` is `format_module`). Function bodies (`statements`) land in
+  PR 2 and are a `todo` placeholder until then. See "Format Parity".
 
 ### Gleam reference
 
@@ -162,13 +174,15 @@ moonrockz/gleam-parser
 │   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; fuel
 │   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
 │   ├── syntax/           # NodeRef, children, kind_table; walk, fold, reduce, Visitor, events, Tree, NodePath, TreeCursor
-│   └── printer/          # v0.3
+│   └── format/           # Port of format.rs on moonrockz/pretty: formatter state, comments, imports, types, constants, functions
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests
 │   ├── bdd/              # MoonSpec step definitions for tests/features
 │   ├── features/         # Gherkin features
 │   ├── fixtures/ast/     # Gleam sources with the oracle's JSON
 │   ├── corpus/           # packages.txt, gleam_version.txt, manifest.json, goldens.lock, baseline.json
 │   ├── parity/           # Corpus parity (mise run test:parity)
+│   ├── format/           # Format parity scoreboard (mise run test:format), baseline.json
+│   ├── fixtures/format/  # The compiler's formatter cases with gleam format's output
 │   └── rejection/        # Rejection fixtures, verdicts.json, pending.json, messages/ (mise run test:rejection)
 ├── tools/gleam-ast-oracle/   # Rust oracle (plan 3)
 ├── scripts/              # MoonBit tooling scripts (.mbtx)
@@ -257,9 +271,10 @@ Library code (`src/**`) may use packages owned by `moonrockz`,
 `moonbitlang` and `moonbit-community`, plus the module's own packages; any
 other owner needs a decision recorded here. The published `moon.mod`
 imports `moonrockz/expect` (used by the packages' own tests),
-`moonbit-community/toml` (the configuration file) and `moonbitlang/x`
-(`fs`, for `Config::load`); it brings `moonbitlang/async` and
-`bobzhang/lexer` to users, which is accepted.
+`moonbit-community/toml` (the configuration file), `moonbitlang/x`
+(`fs`, for `Config::load`) and `moonrockz/pretty` (the document engine of
+the formatter); it brings `moonbitlang/async` and `bobzhang/lexer` to
+users, which is accepted.
 
 Test-only dependencies (`moonrockz/moonspec`, `moonbitlang/async`,
 `moonbitlang/x`) live in the unpublished workspace module `tests/`
@@ -455,6 +470,10 @@ All operations use **file-based mise tasks** in `mise-tasks/`. Do not add inline
 | `parity:ratchet` | Raise `tests/corpus/baseline.json` to the current counts |
 | `rejection:record` | Record the compiler's verdicts for `tests/rejection` (needs cargo; local only) |
 | `test:rejection` | Check verdicts, first errors and message snapshots against `verdicts.json` |
+| `formatter:cases` | Extract the compiler's formatter test cases into `tests/fixtures/format` (needs a Gleam checkout, default `.dev/gleam`; local only) |
+| `formatter:record` | Record `gleam format`'s output for the fixtures and `tests/corpus/format.lock` (needs the `gleam` binary via mise aqua and `corpus:fetch`; local only) |
+| `test:format` | Score format parity against the fixtures and the lock; fail below `tests/format/baseline.json` |
+| `formatter:ratchet` | Raise `tests/format/baseline.json` to the current counts |
 | `coverage:ci-gate`, `coverage:ci-warn` | Coverage threshold (80) |
 | `release:prepare`, `release:version`, `release:plan`, `release:notes`, `release:refresh`, `release:status`, `release:credentials`, `release:publish` | Release process (see Release Process) |
 
@@ -490,6 +509,8 @@ Project tooling logic is written in MoonBit, not bash, `jq` or `awk`.
 | `scripts/corpus.mbtx` | `corpus:manifest`, `corpus:fetch` | Pin (Hex metadata, GitHub tag archives), download and verify the parity corpus |
 | `scripts/goldens.mbtx` | `corpus:goldens` | Run the oracle over the corpus; one raw result per file |
 | `scripts/rejection.mbtx` | `rejection:record` | Record the oracle's verdict per rejection fixture |
+| `scripts/format_cases.mbtx` | `formatter:cases` | Decode the `assert_format!` and `assert_format_rewrite!` inputs of the compiler's tests into fixtures |
+| `scripts/formatted.mbtx` | `formatter:record` | Run `gleam format --stdin` over the fixtures and the corpus; write the outputs and the lock |
 
 ## Gleam Parity
 
@@ -567,6 +588,33 @@ error, against the compiler (the oracle).
   `GLEAM_REJECTION_MODE=write-pending` rewrites the list; use it only when
   adding fixtures. The one expected entry is `nesting/too_deep.gleam`
   (`verdict`): the compiler has no nesting limit.
+
+## Format Parity
+
+gleam-parser checks `format` against `gleam format` 1.19.2.
+
+- `tests/fixtures/format/<suite>/<nnn>.gleam` are the inputs of the
+  compiler's formatter tests (`format/src/tests.rs` is suite `tests`,
+  `format/src/tests/<suite>.rs` the others; `<nnn>` is the case's 1-based
+  index among the real cases of the file; a commented-out macro and the one
+  `format!` case are skipped). `<nnn>.formatted.gleam` is the binary's
+  output. `NOTICE` carries the Apache-2.0 attribution. `mise run
+  formatter:cases` extracts them from a checkout at the pinned tag (`git
+  clone --depth 1 --branch v1.19.2 https://github.com/gleam-lang/gleam
+  .dev/gleam`); `mise run formatter:record` records the outputs with the
+  binary (`mise x aqua:gleam-lang/gleam@<version>`), and writes
+  `tests/corpus/format.lock` (`<corpus key> <sha256 of the output>` or
+  `FORMAT_ERROR`). Both run locally only.
+- `mise run test:format` (`tests/format`, `GLEAM_FORMAT_MODE=check`) scores
+  `fixtures`, `fixtures_matched`, `corpus` and `corpus_matched` (the corpus
+  part needs `corpus:fetch`) and fails when a matched count drops below
+  `tests/format/baseline.json`. `mise run formatter:ratchet` raises the
+  baseline. Reports go to `_build/reports/format/` (`summary.md`,
+  `format.json`, `format.html`); for up to 20 unmatched files the summary
+  shows the first differing line. CI runs it in the `parity` job and uploads
+  `format-report`.
+- A mismatch in a suite without function bodies is a port bug; fix it
+  against `format/src/lib.rs` before the baseline moves.
 
 ## Tooling
 

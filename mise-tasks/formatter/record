@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Record gleam format's output for the fixtures and the corpus (needs mise run corpus:fetch)"
+set -euo pipefail
+
+version="$(tr -d '[:space:]' < tests/corpus/gleam_version.txt)"
+exec mise x "aqua:gleam-lang/gleam@${version}" -- moon run -q --target wasm scripts/formatted.mbtx -- record gleam tests/fixtures/format tests/corpus/manifest.json .corpus tests/corpus/format.lock

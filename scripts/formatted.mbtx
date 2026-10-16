@@ -1,0 +1,199 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/x@0.5.5/sys",
+  "moonbitlang/x@0.5.5/crypto",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonrockz/moonspec@0.11.0",
+  "moonrockz/expect@0.6.1",
+}
+
+///|
+/// Record what `gleam format` writes:
+///
+///   formatted.mbtx record <gleam exe> <fixture dir> <manifest> <corpus dir> <lock>
+///
+/// For every `<suite>/<nnn>.gleam` under `<fixture dir>` the binary's output
+/// goes to `<suite>/<nnn>.formatted.gleam` (an input the binary rejects gets
+/// no file and is listed). For every corpus file of `<manifest>` (under
+/// `<corpus dir>`) the SHA-256 of the output goes to `<lock>`, one line per
+/// file, sorted by key; a rejected file is `FORMAT_ERROR`.
+
+///|
+let usage : String = "Usage: formatted.mbtx record <gleam exe> <fixture dir> <manifest> <corpus dir> <lock>"
+
+///|
+fn output_path(input : String) -> String {
+  input.view(end_offset=input.length() - 6).to_owned() + ".formatted.gleam"
+}
+
+///|
+fn hex(digest : FixedArray[Byte]) -> String {
+  let sb = StringBuilder()
+  let d = "0123456789abcdef"
+  for b in digest {
+    let v = b.to_int()
+    sb.write_char(d.code_units()[v / 16].to_int().unsafe_to_char())
+    sb.write_char(d.code_units()[v % 16].to_int().unsafe_to_char())
+  }
+  sb.to_string()
+}
+
+///|
+fn sha256_hex(text : String) -> String {
+  hex(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+/// One corpus result: `Ok(output)` or `Err(())` when the binary rejected it.
+fn render_lock(results : Array[(String, Result[String, Unit])]) -> String {
+  let sorted = results.copy()
+  sorted.sort_by((a, b) => a.0.compare(b.0))
+  let lines = ["# <corpus key> <sha256 of gleam format output | FORMAT_ERROR>"]
+  for r in sorted {
+    let (key, result) = r
+    lines.push(
+      match result {
+        Ok(out) => "\{key} \{sha256_hex(out)}"
+        Err(_) => "\{key} FORMAT_ERROR"
+      },
+    )
+  }
+  lines.join("\n") + "\n"
+}
+
+///|
+/// Run `gleam format --stdin` on a file.
+async fn gleam_format(exe : String, path : String) -> Result[String, Unit] {
+  let stdin = @process.redirect_from_file(path)
+  let (code, out, _err) = @process.collect_output(
+    exe,
+    ["format", "--stdin"],
+    stdin~,
+  )
+  if code == 0 {
+    Ok(out.text())
+  } else {
+    Err(())
+  }
+}
+
+///|
+async fn record_fixtures(exe : String, dir : String) -> (Int32, Array[String]) {
+  let mut written = 0
+  let rejected = []
+  for suite in @fs.readdir(dir, sort=true) {
+    let suite_dir = "\{dir}/\{suite}"
+    if @fs.kind(suite_dir) is Directory {
+      for e in @fs.readdir(suite_dir, sort=true) {
+        if !e.has_suffix(".gleam") || e.has_suffix(".formatted.gleam") {
+          continue
+        }
+        let input = "\{suite_dir}/\{e}"
+        match gleam_format(exe, input) {
+          Ok(out) => {
+            @fs.write_file(output_path(input), out)
+            written += 1
+          }
+          Err(_) => rejected.push(input)
+        }
+      }
+    }
+  }
+  (written, rejected)
+}
+
+///|
+/// The corpus keys (`<name>@<version>/<path>`) of the manifest.
+fn manifest_keys(json : Json) -> Array[String] raise {
+  guard json is Object(root) && root.get("packages") is Some(Array(packages)) else {
+    fail("manifest: missing packages array")
+  }
+  let keys = []
+  for p in packages {
+    guard p is Object(pkg) &&
+      pkg.get("name") is Some(String(name)) &&
+      pkg.get("version") is Some(String(version)) &&
+      pkg.get("files") is Some(Array(files)) else {
+      fail("manifest: malformed package entry")
+    }
+    for f in files {
+      guard f is Object(file) && file.get("path") is Some(String(path)) else {
+        fail("manifest: malformed file entry")
+      }
+      keys.push("\{name}@\{version}/\{path}")
+    }
+  }
+  keys
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["record", exe, fixtures, manifest, corpus, lock] => {
+      let (written, rejected) = record_fixtures(exe, fixtures)
+      println("recorded \{written} fixture outputs")
+      for r in rejected {
+        println("rejected by gleam format: \{r}")
+      }
+      let results = []
+      for key in manifest_keys(@fs.read_file(manifest).json()) {
+        results.push((key, gleam_format(exe, "\{corpus}/\{key}")))
+      }
+      @fs.write_file(lock, render_lock(results))
+      println("wrote \{results.length()} corpus entries to \{lock}")
+    }
+    _ => {
+      eprintln(usage)
+      @sys.exit(2)
+    }
+  }
+}
+
+///|
+/// Scenario state for `features/formatted.feature`.
+struct FormattedWorld {
+  mut path : String
+  mut results : Array[(String, Result[String, Unit])]
+  mut lock : String
+}
+
+///|
+impl @moonspec.World for FormattedWorld with fn configure(self, setup) {
+  setup.when1("I name the output of {string}", fn(p : String) {
+    self.path = output_path(p)
+  })
+  setup.then1("the output path is {string}", fn(p : String) raise {
+    @expect.expect(self.path).to_equal(p)
+  })
+  setup.given3(
+    "the results {string} formatted to {string}, {string} rejected",
+    fn(a : String, out : String, b : String) {
+      self.results = [
+        (a, Ok(out.replace_all(old="\\n", new="\n"))),
+        (b, Err(())),
+      ]
+    },
+  )
+  setup.when0("I render the lock", fn() {
+    self.lock = render_lock(self.results)
+  })
+  setup.then1("the lock is:", fn(doc : @moonspec.DocString) raise {
+    @expect.expect(self.lock).to_equal(doc.content + "\n")
+  })
+}
+
+///|
+async test "formatted feature" {
+  @moonspec.run_or_fail(
+    () => { path: "", results: [], lock: "", },
+    @moonspec.RunOptions::new([
+      @moonspec.FeatureSource::File("features/formatted.feature"),
+    ]),
+  )
+  |> ignore
+}

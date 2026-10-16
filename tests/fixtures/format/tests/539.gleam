@@ -1,0 +1,3 @@
+const wibble = #(
+  // A comment
+)

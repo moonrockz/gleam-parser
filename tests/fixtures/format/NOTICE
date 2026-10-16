@@ -1,0 +1,8 @@
+The files in this directory tree are the inputs of the Gleam compiler's
+formatter tests (format/src/tests.rs and format/src/tests/*.rs at tag
+v1.19.2, https://github.com/gleam-lang/gleam), extracted by
+scripts/format_cases.mbtx. The `.formatted.gleam` files are the output
+of `gleam format` 1.19.2, recorded by scripts/formatted.mbtx.
+
+Copyright 2020 The Gleam contributors. Licensed under the Apache License,
+Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).

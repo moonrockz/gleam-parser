@@ -8,6 +8,7 @@ import {
   "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/format",
   "moonrockz/gleam-parser/fuel",
   "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/scanner",
@@ -39,6 +40,10 @@ pub fn encode_oracle_output(@ast.OracleOutput) -> Json
 pub fn encode_parsed(@ast.Parsed) -> Json
 
 pub fn[A] fold(@syntax.NodeRef, A, (A, @syntax.NodeRef) -> (A, @syntax.Control), leave? : (A, @syntax.NodeRef) -> A) -> A
+
+pub fn format(String, config? : @config.Config) -> String raise @format.FormatError
+
+pub fn format_parsed(@parser.ParseResult, config? : @config.Config) -> String raise @format.FormatError
 
 pub fn kind_table() -> Array[(String, String, Array[String])]
 
@@ -142,6 +147,8 @@ pub using @syntax {type EventReader}
 pub using @ast {type Expr}
 
 pub using @ast {type External}
+
+pub using @format {type FormatError}
 
 pub using @fuel {type Fuel}
 

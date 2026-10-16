@@ -1,0 +1,2 @@
+type WowThisTypeHasJustTheLongestName =
+  WowThisTypeHasAnEvenLongerNameHowIsThatPossible
