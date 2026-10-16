@@ -342,14 +342,6 @@ fn Formatter::custom_type(
 }
 
 ///|
-fn Formatter::import_(
-  self : Formatter,
-  _i : @ast.Import,
-) -> @pretty.Doc raise FormatError {
-  t("todo")
-}
-
-///|
 fn Formatter::module_constant(
   self : Formatter,
   _c : @ast.ModuleConstant,
@@ -427,17 +419,4 @@ fn Formatter::module(
     }
   }
   @pretty.join(non_empty, line_doc) + line_doc
-}
-
-///|
-/// The compiler's `imports` (Task 2): until then every import is one group.
-fn Formatter::imports(
-  self : Formatter,
-  imports : Array[@ast.TargetedDefinition],
-) -> Array[@pretty.Doc] raise FormatError {
-  let out = []
-  for i in imports {
-    out.push(self.targeted_definition(i))
-  }
-  out
 }
