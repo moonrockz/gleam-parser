@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Extract the compiler's formatter test cases into tests/fixtures/format (formatter:cases [<gleam checkout>], default .dev/gleam)"
+set -euo pipefail
+
+exec moon run -q --target wasm scripts/format_cases.mbtx -- cases "${1:-.dev/gleam}" tests/fixtures/format

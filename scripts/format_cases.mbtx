@@ -1,0 +1,420 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/x@0.5.5/sys",
+  "moonbitlang/core/env",
+  "moonrockz/moonspec@0.11.0",
+  "moonrockz/expect@0.6.1",
+}
+
+///|
+/// Extract the Gleam compiler's formatter test cases as fixtures:
+///
+///   format_cases.mbtx cases <gleam checkout> <fixture dir>
+///
+/// Reads `format/src/tests.rs` and `format/src/tests/*.rs` of the checkout,
+/// decodes the first argument of every `assert_format!` and
+/// `assert_format_rewrite!` and writes it to `<fixture dir>/<suite>/<nnn>.gleam`
+/// (`<suite>` is the file stem, `<nnn>` the 1-based index of the case in the
+/// file). A case the script cannot decode (an input built with `format!`) is
+/// reported and skipped. The checkout's tag must equal the version in
+/// `tests/corpus/gleam_version.txt` (`git describe --tags`).
+
+///|
+let usage : String = "Usage: format_cases.mbtx cases <gleam checkout> <fixture dir>"
+
+///|
+/// A decoded case, or why it was skipped.
+enum Case {
+  Input(String)
+  Skipped(String)
+} derive(Eq, Debug)
+
+///|
+fn hex_value(c : Char) -> Int32? {
+  match c {
+    '0'..<='9' => Some(c.to_int() - '0'.to_int())
+    'a'..<='f' => Some(c.to_int() - 'a'.to_int() + 10)
+    'A'..<='F' => Some(c.to_int() - 'A'.to_int() + 10)
+    _ => None
+  }
+}
+
+///|
+fn is_space(c : Char) -> Bool {
+  c == ' ' || c == '\t' || c == '\n' || c == '\r'
+}
+
+///|
+fn char_at(text : String, k : Int32) -> Char {
+  if k < text.length() {
+    text.code_units()[k].to_int().unsafe_to_char()
+  } else {
+    '\u{0}'
+  }
+}
+
+///|
+/// Decode the Rust string literal that starts at `i` (`"..."`, `r"..."`,
+/// `r#"..."#`, …): the text and the index after the literal.
+fn rust_literal(text : String, i : Int32) -> (String, Int32)? {
+  let n = text.length()
+  if char_at(text, i) == 'r' {
+    let mut hashes = 0
+    let mut k = i + 1
+    while char_at(text, k) == '#' {
+      hashes += 1
+      k += 1
+    }
+    guard char_at(text, k) == '"' else { return None }
+    k += 1
+    let start = k
+    while k < n {
+      if char_at(text, k) == '"' {
+        let mut h = 0
+        while h < hashes && char_at(text, k + 1 + h) == '#' {
+          h += 1
+        }
+        if h == hashes {
+          return Some(
+            (
+              text.view(start_offset=start, end_offset=k).to_owned(),
+              k + 1 + hashes,
+            ),
+          )
+        }
+      }
+      k += 1
+    }
+    return None
+  }
+  guard char_at(text, i) == '"' else { return None }
+  let sb = StringBuilder()
+  let mut k = i + 1
+  while k < n {
+    let c = char_at(text, k)
+    if c == '"' {
+      return Some((sb.to_string(), k + 1))
+    }
+    if c == '\\' {
+      k += 1
+      match char_at(text, k) {
+        'n' => sb.write_char('\n')
+        't' => sb.write_char('\t')
+        'r' => sb.write_char('\r')
+        '0' => sb.write_char('\u{0}')
+        '\\' => sb.write_char('\\')
+        '"' => sb.write_char('"')
+        '\'' => sb.write_char('\'')
+        'x' => {
+          guard hex_value(char_at(text, k + 1)) is Some(a) &&
+            hex_value(char_at(text, k + 2)) is Some(b) else {
+            return None
+          }
+          sb.write_char((a * 16 + b).unsafe_to_char())
+          k += 2
+        }
+        'u' => {
+          guard char_at(text, k + 1) == '{' else { return None }
+          let mut cp = 0
+          k += 2
+          while char_at(text, k) != '}' {
+            guard hex_value(char_at(text, k)) is Some(d) else { return None }
+            cp = cp * 16 + d
+            k += 1
+          }
+          sb.write_char(cp.unsafe_to_char())
+        }
+        '\n' | '\r' =>
+          // A backslash before a line feed skips the following whitespace.
+          while k + 1 < n && is_space(char_at(text, k + 1)) {
+            k += 1
+          }
+        _ => return None
+      }
+      k += 1
+      continue
+    }
+    sb.write_char(c)
+    k += 1
+  }
+  None
+}
+
+///|
+/// The argument that starts at `i` (after the macro's `(`): a literal, a
+/// `let`-bound identifier of the enclosing function (searched backwards
+/// from `i`), either with a `.replace('\n', "...")` suffix; a leading `&`
+/// is skipped.
+fn macro_argument(text : String, i : Int32) -> Case {
+  let mut k = i
+  while is_space(char_at(text, k)) {
+    k += 1
+  }
+  if char_at(text, k) == '&' {
+    k += 1
+  }
+  let (value, after) = match rust_literal(text, k) {
+    Some(v) => v
+    None => {
+      let start = k
+      while char_at(text, k).is_ascii_alphabetic() ||
+            char_at(text, k) == '_' ||
+            char_at(text, k).is_ascii_digit() {
+        k += 1
+      }
+      let name = text.view(start_offset=start, end_offset=k).to_owned()
+      if name == "format" {
+        return Skipped("format!")
+      }
+      guard !name.is_empty() else { return Skipped("unreadable argument") }
+      let pattern = "let \{name} = "
+      guard text.view(end_offset=i).rev_find(pattern) is Some(pos) else {
+        return Skipped("no let binding for \{name}")
+      }
+      guard rust_literal(text, pos + pattern.length()) is Some(v) else {
+        return Skipped("the let binding of \{name} is not a literal")
+      }
+      (v.0, k)
+    }
+  }
+  let mut r = after
+  while is_space(char_at(text, r)) {
+    r += 1
+  }
+  let replace = ".replace('\\n', "
+  if text.view(start_offset=r).has_prefix(replace) {
+    guard rust_literal(text, r + replace.length()) is Some((replacement, _)) else {
+      return Skipped("unreadable replace")
+    }
+    return Input(value.replace_all(old="\n", new=replacement))
+  }
+  Input(value)
+}
+
+///|
+/// Every case of a Rust test file, in order.
+fn extract_cases(text : String) -> Array[Case] {
+  let out = []
+  let macros = ["assert_format_rewrite!(", "assert_format!("]
+  let mut from = 0
+  while true {
+    let mut next : (Int32, String)? = None
+    for m in macros {
+      match text.view(start_offset=from).find(m) {
+        Some(rel) => {
+          let pos = from + rel
+          match next {
+            Some((p, _)) if p <= pos => ()
+            _ => next = Some((pos, m))
+          }
+        }
+        None => ()
+      }
+    }
+    guard next is Some((pos, m)) else { break }
+    if !in_line_comment(text, pos) {
+      out.push(macro_argument(text, pos + m.length()))
+    }
+    from = pos + m.length()
+  }
+  out
+}
+
+///|
+/// Whether the line that holds `pos` starts with `//` (a commented-out
+/// macro is not a case).
+fn in_line_comment(text : String, pos : Int32) -> Bool {
+  let line_start = match text.view(end_offset=pos).rev_find("\n") {
+    Some(i) => i + 1
+    None => 0
+  }
+  text.view(start_offset=line_start, end_offset=pos).trim().has_prefix("//")
+}
+
+///|
+/// `<stem>/<nnn>.gleam` for case `index` (1-based) of `file`.
+fn fixture_path(file : String, index : Int32) -> String {
+  let base = match file.rev_find("/") {
+    Some(i) => file.view(start_offset=i + 1).to_owned()
+    None => file
+  }
+  let stem = if base.has_suffix(".rs") {
+    base.view(end_offset=base.length() - 3).to_owned()
+  } else {
+    base
+  }
+  let n = index.to_string()
+  let padded = "0".repeat(3 - n.length()) + n
+  "\{stem}/\{padded}.gleam"
+}
+
+///|
+let notice : String =
+  #|The files in this directory tree are the inputs of the Gleam compiler's
+  #|formatter tests (format/src/tests.rs and format/src/tests/*.rs at tag
+  #|v1.19.2, https://github.com/gleam-lang/gleam), extracted by
+  #|scripts/format_cases.mbtx. The `.formatted.gleam` files are the output
+  #|of `gleam format` 1.19.2, recorded by scripts/formatted.mbtx.
+  #|
+  #|Copyright 2020 The Gleam contributors. Licensed under the Apache License,
+  #|Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+  #|
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["cases", checkout, out] => {
+      let (code, tag) = @process.collect_stdout("git", [
+        "-C", checkout, "describe", "--tags",
+      ])
+      let version = @fs.read_file("tests/corpus/gleam_version.txt")
+        .text()
+        .trim()
+        .to_owned()
+      let found = tag.text().trim().to_owned()
+      if code != 0 || found != "v\{version}" {
+        eprintln(
+          "the checkout at \{checkout} is not at tag v\{version} (git describe: \{found})",
+        )
+        @sys.exit(1)
+        return
+      }
+      let files = ["format/src/tests.rs"]
+      for e in @fs.readdir("\{checkout}/format/src/tests", sort=true) {
+        if e.has_suffix(".rs") {
+          files.push("format/src/tests/\{e}")
+        }
+      }
+      let mut written = 0
+      let skipped = []
+      for file in files {
+        let text = @fs.read_file("\{checkout}/\{file}").text()
+        for i, c in extract_cases(text) {
+          let path = fixture_path(file, i + 1)
+          match c {
+            Input(input) => {
+              let full = "\{out}/\{path}"
+              let dir = full
+                .view(end_offset=full.rev_find("/").unwrap())
+                .to_owned()
+              @fs.mkdir(dir, recursive=true, allow_exist=true)
+              @fs.write_file(full, input)
+              written += 1
+            }
+            Skipped(reason) => skipped.push("\{path}: \{reason}")
+          }
+        }
+      }
+      @fs.write_file("\{out}/NOTICE", notice)
+      println("wrote \{written} fixtures to \{out}")
+      for s in skipped {
+        println("skipped \{s}")
+      }
+    }
+    _ => {
+      eprintln(usage)
+      @sys.exit(2)
+    }
+  }
+}
+
+///|
+/// Scenario state for `features/format_cases.feature`.
+struct CasesWorld {
+  mut decoded : String?
+  mut source : String
+  mut cases : Array[Case]
+  mut path : String
+}
+
+///|
+/// Gherkin keeps backslash escapes literally; the steps unescape them.
+fn unescape(s : String) -> String {
+  let sb = StringBuilder()
+  let mut i = 0
+  while i < s.length() {
+    let c = char_at(s, i)
+    if c == '\\' && i + 1 < s.length() {
+      match char_at(s, i + 1) {
+        'n' => sb.write_char('\n')
+        't' => sb.write_char('\t')
+        'r' => sb.write_char('\r')
+        '"' => sb.write_char('"')
+        '\\' => sb.write_char('\\')
+        other => {
+          sb.write_char('\\')
+          sb.write_char(other)
+        }
+      }
+      i += 2
+    } else {
+      sb.write_char(c)
+      i += 1
+    }
+  }
+  sb.to_string()
+}
+
+///|
+impl @moonspec.World for CasesWorld with fn configure(self, setup) {
+  setup.when1("I decode the Rust literal with text {string}", fn(
+    text : String,
+  ) {
+    self.decoded = rust_literal("\"" + text + "\"", 0).map(r => r.0)
+  })
+  setup.when1("I decode the Rust literal:", fn(doc : @moonspec.DocString) {
+    self.decoded = rust_literal(doc.content, 0).map(r => r.0)
+  })
+  setup.then1("the decoded text is {string}", fn(text : String) raise {
+    @expect.expect(self.decoded).to_equal(Some(unescape(text)))
+  })
+  setup.given1("the Rust source:", fn(doc : @moonspec.DocString) {
+    self.source = doc.content
+  })
+  setup.when0("I extract the cases", fn() {
+    self.cases = extract_cases(self.source)
+  })
+  setup.then1("the inputs are:", fn(doc : @moonspec.DocString) raise {
+    let inputs = []
+    for c in self.cases {
+      if c is Input(i) {
+        inputs.push(i)
+      }
+    }
+    let expected = doc.content
+      .split("\n")
+      .map(l => unescape(l.to_owned()))
+      .to_array()
+    @expect.expect(inputs).to_equal(expected)
+  })
+  setup.then2("{int} case is skipped with reason {string}", fn(
+    n : Int32,
+    reason : String,
+  ) raise {
+    let skipped = self.cases.filter(c => c is Skipped(_))
+    @expect.expect_all(s => {
+      s.expect(skipped.length()).to_equal(n)
+      s.expect(skipped.contains(Skipped(reason))).to_equal(true)
+    })
+  })
+  setup.when2("I name case {int} of {string}", fn(i : Int32, file : String) {
+    self.path = fixture_path(file, i)
+  })
+  setup.then1("the fixture path is {string}", fn(p : String) raise {
+    @expect.expect(self.path).to_equal(p)
+  })
+}
+
+///|
+async test "format_cases feature" {
+  @moonspec.run_or_fail(
+    () => { decoded: None, source: "", cases: [], path: "", },
+    @moonspec.RunOptions::new([
+      @moonspec.FeatureSource::File("features/format_cases.feature"),
+    ]),
+  )
+  |> ignore
+}

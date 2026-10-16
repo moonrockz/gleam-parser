@@ -1,0 +1,19 @@
+pub type Sixteen(element) =
+  #(
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+    element,
+  )
