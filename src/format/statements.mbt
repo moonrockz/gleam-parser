@@ -29,19 +29,19 @@ fn Formatter::statements(
 }
 
 ///|
-/// The compiler's `statement`. One unit of fuel per nesting level.
+/// The compiler's `statement`. It spends no fuel of its own: the expression
+/// inside it does, so the formatter's depth per nesting level equals the
+/// parser's (a block is one level, not two).
 fn Formatter::statement(
   self : Formatter,
   statement : @ast.Statement,
 ) -> @pretty.Doc raise FormatError {
-  self.nested(op_format, () => {
-    match statement {
-      Expression(e) => self.expr(e)
-      Assignment(a) => self.assignment(a)
-      Use(u) => self.use_(u)
-      Assert(a) => self.assert_(a)
-    }
-  })
+  match statement {
+    Expression(e) => self.expr(e)
+    Assignment(a) => self.assignment(a)
+    Use(u) => self.use_(u)
+    Assert(a) => self.assert_(a)
+  }
 }
 
 ///|

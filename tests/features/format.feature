@@ -32,3 +32,8 @@ Feature: Formatting Gleam source
     Given the Gleam source "// a\nconst x = 1\n// b\n\n/// d\nconst y = 2\n// e\n"
     When I format it
     Then the formatted text is "// a\nconst x = 1\n\n// b\n\n/// d\nconst y = 2\n// e\n"
+
+  Scenario: A module deeper than the fuel budget fails to parse before it formats
+    Given the Gleam source of 150 nested lists
+    When I format it
+    Then formatting fails with 1 error diagnostics

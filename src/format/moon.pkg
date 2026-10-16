@@ -12,6 +12,10 @@ import {
 import {
   "moonrockz/expect",
   "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/lawkit",
+  "moonrockz/gleam-parser/fuel",
+  "moonrockz/gleam-parser/config",
+  "moonbitlang/core/quickcheck",
 } for "test"
 
 import {
