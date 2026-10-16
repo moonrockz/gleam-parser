@@ -37,3 +37,11 @@ test "comments inside type arguments stay before the closing parenthesis" {
     content="type A =\n  B(\n    C,\n    // comment\n  )\n",
   )
 }
+
+///|
+test "a deprecation message keeps its line feeds without indentation" {
+  inspect(
+    @format.format("@deprecated(\"first line\n  second line\")\ntype A = B\n"),
+    content="@deprecated(\"first line\n  second line\")\ntype A =\n  B\n",
+  )
+}

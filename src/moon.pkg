@@ -8,6 +8,7 @@ import {
   "moonrockz/gleam-parser/dialect",
   "moonrockz/gleam-parser/fuel",
   "moonrockz/gleam-parser/config",
+  "moonrockz/gleam-parser/format",
   "moonrockz/gleam-parser/syntax",
   "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/report",

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Raise tests/format/baseline.json to the current format parity counts"
+set -euo pipefail
+
+GLEAM_FORMAT_MODE=ratchet exec moon test tests/format --target js

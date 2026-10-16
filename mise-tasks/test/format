@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Score format parity against the fixtures and tests/corpus/format.lock (the corpus part needs mise run corpus:fetch)"
+set -euo pipefail
+
+GLEAM_FORMAT_MODE=check exec moon test tests/format --target js

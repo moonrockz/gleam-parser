@@ -338,6 +338,33 @@ pub fn parse_text(text : String, config? : Config) -> ParseResult {
 }
 
 ///|
+/// Format Gleam source as `gleam format` does (see `@format.format`):
+/// 80 columns, two spaces of indentation, comments and empty lines kept.
+/// Raises `ParseFailed` with the error diagnostics when the text has a
+/// syntax error.
+///
+/// ```mbt check
+/// test {
+///   inspect(@gleam.format("const  x  =  1\n"), content="const x = 1\n")
+/// }
+/// ```
+pub fn format(text : String, config? : Config) -> String raise FormatError {
+  @format.format(text, config?)
+}
+
+///|
+/// Format a parse result (see `@format.format_parsed`).
+pub fn format_parsed(
+  result : ParseResult,
+  config? : Config,
+) -> String raise FormatError {
+  @format.format_parsed(result, config?)
+}
+
+///|
+pub using @format {type FormatError}
+
+///|
 /// Render a diagnostic as the Gleam compiler prints it (no colours).
 pub fn render_plain(
   d : Diagnostic,

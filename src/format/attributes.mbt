@@ -9,7 +9,7 @@ fn attributes(
 ) -> @pretty.Doc {
   let parts : Array[@pretty.Doc] = []
   if deprecation is Deprecated(message~) {
-    parts.push(t("@deprecated(\"") + t(message) + t("\")"))
+    parts.push(t("@deprecated(\"") + @pretty.raw_text(message) + t("\")"))
   }
   if external_erlang is Some(e) {
     parts.push(
