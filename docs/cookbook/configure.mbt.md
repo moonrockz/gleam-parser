@@ -4,6 +4,31 @@ A `Config` holds what the parser accepts (its `Dialect`) and how deep it
 reads (its fuel `Budget`). Every parse entry point takes `config?`;
 without it, `Config::default()` applies: Gleam 1.19 and 100 units of fuel.
 
+`Dialect.keywords` contains `Keyword` values. The parser treats an omitted
+keyword as an ordinary name. The scanner still classifies the compiler's
+keywords, and the CST keeps its original tokens. Use `Dialect::reserves`
+to check whether a keyword is reserved by a dialect.
+
+```mbt check
+///|
+test "cf: a dialect can unreserve a keyword" {
+  let base = @gleam.Config::default()
+  let dialect = {
+    ..base.dialect,
+    keywords: base.dialect.keywords
+    .iter()
+    .filter(k => k != @gleam.Keyword::Echo)
+    .collect()[:],
+  }
+  let result = @gleam.parse_text("const echo = 1\n", config={ ..base, dialect, })
+  @expect.expect(result.has_errors()).to_be_false()
+}
+```
+
+For migration, replace strings in a custom `keywords` list with `Keyword`
+cases. For example, replace `"echo"` with `Keyword::Echo`. The default
+dialect still reserves all 22 compiler keywords.
+
 Fuel counts nested levels of syntax: each nested expression, pattern,
 type, constant, guard or bit-array size spends one unit while it is open
 and gives it back when it closes. When the budget is spent the parser

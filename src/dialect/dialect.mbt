@@ -27,6 +27,7 @@ pub fn Rule::name(self : Rule) -> String {
 }
 
 ///|
+/// Every supported deprecation rule in declaration order.
 pub fn Rule::all() -> Array[Rule] {
   [
     DeprecatedListPrepend,
@@ -53,7 +54,8 @@ pub fn Rule::all() -> Array[Rule] {
 /// ```
 pub(all) struct Dialect {
   name : String
-  keywords : ArrayView[String]
+  /// Reserved scanner keywords. Omitted keywords parse as ordinary names.
+  keywords : ArrayView[@scanner.Keyword]
   attributes : ArrayView[String]
   targets : ArrayView[String]
   deprecations : ArrayView[Rule]
@@ -66,9 +68,28 @@ pub fn Dialect::gleam_1_19() -> Dialect {
   {
     name: "gleam-1.19",
     keywords: [
-      "as", "assert", "auto", "case", "const", "delegate", "derive", "echo", "else",
-      "fn", "if", "implement", "import", "let", "macro", "opaque", "panic", "pub",
-      "test", "todo", "type", "use",
+      @scanner.Keyword::As,
+      @scanner.Keyword::Assert,
+      @scanner.Keyword::Auto,
+      @scanner.Keyword::Case,
+      @scanner.Keyword::Const,
+      @scanner.Keyword::Delegate,
+      @scanner.Keyword::Derive,
+      @scanner.Keyword::Echo,
+      @scanner.Keyword::Else,
+      @scanner.Keyword::Fn,
+      @scanner.Keyword::If,
+      @scanner.Keyword::Implement,
+      @scanner.Keyword::Import,
+      @scanner.Keyword::Let,
+      @scanner.Keyword::Macro,
+      @scanner.Keyword::Opaque,
+      @scanner.Keyword::Panic,
+      @scanner.Keyword::Pub,
+      @scanner.Keyword::Test,
+      @scanner.Keyword::Todo,
+      @scanner.Keyword::Type,
+      @scanner.Keyword::Use,
     ][:],
     attributes: ["external", "target", "deprecated", "internal"][:],
     targets: ["erlang", "javascript"][:],
@@ -77,16 +98,20 @@ pub fn Dialect::gleam_1_19() -> Dialect {
 }
 
 ///|
+/// Whether this dialect emits warnings for the specified deprecation rule.
 pub fn Dialect::warns(self : Dialect, rule : Rule) -> Bool {
   self.deprecations.contains(rule)
 }
 
 ///|
+/// Whether this dialect accepts an attribute name without its `@` prefix.
 pub fn Dialect::knows_attribute(self : Dialect, name : String) -> Bool {
   self.attributes.contains(name)
 }
 
 ///|
+/// Whether this dialect accepts the canonical name of a target.
+/// Shorthand names are resolved by the parser before this check.
 pub fn Dialect::knows_target(self : Dialect, name : String) -> Bool {
   self.targets.contains(name)
 }
@@ -124,4 +149,20 @@ pub fn Dialect::version(self : Dialect) -> String {
   } else {
     self.name
   }
+}
+
+///|
+/// Whether the parser treats a scanner keyword as reserved.
+/// Omitted keywords parse as names; scanner output remains unchanged.
+///
+/// ```mbt check
+/// test {
+///   assert_eq(
+///     @dialect.Dialect::gleam_1_19().reserves(@scanner.Keyword::Echo),
+///     true,
+///   )
+/// }
+/// ```
+pub fn Dialect::reserves(self : Dialect, keyword : @scanner.Keyword) -> Bool {
+  self.keywords.contains(keyword)
 }

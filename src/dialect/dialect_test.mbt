@@ -4,7 +4,7 @@ test "gleam-1.19 knows the compiler's attributes, targets and keywords" {
   @expect.expect_all(e => {
     e.expect(d.name).to_equal("gleam-1.19")
     e.expect(d.keywords.length()).to_equal(22)
-    e.expect(d.keywords.contains("opaque")).to_be_true()
+    e.expect(d.keywords.contains(@scanner.Keyword::Opaque)).to_be_true()
     e
     .expect(d.attributes)
     .to_equal(["external", "target", "deprecated", "internal"][:])

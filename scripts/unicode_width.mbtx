@@ -1,0 +1,107 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/x@0.5.5/sys",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonrockz/moonspec@0.11.0",
+  "moonrockz/expect@0.6.1",
+}
+
+///|
+/// Convert the pinned oracle's non-default character widths to MoonBit.
+fn generate_widths(input : Json) -> String raise {
+  guard input
+    is {
+      "crate_version": "0.2.2",
+      "unicode_version": [17, 0, 0],
+      "ranges": Array(ranges),
+      ..
+    } else {
+    fail("expected unicode-width 0.2.2 with Unicode 17.0.0")
+  }
+  guard ranges.length() > 0 else { fail("width ranges must not be empty") }
+  let out = StringBuilder()
+  out.write_string(
+    "// Copyright 2012-2025 The Rust Project Developers.\n" +
+    "// SPDX-License-Identifier: Apache-2.0\n" +
+    "// Generated from unicode-width 0.2.2, Unicode 17.0.0.\n" +
+    "// Source: https://github.com/unicode-rs/unicode-width/tree/v0.2.2\n" +
+    "// Regenerate with mise run unicode-width:record after oracle:build.\n" +
+    "// Half-open code point ranges whose width differs from one.\n\n" +
+    "///|\nlet unicode_width_ranges : ArrayView[(Int32, Int32, Int32)] = [\n",
+  )
+  let mut previous_end = 0
+  for row in ranges {
+    guard row is [Number(a, ..), Number(b, ..), Number(w, ..)] else {
+      fail("expected [start, end, width]")
+    }
+    guard a >= previous_end.to_double() &&
+      a == a.floor() &&
+      b == b.floor() &&
+      a < b &&
+      b <= 1114112.0 &&
+      (w == 0.0 || w == 2.0 || w == 3.0) else {
+      fail("invalid or overlapping width range")
+    }
+    let (start, end, width) = (a.to_int(), b.to_int(), w.to_int())
+    out.write_string("    (\{start}, \{end}, \{width}),\n")
+    previous_end = end
+  }
+  out.write_string("  ][:]\n")
+  out.to_string()
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    [oracle, target] => {
+      let (code, output) = @process.collect_stdout(oracle, ["--unicode-widths"])
+      guard code == 0 else { fail("width oracle failed: exit \{code}") }
+      @fs.write_file(target, generate_widths(@json.parse(output.text())))
+      println("recorded \{target}")
+    }
+    _ => {
+      println("Usage: unicode_width.mbtx <oracle-binary> <target.mbt>")
+      @sys.exit(2)
+    }
+  }
+}
+
+///|
+struct WidthWorld {
+  mut input : String
+  mut output : String?
+} derive(Default)
+
+///|
+impl @moonspec.World for WidthWorld with fn configure(self, setup) {
+  setup.given1("the width ranges {string}", fn(ranges : String) {
+    self.input = "{\"crate_version\":\"0.2.2\",\"unicode_version\":[17,0,0],\"ranges\":\{ranges}}"
+  })
+  setup.when0("I generate the width table", fn() {
+    self.output = Some(generate_widths(@json.parse(self.input))) catch {
+      _ => None
+    }
+  })
+  setup.then1("the generated table contains {string}", fn(text : String) raise {
+    guard self.output is Some(output) else { fail("generation failed") }
+    @expect.expect(output.contains(text)).to_be_true()
+  })
+  setup.then0("generation fails", fn() raise {
+    @expect.expect(self.output).to_equal(None)
+  })
+}
+
+///|
+async test "Unicode width recording feature" {
+  @moonspec.run_or_fail(
+    () => (Default::default() : WidthWorld),
+    @moonspec.RunOptions::new([
+      @moonspec.FeatureSource::File("features/unicode_width.feature"),
+    ]),
+  )
+  |> ignore
+}

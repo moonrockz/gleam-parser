@@ -30,7 +30,8 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   error is in the compiler. Recovery per definition: a syntax error is
   reported, the parser skips to the next definition start (`import`,
   `const`, `pub`, `fn`, `type`, `opaque` or `@` in column 1) and goes on;
-  the skipped tokens are a `Skipped` CST definition. `ParseResult` holds
+  the skipped tokens are a `Skipped` CST definition. Warnings and trailing
+  commas from a failed definition are discarded. `ParseResult` holds
   `module_`, `extra`, `warnings`, `cst` and `diagnostics`;
   `ParseResult::parsed()` is the oracle's `Parsed`. See "Parser contract".
 - **AST** — a mirror of the compiler's untyped AST at v1.19.2 (`src/ast`),
@@ -47,6 +48,8 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   compiler's `series_of` records them, so `[1, ..rest]` has one).
 - **Dialect** — `Dialect::gleam_1_19()` (`src/dialect`): the reserved words,
   attributes, targets and deprecation rules the parser accepts.
+  `keywords` holds scanner `Keyword` values. The parser treats omitted
+  keywords as names, including during recovery; the CST keeps scanner tokens.
 - **Fuel and Config** — `src/fuel`: an immutable recursion budget
   (`Budget`, at least 1; `default_budget` 100 units, sized for wasm), one
   unit per nested entry, `FuelExhausted` names the operations.
@@ -116,8 +119,9 @@ To move to a new Gleam version: bump the tag in
 `tools/gleam-ast-oracle/Cargo.toml` and `tests/corpus/gleam_version.txt`;
 diff the files above between the tags; apply the changes to `src/ast`,
 `src/scanner`, `src/parser`, `src/syntax/children.mbt`, `src/format` and
-`docs/ast-json.md`; then re-record and ratchet as "Gleam Parity" and
-"Format Parity" say (`mise run formatter:cases`, `formatter:record`,
+`docs/ast-json.md`; update the oracle's pinned `unicode-width` version and
+run `mise run unicode-width:record` when its dependency changes; then re-record
+and ratchet as "Gleam Parity" and "Format Parity" say (`mise run formatter:cases`, `formatter:record`,
 `formatter:ratchet`; a test checks that the two files name the same tag).
 
 ### Parser contract
@@ -208,8 +212,8 @@ a `title` (the compiler's: "Syntax error", "Deprecated prepend syntax", …),
 `message`), `text` (the compiler's body text, lines joined with `\n`) and
 an optional `hint` (without the `Hint: ` prefix; the renderer adds it), with
 the compiler's wording from `parse/error.rs` and `warning.rs`. The renderer
-(`src/report`) follows codespan-reporting 0.13.1: tab width 4, every code
-point width 1 (the compiler uses East Asian widths), lines split at `\n`
+(`src/report`) follows codespan-reporting 0.13.1: tab width 4, character
+widths from unicode-width 0.2.2 (Unicode 17.0.0), lines split at `\n`
 only; terminal colours are close to the compiler's, not an oracle.
 
 | Code | Meaning |
@@ -495,6 +499,7 @@ All operations use **file-based mise tasks** in `mise-tasks/`. Do not add inline
 | `test` | unit + bdd + scripts + rejection + docs |
 | `oracle:build` | Build the Rust AST oracle (`tools/gleam-ast-oracle`; needs cargo; local only) |
 | `fixtures:record` | Record the oracle's JSON for `tests/fixtures/ast/*.gleam` (needs `oracle:build`) |
+| `unicode-width:record` | Record character widths from the pinned Rust oracle (needs `oracle:build`) |
 | `corpus:manifest` | Rebuild `tests/corpus/manifest.json` from `packages.txt` (downloads every package) |
 | `corpus:fetch` | Download and verify the pinned corpus into `.corpus/` |
 | `corpus:goldens` | Run the oracle over the corpus and write `goldens.lock` (needs cargo; local only) |
@@ -538,6 +543,7 @@ Project tooling logic is written in MoonBit, not bash, `jq` or `awk`.
 | `scripts/publish.mbtx` | `release:publish` | Publish to mooncakes.io; a release tag must match `moon.mod`'s version; an already published version (a second run for the tag) succeeds |
 | `scripts/hooks_install.mbtx` | `hooks:install` | Install lefthook hooks |
 | `scripts/fixtures.mbtx` | `fixtures:record` | Run the oracle over the AST fixtures and write their `.json` |
+| `scripts/unicode_width.mbtx` | `unicode-width:record` | Record the compiler's pinned character-width ranges |
 | `scripts/corpus.mbtx` | `corpus:manifest`, `corpus:fetch` | Pin (Hex metadata, GitHub tag archives), download and verify the parity corpus |
 | `scripts/goldens.mbtx` | `corpus:goldens` | Run the oracle over the corpus; one raw result per file |
 | `scripts/rejection.mbtx` | `rejection:record` | Record the oracle's verdict per rejection fixture |

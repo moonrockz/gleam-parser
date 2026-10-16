@@ -3,6 +3,13 @@
 A parser and formatter for Gleam source text, with the compiler's AST and
 lossless tokens.
 
+## Language rules
+
+**Keyword**: One of the compiler's grammar words, such as `fn` or `echo`.
+
+**Reserved keyword**: A keyword that a dialect excludes from ordinary names.
+A dialect can reserve a subset of the compiler's keywords.
+
 ## Source coordinates
 
 **Byte offset**: A zero-based position measured in UTF-8 bytes. A byte offset

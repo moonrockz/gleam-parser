@@ -5,6 +5,12 @@ the span), `text`, `hint` and extra `labels`. `render_plain` prints it in
 the compiler's layout; `render_terminal` adds colours;
 `encode_diagnostics` gives JSON.
 
+Locus columns count Unicode code points. When a span starts inside a UTF-8
+character, the locus counts only complete characters before that byte.
+Underlines use the compiler's Unicode display widths. Wide characters
+occupy two cells, combining marks can occupy zero cells, and tabs reach
+the next four-cell tab stop. Display cells and locus columns are distinct.
+
 ```mbt check
 ///|
 test "di: render a syntax error" {

@@ -58,6 +58,9 @@ pub fn parse_module(
 
   while p.index0 < p.tokens.length() {
     let start_index = p.index0
+    let warnings_start = p.warnings.length()
+    let detached_start = p.detached_doc_comments.length()
+    let commas_start = p.trailing_commas.length()
     let outcome = try p.parse_definition() catch {
       e => Err(e)
     } noraise {
@@ -71,6 +74,9 @@ pub fn parse_module(
         cst_definitions.push(@cst.DefinitionCst(kind~, name~, tokens~))
       }
       Ok(None) => {
+        p.warnings.truncate(warnings_start)
+        p.detached_doc_comments.truncate(detached_start)
+        p.trailing_commas.truncate(commas_start)
         // Not a definition start: a stray token (reported as the compiler
         // does) or a hole left by a lexical error (reported by the scanner).
         if p.token0 is Some(t) {
@@ -88,6 +94,9 @@ pub fn parse_module(
         p.recover(start_index, cst_definitions)
       }
       Err(e) => {
+        p.warnings.truncate(warnings_start)
+        p.detached_doc_comments.truncate(detached_start)
+        p.trailing_commas.truncate(commas_start)
         report(e)
         p.recover(start_index, cst_definitions)
       }

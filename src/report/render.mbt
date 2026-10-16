@@ -56,7 +56,7 @@ fn Out::reset(self : Out) -> Unit {
 
 ///|
 /// One character of a source line: its byte index in the line, its display
-/// width (a tab reaches the next tab stop; everything else is 1) and its
+/// width (a tab reaches the next tab stop; other widths match Unicode) and its
 /// text.
 priv struct CharInfo {
   byte : @span.ByteOffset
@@ -152,6 +152,21 @@ fn utf8_len(c : Int32) -> Int32 {
 }
 
 ///|
+/// Codespan counts only code points whose final byte precedes the locus.
+fn locus_column(text : String, byte : @span.ByteOffset) -> @span.ColumnNumber {
+  let mut end = @span.ByteOffset::zero()
+  let mut column = 1
+  for ch in text {
+    end = end.shift(utf8_len(ch.to_int())).unwrap()
+    if end > byte {
+      break
+    }
+    column += 1
+  }
+  @span.ColumnNumber::from_int(column).unwrap()
+}
+
+///|
 /// The characters of a line (its `\n`, `\r` and `\0` tail removed), with
 /// byte indexes and widths.
 fn line_chars(text : String) -> Array[CharInfo] {
@@ -161,7 +176,11 @@ fn line_chars(text : String) -> Array[CharInfo] {
   let mut column = 0
   for ch in trimmed {
     let code = ch.to_int()
-    let width = if ch == '\t' { tab_width - column % tab_width } else { 1 }
+    let width = if ch == '\t' {
+      tab_width - column % tab_width
+    } else {
+      char_width(ch)
+    }
     chars.push({
       byte,
       width,
@@ -380,11 +399,11 @@ fn render(
   keys.sort()
   if keys.length() > 0 {
     let locus_line = line_index(starts, primary.start)
-    let (ls, _) = line_range(locus_line)
-    let column = match source.slice(sp(ls, primary.start)) {
-      Some(before) => before.iter().count() + 1
-      None => 1
-    }
+    let (ls, le) = line_range(locus_line)
+    let column = locus_column(
+      source.slice(sp(ls, le)).unwrap_or(""),
+      @span.ByteOffset::from_int(primary.start.to_int() - ls.to_int()).unwrap(),
+    ).to_int()
     outer_gutter(out, outer_padding)
     out.set_border()
     out.write("┌─")
@@ -833,6 +852,9 @@ fn inner_gutter_column(out : Out, underline : (Style, Bool)?) -> Unit {
 
 ///|
 /// The diagnostic as the Gleam compiler prints it, without colours.
+/// Locus columns count complete code points before the start byte, even
+/// inside a multi-byte character. Underlines use Unicode display widths
+/// from the compiler's pinned `unicode-width` dependency and tab stops of four.
 ///
 /// ```mbt check
 /// test {

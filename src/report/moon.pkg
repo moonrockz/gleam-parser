@@ -12,3 +12,8 @@ import {
   "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/lawkit",
 } for "test"
+
+import {
+  "moonrockz/expect",
+  "moonbitlang/core/quickcheck",
+} for "wbtest"
