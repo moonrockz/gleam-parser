@@ -39,7 +39,53 @@ fn format_mode() -> Mode? raise {
 priv struct FileResult {
   key : String
   matched : Bool
+  idempotent : Bool
+  reparsed : Bool
   detail : String? // the first difference, or the error
+}
+
+///|
+/// The two laws on one output: formatting it again gives the same text,
+/// and it parses with no error diagnostic.
+fn laws_of(output : String) -> (Bool, Bool) {
+  let idempotent = match format_or_error(output) {
+    Ok(again) => again == output
+    Err(_) => false
+  }
+  let reparsed = @gleam.parse_text(output).diagnostics
+    .filter(d => d.severity is Error)
+    .length() ==
+    0
+  (idempotent, reparsed)
+}
+
+///|
+/// A result for an output that may differ from the expected text.
+fn result_of(
+  key : String,
+  actual : String,
+  matched : Bool,
+  detail : String?,
+) -> FileResult {
+  let (idempotent, reparsed) = laws_of(actual)
+  let detail = match detail {
+    Some(d) => Some(d)
+    None if !idempotent => Some("not idempotent")
+    None if !reparsed => Some("the output does not parse")
+    None => None
+  }
+  { key, matched, idempotent, reparsed, detail, }
+}
+
+///|
+fn failed_result(key : String, error : String) -> FileResult {
+  {
+    key,
+    matched: false,
+    idempotent: false,
+    reparsed: false,
+    detail: Some(error),
+  }
 }
 
 ///|
@@ -69,6 +115,12 @@ fn score_fixtures() -> Array[FileResult] raise {
       let stem = e.view(end_offset=e.length() - 6).to_owned()
       let expected_path = "\{suite_dir}/\{stem}.formatted.gleam"
       if !@fs.path_exists(expected_path) {
+        results.push(
+          failed_result(
+            "\{suite}/\{e}",
+            "no recorded output: run mise run formatter:record, or the binary rejects this input",
+          ),
+        )
         continue
       }
       let input = @fs.read_file_to_string("\{suite_dir}/\{e}")
@@ -76,15 +128,15 @@ fn score_fixtures() -> Array[FileResult] raise {
       let key = "\{suite}/\{e}"
       results.push(
         match format_or_error(input) {
-          Ok(actual) if actual == expected =>
-            { key, matched: true, detail: None, }
+          Ok(actual) if actual == expected => result_of(key, actual, true, None)
           Ok(actual) =>
-            {
+            result_of(
               key,
-              matched: false,
-              detail: Some(first_difference(expected, actual)),
-            }
-          Err(e) => { key, matched: false, detail: Some(e), }
+              actual,
+              false,
+              Some(first_difference(expected, actual)),
+            )
+          Err(e) => failed_result(key, e)
         },
       )
     }
@@ -115,8 +167,25 @@ fn read_lock() -> Array[(String, String)] raise {
 }
 
 ///|
+/// Why the corpus cannot be scored, or `None`.
+fn corpus_problem(lock_exists~ : Bool, corpus_exists~ : Bool) -> String? {
+  if lock_exists && !corpus_exists {
+    Some(
+      "tests/corpus/format.lock exists but .corpus does not; run mise run corpus:fetch",
+    )
+  } else {
+    None
+  }
+}
+
+///|
 fn score_corpus() -> Array[FileResult] raise {
-  if !@fs.path_exists(lock_path) || !@fs.path_exists(corpus_dir) {
+  let lock_exists = @fs.path_exists(lock_path)
+  let corpus_exists = @fs.path_exists(corpus_dir)
+  if corpus_problem(lock_exists~, corpus_exists~) is Some(problem) {
+    fail(problem)
+  }
+  if !lock_exists {
     return []
   }
   let results = []
@@ -130,14 +199,25 @@ fn score_corpus() -> Array[FileResult] raise {
     results.push(
       match format_or_error(text) {
         Ok(actual) if sha256_hex(actual) == expected =>
-          { key, matched: true, detail: None, }
-        Ok(_) =>
+          result_of(key, actual, true, None)
+        Ok(actual) =>
+          result_of(
+            key,
+            actual,
+            false,
+            Some("output hash differs from the lock"),
+          )
+        // Both reject the file: that is a match of verdicts. The law counts
+        // are vacuous here (there is no output to check).
+        Err(e) if expected == "FORMAT_ERROR" =>
           {
             key,
-            matched: false,
-            detail: Some("output hash differs from the lock"),
+            matched: true,
+            idempotent: true,
+            reparsed: true,
+            detail: Some(e),
           }
-        Err(e) => { key, matched: false, detail: Some(e), }
+        Err(e) => failed_result(key, e)
       },
     )
   }
@@ -152,8 +232,12 @@ fn counts_of(
   {
     fixtures: fixtures.length(),
     fixtures_matched: fixtures.filter(r => r.matched).length(),
+    fixtures_idempotent: fixtures.filter(r => r.idempotent).length(),
+    fixtures_reparsed: fixtures.filter(r => r.reparsed).length(),
     corpus: corpus.length(),
     corpus_matched: corpus.filter(r => r.matched).length(),
+    corpus_idempotent: corpus.filter(r => r.idempotent).length(),
+    corpus_reparsed: corpus.filter(r => r.reparsed).length(),
   }
 }
 
@@ -183,17 +267,19 @@ fn write_reports(
   ensure_dir("../_build/reports")
   ensure_dir(reports_dir)
   let all = fixtures + corpus
-  let unmatched = all.filter(r => !r.matched)
+  let unmatched = all.filter(r => !r.matched || !r.idempotent || !r.reparsed)
   let md = StringBuilder()
   md.write_string("## Format parity\n\n\{scoreboard(counts)}")
   match baseline {
     Some(b) =>
       md.write_string(
-        " (baseline \{b.fixtures_matched}/\{b.fixtures}, \{b.corpus_matched}/\{b.corpus})\n",
+        " (baseline: \{b.fixtures_matched}/\{b.fixtures} fixtures, \{b.fixtures_idempotent} idempotent, \{b.fixtures_reparsed} reparsed; \{b.corpus_matched}/\{b.corpus} corpus files, \{b.corpus_idempotent} idempotent, \{b.corpus_reparsed} reparsed)\n",
       )
     None => md.write_string("\n")
   }
-  md.write_string("\n\{unmatched.length()} unmatched.\n")
+  md.write_string(
+    "\n\{unmatched.length()} files with a problem (not matched, not idempotent, or not reparsed).\n",
+  )
   let shown = if unmatched.length() < max_reported {
     unmatched.length()
   } else {
@@ -209,6 +295,8 @@ fn write_reports(
     files.push({
       "key": Json(r.key),
       "matched": Json(r.matched),
+      "idempotent": Json(r.idempotent),
+      "reparsed": Json(r.reparsed),
       "detail": match r.detail {
         Some(d) => Json(d)
         None => Json::null()
@@ -225,7 +313,7 @@ fn write_reports(
     "<!doctype html><meta charset=utf-8><title>Format parity</title><style>body{font-family:sans-serif}pre{background:#f4f4f4;padding:4px}.ok{color:green}.no{color:#b00}</style><h1>\{escape_html(scoreboard(counts))}</h1><p><label><input type=checkbox id=f onchange=\"document.querySelectorAll('.ok').forEach(e=>e.style.display=this.checked?'none':'')\"> unmatched only</label></p><ul>",
   )
   for r in all {
-    let cls = if r.matched { "ok" } else { "no" }
+    let cls = if r.matched && r.idempotent && r.reparsed { "ok" } else { "no" }
     html.write_string("<li class=\{cls}><code>\{escape_html(r.key)}</code>")
     if r.detail is Some(d) {
       html.write_string("<pre>\{escape_html(d)}</pre>")
@@ -234,6 +322,51 @@ fn write_reports(
   }
   html.write_string("</ul>")
   @fs.write_string_to_file("\{reports_dir}/format.html", html.to_string())
+}
+
+///|
+/// The next baseline: for a source whose total is unchanged, the maximum
+/// of each count; for a source whose total changed (a fixture added or
+/// removed, a corpus bump), the current counts, so the baseline stays one
+/// a run can meet.
+fn ratchet_counts(current : Counts, baseline : Counts?) -> Counts {
+  guard baseline is Some(b) else { return current }
+  let max = (a : Int32, c : Int32) => if a > c { a } else { c }
+  let same_fixtures = current.fixtures == b.fixtures
+  let same_corpus = current.corpus == b.corpus
+  let up = (same : Bool, now : Int32, before : Int32) => {
+    if same {
+      max(now, before)
+    } else {
+      now
+    }
+  }
+  {
+    fixtures: current.fixtures,
+    fixtures_matched: up(
+      same_fixtures,
+      current.fixtures_matched,
+      b.fixtures_matched,
+    ),
+    fixtures_idempotent: up(
+      same_fixtures,
+      current.fixtures_idempotent,
+      b.fixtures_idempotent,
+    ),
+    fixtures_reparsed: up(
+      same_fixtures,
+      current.fixtures_reparsed,
+      b.fixtures_reparsed,
+    ),
+    corpus: current.corpus,
+    corpus_matched: up(same_corpus, current.corpus_matched, b.corpus_matched),
+    corpus_idempotent: up(
+      same_corpus,
+      current.corpus_idempotent,
+      b.corpus_idempotent,
+    ),
+    corpus_reparsed: up(same_corpus, current.corpus_reparsed, b.corpus_reparsed),
+  }
 }
 
 ///|
@@ -268,24 +401,7 @@ test "format parity" {
           )
       }
     Ratchet => {
-      let next = match baseline {
-        Some(b) =>
-          {
-            fixtures: counts.fixtures,
-            corpus: counts.corpus,
-            fixtures_matched: if counts.fixtures_matched > b.fixtures_matched {
-              counts.fixtures_matched
-            } else {
-              b.fixtures_matched
-            },
-            corpus_matched: if counts.corpus_matched > b.corpus_matched {
-              counts.corpus_matched
-            } else {
-              b.corpus_matched
-            },
-          }
-        None => counts
-      }
+      let next = ratchet_counts(counts, baseline)
       @fs.write_string_to_file(
         baseline_path,
         counts_to_json(next).stringify(indent=2) + "\n",

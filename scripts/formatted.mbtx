@@ -32,6 +32,21 @@ fn output_path(input : String) -> String {
 }
 
 ///|
+/// Lexicographic order of UTF-16 code units (`String::compare` is
+/// length-first).
+fn by_code_units(a : String, b : String) -> Int32 {
+  let n = if a.length() < b.length() { a.length() } else { b.length() }
+  for i in 0..<n {
+    let x = a.code_units()[i].to_int()
+    let y = b.code_units()[i].to_int()
+    if x != y {
+      return if x < y { -1 } else { 1 }
+    }
+  }
+  a.length().compare(b.length())
+}
+
+///|
 fn hex(digest : FixedArray[Byte]) -> String {
   let sb = StringBuilder()
   let d = "0123456789abcdef"
@@ -52,7 +67,7 @@ fn sha256_hex(text : String) -> String {
 /// One corpus result: `Ok(output)` or `Err(())` when the binary rejected it.
 fn render_lock(results : Array[(String, Result[String, Unit])]) -> String {
   let sorted = results.copy()
-  sorted.sort_by((a, b) => a.0.compare(b.0))
+  sorted.sort_by((a, b) => by_code_units(a.0, b.0))
   let lines = ["# <corpus key> <sha256 of gleam format output | FORMAT_ERROR>"]
   for r in sorted {
     let (key, result) = r
@@ -99,7 +114,13 @@ async fn record_fixtures(exe : String, dir : String) -> (Int32, Array[String]) {
             @fs.write_file(output_path(input), out)
             written += 1
           }
-          Err(_) => rejected.push(input)
+          Err(_) => {
+            // A stale output from an earlier run must not survive.
+            if @fs.exists(output_path(input)) {
+              @fs.remove(output_path(input))
+            }
+            rejected.push(input)
+          }
         }
       }
     }

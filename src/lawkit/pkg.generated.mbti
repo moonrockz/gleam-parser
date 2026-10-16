@@ -57,6 +57,12 @@ pub fn units(Array[Int]) -> String
 // Errors
 
 // Types and methods
+pub(all) struct Commented(String) derive(@debug.Debug)
+pub fn Commented::comments(Self) -> Array[String]
+pub fn Commented::text(Self) -> String
+pub impl @quickcheck.Arbitrary for Commented
+pub impl @shrink.Shrink for Commented
+
 pub(all) enum Construct {
   List
   Tuple

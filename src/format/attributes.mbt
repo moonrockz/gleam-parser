@@ -14,18 +14,18 @@ fn attributes(
   if external_erlang is Some(e) {
     parts.push(
       t("@external(erlang, \"") +
-      t(e.module_) +
+      @pretty.raw_text(e.module_) +
       t("\", \"") +
-      t(e.function) +
+      @pretty.raw_text(e.function) +
       t("\")"),
     )
   }
   if external_javascript is Some(e) {
     parts.push(
       t("@external(javascript, \"") +
-      t(e.module_) +
+      @pretty.raw_text(e.module_) +
       t("\", \"") +
-      t(e.function) +
+      @pretty.raw_text(e.function) +
       t("\")"),
     )
   }
