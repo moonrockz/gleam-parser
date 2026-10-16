@@ -102,3 +102,20 @@ fn pub_(publicity : @ast.Publicity) -> @pretty.Doc {
 fn wrap_block(doc : @pretty.Doc) -> @pretty.Doc {
   nest(open_curly_break + doc) + breakable_space + t("}")
 }
+
+///|
+let case_break : @pretty.Doc = @pretty.break_("case", "case ")
+
+///|
+/// The compiler's `break_block`.
+fn break_block(doc : @pretty.Doc) -> @pretty.Doc {
+  @pretty.force_break(t("{") + nest(line_doc + doc) + line_doc + t("}"))
+}
+
+///|
+/// The compiler's `IF_SPACE_DOCUMENT` ("if ", declared width 2).
+let if_space : @pretty.Doc = t("if") + @pretty.zero_width(" ")
+
+///|
+/// The compiler's `SPACE_AS_DOCUMENT` (" as", declared width 2).
+let space_as : @pretty.Doc = @pretty.zero_width(" ") + t("as")
