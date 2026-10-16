@@ -60,10 +60,7 @@ fn Formatter::sorted_import_group(
 
 ///|
 /// The compiler's `unqualified_import`.
-fn Formatter::unqualified_import(
-  self : Formatter,
-  import_ : @ast.UnqualifiedImport,
-) -> @pretty.Doc {
+fn unqualified_import(import_ : @ast.UnqualifiedImport) -> @pretty.Doc {
   t(import_.name) +
   (match import_.as_name {
     None => @pretty.empty()
@@ -74,24 +71,21 @@ fn Formatter::unqualified_import(
 
 ///|
 /// The import arm of the compiler's `definition`.
-fn Formatter::import_(
-  self : Formatter,
-  import_ : @ast.Import,
-) -> @pretty.Doc raise FormatError {
+fn import_(import_ : @ast.Import) -> @pretty.Doc {
   let second = if import_.unqualified_values.is_empty() &&
     import_.unqualified_types.is_empty() {
     @pretty.empty()
   } else {
-    let types = import_.unqualified_types.to_array()
+    let types = import_.unqualified_types.to_owned()
     types.sort_by((a, b) => lexicographic(a.name, b.name))
-    let values = import_.unqualified_values.to_array()
+    let values = import_.unqualified_values.to_owned()
     values.sort_by((a, b) => lexicographic(a.name, b.name))
     let docs = []
     for i in types {
-      docs.push(t("type ") + self.unqualified_import(i))
+      docs.push(t("type ") + unqualified_import(i))
     }
     for i in values {
-      docs.push(self.unqualified_import(i))
+      docs.push(unqualified_import(i))
     }
     let unqualified = @pretty.join(docs, flex_comma)
     let unqualified = group(
@@ -101,7 +95,7 @@ fn Formatter::import_(
   }
   let doc = t("import ") + t(import_.module_) + second
   let default_name = match import_.module_.rev_find("/") {
-    Some(i) => import_.module_.view(start_offset=i + 1).to_string()
+    Some(i) => import_.module_.view(start_offset=i + 1).to_owned()
     None => import_.module_
   }
   match import_.as_name {

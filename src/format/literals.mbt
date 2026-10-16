@@ -14,7 +14,7 @@ fn string(value : String) -> @pretty.Doc {
 /// The compiler's `bin_op_string`: a string literal on the side of an
 /// operator; each line after the first starts a line with no indentation.
 fn bin_op_string(value : String) -> @pretty.Doc {
-  let lines = value.split("\n").map(l => l.to_string()).to_array()
+  let lines = value.split("\n").map(l => l.to_owned()).to_array()
   if lines.length() <= 1 {
     return t("\"") + @pretty.raw_text(value) + t("\"")
   }
@@ -73,18 +73,18 @@ fn int(value : String) -> @pretty.Doc {
 /// zeros of the fraction removed (at least one digit), exponent kept.
 fn float(value : String) -> @pretty.Doc {
   let (integer_part, floating_part) = match value.split_once(".") {
-    Some((a, b)) => (a.to_string(), b.to_string())
+    Some((a, b)) => (a.to_owned(), b.to_owned())
     None => (value, "")
   }
   let (fraction, scientific) = match floating_part.find("e") {
     Some(i) =>
       (
-        floating_part.view(end_offset=i).to_string(),
-        floating_part.view(start_offset=i).to_string(),
+        floating_part.view(end_offset=i).to_owned(),
+        floating_part.view(start_offset=i).to_owned(),
       )
     None => (floating_part, "")
   }
-  let mut fraction = fraction.trim_end(chars="0").to_string()
+  let mut fraction = fraction.trim_end(chars="0").to_owned()
   if fraction.is_empty() {
     fraction = "0"
   }

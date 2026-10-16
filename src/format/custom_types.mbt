@@ -2,24 +2,24 @@
 /// The compiler's `record_constructor`.
 fn Formatter::record_constructor(
   self : Formatter,
-  constructor : @ast.RecordConstructor,
+  constructor_ : @ast.RecordConstructor,
 ) -> @pretty.Doc raise FormatError {
-  let comments = self.pop_comments(constructor.location.start)
-  let doc_comments = self.doc_comments(constructor.location.start)
-  let attrs = attributes(constructor.deprecation, Private, None, None)
-  let doc = if constructor.arguments.is_empty() {
-    if self.any_comments(constructor.location.end) {
+  let comments = self.pop_comments(constructor_.location.start)
+  let doc_comments = self.doc_comments(constructor_.location.start)
+  let attrs = attributes(constructor_.deprecation, Private, None, None)
+  let doc = if constructor_.arguments.is_empty() {
+    if self.any_comments(constructor_.location.end) {
       group(
         attrs +
-        t(constructor.name) +
-        self.wrap_arguments([], constructor.location.end),
+        t(constructor_.name) +
+        self.wrap_arguments([], constructor_.location.end),
       )
     } else {
-      attrs + t(constructor.name)
+      attrs + t(constructor_.name)
     }
   } else {
     let arguments = []
-    for a in constructor.arguments {
+    for a in constructor_.arguments {
       let arg_comments = self.pop_comments(a.location.start)
       let argument = match a.label {
         Some(label) => t(label.name) + t(": ") + self.type_ast(a.ast)
@@ -33,8 +33,8 @@ fn Formatter::record_constructor(
       )
     }
     attrs +
-    t(constructor.name) +
-    group(self.wrap_arguments(arguments, constructor.location.end))
+    t(constructor_.name) +
+    group(self.wrap_arguments(arguments, constructor_.location.end))
   }
   commented(group(doc_comments + doc), comments[:])
 }

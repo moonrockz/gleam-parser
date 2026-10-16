@@ -3,7 +3,6 @@ import {
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/diagnostic",
   "moonrockz/gleam-parser/ast",
-  "moonrockz/gleam-parser/cst",
   "moonrockz/gleam-parser/parser",
   "moonrockz/gleam-parser/fuel",
   "moonrockz/gleam-parser/config",
@@ -12,16 +11,10 @@ import {
 
 import {
   "moonrockz/expect",
-  "moonbitlang/core/debug",
   "moonrockz/gleam-parser/parser",
-  "moonrockz/gleam-parser/ast",
-  "moonrockz/gleam-parser/scanner",
-  "moonrockz/gleam-parser/config",
-  "moonrockz/pretty",
 } for "test"
 
 import {
   "moonrockz/expect",
-  "moonbitlang/core/debug",
   "moonrockz/pretty",
 } for "wbtest"

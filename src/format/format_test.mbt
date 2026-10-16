@@ -23,5 +23,5 @@ test "a syntax error raises ParseFailed with the parser's error diagnostics" {
     ParseFailed(ds) => Some(ds.length())
     OutOfFuel(_) => None
   }
-  inspect(failed, content="Some(1)")
+  debug_inspect(failed, content="Some(1)")
 }

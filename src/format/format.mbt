@@ -53,7 +53,7 @@ pub fn format_parsed(
   }
   let source = @scanner.SourceText::new(result.cst.to_source())
   let formatter = Formatter::new(result.extra, source, config)
-  pretty_print(formatter.module(result.module_))
+  pretty_print(formatter.format_module(result.module_))
 }
 
 ///|

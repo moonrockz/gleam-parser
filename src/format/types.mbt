@@ -64,15 +64,15 @@ fn Formatter::type_arguments(
 /// The compiler's `type_alias`.
 fn Formatter::type_alias(
   self : Formatter,
-  alias : @ast.TypeAlias,
+  alias_ : @ast.TypeAlias,
 ) -> @pretty.Doc raise FormatError {
-  let attrs = attributes(alias.deprecation, alias.publicity, None, None)
-  let head = attrs + pub_(alias.publicity) + t("type ") + t(alias.alias_)
-  let head = if alias.parameters.is_empty() {
+  let attrs = attributes(alias_.deprecation, alias_.publicity, None, None)
+  let head = attrs + pub_(alias_.publicity) + t("type ") + t(alias_.alias_)
+  let head = if alias_.parameters.is_empty() {
     head
   } else {
-    let args = alias.parameters.iter().map(p => t(p.name)).to_array()
-    head + group(self.wrap_arguments(args, alias.location.end))
+    let args = alias_.parameters.iter().map(p => t(p.name)).to_array()
+    head + group(self.wrap_arguments(args, alias_.location.end))
   }
-  head + t(" =") + nest(group(line_doc + self.type_ast(alias.type_ast)))
+  head + t(" =") + nest(group(line_doc + self.type_ast(alias_.type_ast)))
 }

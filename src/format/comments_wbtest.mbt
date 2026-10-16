@@ -1,4 +1,13 @@
 ///|
+/// A text form of a popped comment, for comparisons.
+fn show(c : CommentOrLine) -> String {
+  match c {
+    Text(s) => "T:" + s
+    EmptyLine => "E"
+  }
+}
+
+///|
 fn fixture(text : String) -> Formatter {
   let r = @parser.parse_text(text)
   Formatter::new(
@@ -15,9 +24,9 @@ test "pop_comments returns comments and coalesced empty lines before the limit, 
   let popped = f.pop_comments_with_position(13)
   @expect.expect_all(s => {
     s.expect(popped.length()).to_equal(3)
-    s.expect(popped[0]).to_equal((2, Text(" a")))
-    s.expect(popped[1]).to_equal((5, EmptyLine))
-    s.expect(popped[2]).to_equal((9, Text(" b")))
+    s.expect((popped[0].0, show(popped[0].1))).to_equal((2, "T: a"))
+    s.expect((popped[1].0, show(popped[1].1))).to_equal((5, "E"))
+    s.expect((popped[2].0, show(popped[2].1))).to_equal((9, "T: b"))
     // Nothing is left before the limit; the cursor moved.
     s.expect(f.any_comments(13)).to_equal(false)
     s.expect(f.any_empty_lines(13)).to_equal(false)
@@ -31,7 +40,7 @@ test "leading empty lines are dropped and doc comments drop every empty line" {
     let comments = f.pop_comments(100)
     // The empty lines after `// a` are popped too (one per gap, as the
     // compiler coalesces only consecutive ones).
-    s.expect(comments).to_equal([Text(" a"), EmptyLine, EmptyLine])
+    s.expect(comments.map(show)).to_equal(["T: a", "E", "E"])
     let docs = f.pop_doc_comments(100)
     s.expect(docs).to_equal([" d", " e"])
     s.expect(f.any_empty_lines(100)).to_equal(false)

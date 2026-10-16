@@ -12,7 +12,7 @@ priv struct Comment {
 priv enum CommentOrLine {
   Text(String)
   EmptyLine
-} derive(Eq, Debug)
+}
 
 ///|
 /// The compiler's `Formatter`: the comment arrays of `ModuleExtra` with a
@@ -312,22 +312,14 @@ fn Formatter::definition(
     Function(f) => self.statement_fn(f)
     TypeAlias(a) => self.type_alias(a)
     CustomType(c) => self.custom_type(c)
-    Import(i) => self.import_(i)
+    Import(i) => import_(i)
     ModuleConstant(c) => self.module_constant(c)
   }
 }
 
 ///|
-fn Formatter::statement_fn(
-  self : Formatter,
-  _f : @ast.Function,
-) -> @pretty.Doc raise FormatError {
-  t("todo")
-}
-
-///|
-/// The compiler's `module`.
-fn Formatter::module(
+/// The compiler's `module` (`module` is a reserved word).
+fn Formatter::format_module(
   self : Formatter,
   module_ : @ast.Module,
 ) -> @pretty.Doc raise FormatError {

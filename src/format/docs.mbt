@@ -54,9 +54,6 @@ let open_square_break : @pretty.Doc = @pretty.break_("[", "[")
 let open_paren_break : @pretty.Doc = @pretty.break_("(", "(")
 
 ///|
-let open_tuple_break : @pretty.Doc = @pretty.break_("#(", "#(")
-
-///|
 let open_bit_array_break : @pretty.Doc = @pretty.break_("<<", "<<")
 
 ///|
@@ -88,10 +85,4 @@ fn pub_(publicity : @ast.Publicity) -> @pretty.Doc {
 /// The compiler's `wrap_block`.
 fn wrap_block(doc : @pretty.Doc) -> @pretty.Doc {
   nest(open_curly_break + doc) + breakable_space + t("}")
-}
-
-///|
-/// The compiler's `break_block`.
-fn break_block(doc : @pretty.Doc) -> @pretty.Doc {
-  @pretty.force_break(t("{") + nest(line_doc + doc) + line_doc + t("}"))
 }
