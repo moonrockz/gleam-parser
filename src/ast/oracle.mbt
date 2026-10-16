@@ -9,6 +9,19 @@ pub(all) enum OracleOutput {
 } derive(Eq, Debug)
 
 ///|
+/// Encode a parsed module or the compiler's first error.
+/// Use `canonical` to write the JSON text, then add a line feed for oracle output.
+///
+/// ```mbt check
+/// test {
+///   let value : @ast.OracleOutput = Error(
+///     kind="UnexpectedEof",
+///     lexical_kind=None,
+///     location=@span.SrcSpan::new(0, 0),
+///   )
+///   assert_eq(@ast.decode_oracle_output(@ast.encode_oracle_output(value)), value)
+/// }
+/// ```
 pub fn encode_oracle_output(o : OracleOutput) -> Json {
   match o {
     Parsed(p) => encode_parsed(p)
@@ -27,6 +40,9 @@ pub fn encode_oracle_output(o : OracleOutput) -> Json {
 }
 
 ///|
+/// Decode the oracle's parsed module or first-error object.
+/// An `error` field selects the error form. Otherwise, decode a parsed module.
+/// Raise `DecodeError` with the field path for malformed input.
 pub fn decode_oracle_output(json : Json) -> OracleOutput raise DecodeError {
   let m = dec_object(json, Root)
   match m.get("error") {

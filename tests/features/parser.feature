@@ -33,6 +33,7 @@ Feature: Parser parity with the Gleam compiler
       | crlf              |
       | trailing_commas   |
       | nested            |
+      | edge_forms        |
 
   Scenario Outline: An error fixture gives the oracle's first error
     Given the Gleam fixture "<fixture>"

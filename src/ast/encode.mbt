@@ -208,6 +208,8 @@ fn write_json_string(sb : StringBuilder, s : String) -> Unit {
 }
 
 ///|
+/// Encode a source span as `start` and `end` byte offsets.
+/// The offsets are written as given, including the compiler's `start..0` EOF spans.
 pub fn encode_span(s : @span.SrcSpan) -> Json {
   obj([("start", num(s.start)), ("end", num(s.end))])
 }
@@ -232,6 +234,7 @@ fn external(e : External) -> Json {
 }
 
 ///|
+/// Encode public, private or internal visibility as a tagged JSON object.
 pub fn encode_publicity(p : Publicity) -> Json {
   match p {
     Public => obj([("kind", str("public"))])
@@ -262,6 +265,20 @@ fn assign_name(a : AssignName) -> Json {
 }
 
 ///|
+/// Encode a module with its trivia positions and parse-time warnings.
+/// Use `canonical` to write the JSON in the oracle's key order.
+/// Encoding uses no recursive calls and has no depth limit.
+///
+/// ```mbt check
+/// test {
+///   let p = @ast.Parsed::{
+///     module_: { definitions: [][:], },
+///     extra: @ast.ModuleExtra::empty(),
+///     warnings: [][:],
+///   }
+///   assert_eq(@ast.decode_parsed(@ast.encode_parsed(p)), p)
+/// }
+/// ```
 pub fn encode_parsed(p : Parsed) -> Json {
   run(enc_parsed(p, j => Done(j)))
 }
@@ -281,6 +298,7 @@ fn[R] enc_parsed(p : Parsed, k : (Json) -> Step[R]) -> Step[R] {
 }
 
 ///|
+/// Encode a module as a JSON object with its definitions in source order.
 pub fn encode_module(m : Module) -> Json {
   run(enc_module(m, j => Done(j)))
 }
@@ -293,6 +311,8 @@ fn[R] enc_module(m : Module, k : (Json) -> Step[R]) -> Step[R] {
 }
 
 ///|
+/// Encode a definition with its optional target.
+/// An absent target is written as `null`.
 pub fn encode_targeted_definition(d : TargetedDefinition) -> Json {
   run(enc_targeted_definition(d, j => Done(j)))
 }
@@ -314,6 +334,7 @@ fn[R] enc_targeted_definition(
 }
 
 ///|
+/// Encode a definition as a tagged JSON object.
 pub fn encode_definition(d : Definition) -> Json {
   run(enc_definition(d, j => Done(j)))
 }
@@ -533,6 +554,7 @@ fn arg_names(n : ArgNames) -> Json {
 }
 
 ///|
+/// Encode a type annotation as a tagged JSON object.
 pub fn encode_type_ast(t : TypeAst) -> Json {
   run(enc_type_ast(t, j => Done(j)))
 }
@@ -620,6 +642,7 @@ fn type_ast_constructor_name(n : TypeAstConstructorName) -> Json {
 }
 
 ///|
+/// Encode a statement as a tagged JSON object.
 pub fn encode_statement(s : Statement) -> Json {
   run(enc_statement(s, j => Done(j)))
 }
@@ -870,6 +893,15 @@ fn function_literal_kind(k : FunctionLiteralKind) -> Json {
 }
 
 ///|
+/// Encode an expression as a tagged JSON object.
+/// Write only a float's lexeme; the decoder derives its numeric value.
+///
+/// ```mbt check
+/// test {
+///   let value : @ast.Expr = Var(location=@span.SrcSpan::new(0, 1), name="x")
+///   assert_eq(@ast.decode_expr(@ast.encode_expr(value)), value)
+/// }
+/// ```
 pub fn encode_expr(e : Expr) -> Json {
   run(enc_expr(e, j => Done(j)))
 }
@@ -1176,6 +1208,8 @@ fn[R] enc_clause(c : Clause, k : (Json) -> Step[R]) -> Step[R] {
 }
 
 ///|
+/// Encode a clause guard as a tagged JSON object.
+/// Tuple and field indexes keep all unsigned 64-bit digits.
 pub fn encode_clause_guard(g : ClauseGuard) -> Json {
   run(enc_clause_guard(g, j => Done(j)))
 }
@@ -1263,6 +1297,7 @@ fn[R] enc_clause_guard(g : ClauseGuard, k : (Json) -> Step[R]) -> Step[R] {
 }
 
 ///|
+/// Encode a pattern as a tagged JSON object.
 pub fn encode_pattern(p : Pattern) -> Json {
   run(enc_pattern(p, j => Done(j)))
 }
@@ -1481,6 +1516,7 @@ fn[R] enc_bit_array_size(s : BitArraySize, k : (Json) -> Step[R]) -> Step[R] {
 }
 
 ///|
+/// Encode a constant as a tagged JSON object.
 pub fn encode_constant(c : Constant) -> Json {
   run(enc_constant(c, j => Done(j)))
 }
@@ -1639,6 +1675,7 @@ fn[R] enc_constant(c : Constant, k : (Json) -> Step[R]) -> Step[R] {
 }
 
 ///|
+/// Encode comment spans, line offsets and trailing comma offsets.
 pub fn encode_extra(x : ModuleExtra) -> Json {
   obj([
     ("module_comments", list(x.module_comments, encode_span)),
@@ -1651,6 +1688,7 @@ pub fn encode_extra(x : ModuleExtra) -> Json {
 }
 
 ///|
+/// Encode a parse-time warning as a tagged JSON object.
 pub fn encode_warning(w : Warning) -> Json {
   let simple = (kind : String, location : @span.SrcSpan) => {
     obj([("kind", str(kind)), ("location", encode_span(location))])

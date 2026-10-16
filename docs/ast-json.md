@@ -20,6 +20,19 @@ byte equality of this text.
   its own nesting limit (`max_nesting_depth`, default 1024) and recursion;
   neither is a limit of the codec.
 
+Decoders require every schema field, including nullable fields. They ignore
+unknown fields. A malformed value raises `DecodeError` with its JSON path.
+Byte offsets must be non-negative integers that fit `Int32`. Span ends can
+precede their starts because the compiler uses `start..0` for some EOF
+errors. Tuple and guard indexes must fit `UInt64`. A bit array `unit` must
+be an integer in `0..255`.
+
+An `int_value` string uses canonical decimal digits: `0`, or an optional
+`-` followed by a nonzero digit and more digits. Leading zeros, `-0`, `+`
+and separators are rejected. A float's `value` must be one complete Gleam
+float lexeme, including its decimal point. Conversion retains overflow to
+infinity and underflow to zero, as the compiler does.
+
 ## Value shapes
 
 | Compiler value | JSON |

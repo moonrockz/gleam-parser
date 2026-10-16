@@ -3,4 +3,4 @@
 
 // A regular comment.
 
-/// A detached doc comment.
+/// A trailing doc comment, ignored because no definition follows.

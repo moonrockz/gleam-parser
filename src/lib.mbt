@@ -140,31 +140,56 @@ pub fn canonical(json : Json) -> String {
 }
 
 ///|
+/// Encode a module with its trivia positions and parse-time warnings.
+/// Use `canonical` to write the JSON in the oracle's key order.
+///
+/// ```mbt check
+/// test {
+///   let parsed = @gleam.parse_text("const x = 1").parsed()
+///   assert_eq(@gleam.decode_parsed(@gleam.encode_parsed(parsed)), parsed)
+/// }
+/// ```
 pub fn encode_parsed(p : Parsed) -> Json {
   @ast.encode_parsed(p)
 }
 
 ///|
+/// Decode a module with its trivia positions and parse-time warnings.
+/// Raise `DecodeError` with the field path for malformed JSON values.
 pub fn decode_parsed(json : Json) -> Parsed raise DecodeError {
   @ast.decode_parsed(json)
 }
 
 ///|
+/// Encode an oracle result, either a parsed module or its first error.
 pub fn encode_oracle_output(o : OracleOutput) -> Json {
   @ast.encode_oracle_output(o)
 }
 
 ///|
+/// Decode an oracle result, either a parsed module or its first error.
+/// Raise `DecodeError` with the field path for malformed JSON values.
 pub fn decode_oracle_output(json : Json) -> OracleOutput raise DecodeError {
   @ast.decode_oracle_output(json)
 }
 
 ///|
+/// Encode an expression as a tagged JSON object.
+/// Write only a float's lexeme; the decoder derives its numeric value.
 pub fn encode_expr(e : Expr) -> Json {
   @ast.encode_expr(e)
 }
 
 ///|
+/// Decode an expression from its tagged JSON object.
+/// Raise `DecodeError` with the field path for malformed JSON values.
+///
+/// ```mbt check
+/// test {
+///   let value : @gleam.Expr = Var(location=@gleam.SrcSpan::new(0, 1), name="x")
+///   assert_eq(@gleam.decode_expr(@gleam.encode_expr(value)), value)
+/// }
+/// ```
 pub fn decode_expr(json : Json) -> Expr raise DecodeError {
   @ast.decode_expr(json)
 }
