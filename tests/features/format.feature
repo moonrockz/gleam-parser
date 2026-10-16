@@ -13,6 +13,12 @@ Feature: Formatting Gleam source
     Then formatting fails with 2 error diagnostics
 
   Scenario: A module with a warning only formats
+    Given the Gleam source "/// a\n// b\npub const x = 1\n"
+    Then parsing gives 1 warning diagnostic and no error
+    When I format it
+    Then the formatted text is "/// a\n// b\n\npub const x = 1\n"
+
+  Scenario: A constant list with a tail keeps one line
     Given the Gleam source "const x = [1, ..[]]\n"
     When I format it
     Then the formatted text is "const x = [1, ..[]]\n"

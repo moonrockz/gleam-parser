@@ -341,7 +341,8 @@ pub fn parse_text(text : String, config? : Config) -> ParseResult {
 /// Format Gleam source as `gleam format` does (see `@format.format`):
 /// 80 columns, two spaces of indentation, comments and empty lines kept.
 /// Raises `ParseFailed` with the error diagnostics when the text has a
-/// syntax error.
+/// syntax error. Not finished: a function body is written as `todo` until
+/// expressions and statements are ported.
 ///
 /// ```mbt check
 /// test {

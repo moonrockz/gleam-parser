@@ -26,6 +26,15 @@ impl @moonspec.World for FormatWorld with fn configure(self, setup) {
   setup.when0("I format it", fn() {
     self.result = Some(format_result(self.source))
   })
+  setup.then1("parsing gives {int} warning diagnostic and no error", fn(
+    n : Int32,
+  ) raise {
+    let ds = @gleam.parse_text(self.source).diagnostics
+    @expect.expect_all(s => {
+      s.expect(ds.filter(d => d.severity is Warning).length()).to_equal(n)
+      s.expect(ds.filter(d => d.severity is Error).length()).to_equal(0)
+    })
+  })
   setup.when0("I format it and its parse result", fn() {
     self.result = Some(format_result(self.source))
     self.from_parsed = Some(
