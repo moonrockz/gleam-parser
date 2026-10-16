@@ -377,7 +377,9 @@ inputs.
   attribute, expression, statement, pattern, guard and type form, no
   deprecated syntax; shrinks by dropping a definition) and
   `Construct`/`nested(construct, depth)` (each nesting construct at any
-  depth); later plans add `Commented` and `Spaced`. Keep generated depth
+  depth) and `Commented` (a `GleamModule` with a `//` comment line before
+  every code line, for the formatter's comment law); a later plan adds
+  `Spaced`. Keep generated depth
   bounded by `size`, so generators do not overflow the stack on wasm.
 - **Valid input fails loudly.** A generator of valid input makes the law fail
   on any diagnostic, never skip the case. Generate arbitrary text only for
