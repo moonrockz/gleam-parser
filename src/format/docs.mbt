@@ -73,6 +73,22 @@ fn lexicographic(a : String, b : String) -> Int32 {
 }
 
 ///|
+/// A stable sort (`Array::sort_by` is not stable past 16 elements; the
+/// compiler's `sorted_by` is): equal keys keep their order.
+fn[A] stable_sort_by(xs : Array[A], cmp : (A, A) -> Int32) -> Array[A] {
+  let indexed = xs.mapi((i, x) => (i, x))
+  indexed.sort_by((a, b) => {
+    let c = cmp(a.1, b.1)
+    if c != 0 {
+      c
+    } else {
+      a.0.compare(b.0)
+    }
+  })
+  indexed.map(p => p.1)
+}
+
+///|
 /// `pub ` for a public or internal definition (the compiler's `pub_`).
 fn pub_(publicity : @ast.Publicity) -> @pretty.Doc {
   match publicity {

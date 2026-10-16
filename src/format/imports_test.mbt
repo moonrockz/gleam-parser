@@ -62,3 +62,13 @@ test "an import under a target attribute keeps it" {
     content="@target(erlang)\nimport one\n",
   )
 }
+
+///|
+test "unqualified names with equal keys keep their order beyond sixteen entries" {
+  inspect(
+    @format.format(
+      "import a.{u, t, s, r, q, p, o, n, m, l, k, j, i, h, g, f, e, d, b as c, b}\n",
+    ),
+    content="import a.{b as c, b, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u}\n",
+  )
+}

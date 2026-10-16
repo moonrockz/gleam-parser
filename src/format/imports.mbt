@@ -44,8 +44,7 @@ fn Formatter::sorted_import_group(
   self : Formatter,
   imports : Array[@ast.TargetedDefinition],
 ) -> @pretty.Doc raise FormatError {
-  let sorted = imports.copy()
-  sorted.sort_by((a, b) => {
+  let sorted = stable_sort_by(imports, (a, b) => {
     match (a.definition, b.definition) {
       (Import(x), Import(y)) => lexicographic(x.module_, y.module_)
       _ => 0
@@ -76,10 +75,11 @@ fn import_(import_ : @ast.Import) -> @pretty.Doc {
     import_.unqualified_types.is_empty() {
     @pretty.empty()
   } else {
-    let types = import_.unqualified_types.to_owned()
-    types.sort_by((a, b) => lexicographic(a.name, b.name))
-    let values = import_.unqualified_values.to_owned()
-    values.sort_by((a, b) => lexicographic(a.name, b.name))
+    let by_name = (a : @ast.UnqualifiedImport, b : @ast.UnqualifiedImport) => {
+      lexicographic(a.name, b.name)
+    }
+    let types = stable_sort_by(import_.unqualified_types.to_owned(), by_name)
+    let values = stable_sort_by(import_.unqualified_values.to_owned(), by_name)
     let docs = []
     for i in types {
       docs.push(t("type ") + unqualified_import(i))
