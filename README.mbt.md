@@ -5,7 +5,7 @@ language in MoonBit. One expected user is
 [morphir-moonbit](https://github.com/finos/morphir-moonbit), as a frontend
 that reads Gleam and a backend that writes it.
 
-Status: scanner, AST, parser, CST and diagnostics are done. The AST mirrors
+Status: scanner, AST, parser, CST, diagnostics, syntax tree and formatter are done. The AST mirrors
 the Gleam compiler's untyped AST at v1.19.2; the parity oracle is the
 compiler itself.
 
@@ -30,11 +30,15 @@ Done:
   `ModuleCst::to_source()` is the text byte for byte, also with errors.
 - **Formatter** (`format`, `format_parsed`): `gleam format`'s text (80
   columns), from a port of the compiler's formatter on `moonrockz/pretty`;
-  comments and empty lines are kept; the parity scoreboard is in
-  `tests/format`.
+  comments and empty lines are kept. Every one of the compiler's 893
+  formatter test cases and every file of the 233-file corpus formats to the
+  binary's bytes (`tests/format`).
 
   ```moonbit
-  inspect(@gleam.format("const  x  =  1\n"), content="const x = 1\n")
+  inspect(
+    @gleam.format("pub fn main(){\n  io.println(  \"hi\" )\n}\n"),
+    content="pub fn main() {\n  io.println(\"hi\")\n}\n",
+  )
   ```
 
 - **Dialect** (`Dialect::gleam_1_19()`): what the parser accepts.

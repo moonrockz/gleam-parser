@@ -89,12 +89,16 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   `raw_text`; `render(doc, width=80, start=Unbroken)`). `format(text,
   config?)` and `format_parsed(result, config?)` give `gleam format`'s
   text; `FormatError` is `ParseFailed` (the error diagnostics) or
-  `OutOfFuel` (`type_ast` and `const_expr` spend fuel). A private
+  `OutOfFuel` (`expr`, `pattern`, `type_ast`, `const_expr`, `clause_guard`
+  and `bit_array_size` spend one unit per nesting level; `statement` spends
+  none, so the formatter's depth equals the parser's). A private
   `Formatter` keeps the comment arrays of `ModuleExtra` with forward
   cursors, as the compiler pops slices; comment text comes from the CST
   source (`ModuleCst::to_source()`). Every compiler function keeps its name
-  (`module` is `format_module`). Function bodies (`statements`) land in
-  PR 2 and are a `todo` placeholder until then. See "Format Parity".
+  (`module` is `format_module`). pretty-arena's declared widths win over
+  the text (`const `, `if ` and ` as` count one column less). Every
+  compiler test case and every corpus file formats to the binary's bytes.
+  See "Format Parity".
 
 ### Gleam reference
 
@@ -102,16 +106,17 @@ The reference is the Gleam compiler at tag `v1.19.2`
 (<https://github.com/gleam-lang/gleam>). Sources that define behaviour:
 `compiler-core/src/parse/lexer.rs`, `parse/token.rs`, `parse.rs`,
 `parse/extra.rs`, `parse/error.rs`, `ast.rs`, `ast/untyped.rs`,
-`ast/constant.rs`, `warning.rs`, `format/src/lib.rs`. The parity oracle is
-`tools/gleam-ast-oracle` (Rust, on `gleam-core`); it runs only locally.
+`ast/constant.rs`, `warning.rs`, `format/src/lib.rs` and
+`pretty-arena/src/lib.rs`. The parity oracle is `tools/gleam-ast-oracle`
+(Rust, on `gleam-core`); it runs only locally.
 
 To move to a new Gleam version: bump the tag in
 `tools/gleam-ast-oracle/Cargo.toml` and `tests/corpus/gleam_version.txt`;
 diff the files above between the tags; apply the changes to `src/ast`,
-`src/scanner`, `src/parser`, `src/syntax/children.mbt` and
-`docs/ast-json.md`; then re-record and
-ratchet as "Gleam Parity" says (a test checks that the two files name the
-same tag).
+`src/scanner`, `src/parser`, `src/syntax/children.mbt`, `src/format` and
+`docs/ast-json.md`; then re-record and ratchet as "Gleam Parity" and
+"Format Parity" say (`mise run formatter:cases`, `formatter:record`,
+`formatter:ratchet`; a test checks that the two files name the same tag).
 
 ### Parser contract
 
@@ -174,7 +179,7 @@ moonrockz/gleam-parser
 │   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; fuel
 │   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
 │   ├── syntax/           # NodeRef, children, kind_table; walk, fold, reduce, Visitor, events, Tree, NodePath, TreeCursor
-│   └── format/           # Port of format.rs on moonrockz/pretty: formatter state, comments, imports, types, constants, functions
+│   └── format/           # Port of format/src/lib.rs on moonrockz/pretty: formatter state, comments, definitions, expressions, patterns, cases
 ├── tests/                # Unpublished module moonrockz/gleam_parser_tests
 │   ├── bdd/              # MoonSpec step definitions for tests/features
 │   ├── features/         # Gherkin features
@@ -613,8 +618,9 @@ gleam-parser checks `format` against `gleam format` 1.19.2.
   `format.json`, `format.html`); for up to 20 unmatched files the summary
   shows the first differing line. CI runs it in the `parity` job and uploads
   `format-report`.
-- A mismatch in a suite without function bodies is a port bug; fix it
-  against `format/src/lib.rs` before the baseline moves.
+- The baseline is 893/893 fixtures and 233/233 corpus files: every mismatch
+  is a regression. A new mismatch is a port bug; fix it against
+  `format/src/lib.rs` with a test whose expectation comes from the binary.
 
 ## Tooling
 
