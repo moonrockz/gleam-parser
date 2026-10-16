@@ -210,13 +210,40 @@ fn Formatter::clause_guard(
       BinaryOperator(operator~, left~, right~, ..) =>
         self.clause_guard_bin_op(operator, left, right)
       Var(name~, ..) => t(name)
-      TupleIndex(tuple~, index~, ..) =>
-        self.clause_guard(tuple) + t(".") + t(index.to_string())
-      FieldAccess(container~, label~, ..) =>
-        self.clause_guard(container) + t(".") + t(label)
+      TupleIndex(..) | FieldAccess(..) => self.guard_access_chain(guard_)
       Constant(c) => self.const_expr(c)
       Not(expression~, ..) => t("!") + self.clause_guard(expression)
       Block(value~, ..) => group(wrap_block(self.clause_guard(value)))
     }
   })
+}
+
+///|
+/// The compiler's `TupleIndex` and `FieldAccess` guard arms, for a whole
+/// chain in a loop: the parser accepts a chain of any length.
+fn Formatter::guard_access_chain(
+  self : Formatter,
+  guard_ : @ast.ClauseGuard,
+) -> @pretty.Doc raise FormatError {
+  let suffixes : Array[String] = []
+  let mut base = guard_
+  let mut walking = true
+  while walking {
+    match base {
+      TupleIndex(tuple~, index~, ..) => {
+        suffixes.push(index.to_string())
+        base = tuple
+      }
+      FieldAccess(container~, label~, ..) => {
+        suffixes.push(label)
+        base = container
+      }
+      _ => walking = false
+    }
+  }
+  let mut doc = self.clause_guard(base)
+  for k = suffixes.length() - 1; k >= 0; k = k - 1 {
+    doc = doc + t(".") + t(suffixes[k])
+  }
+  doc
 }

@@ -34,6 +34,6 @@ Feature: Formatting Gleam source
     Then the formatted text is "// a\nconst x = 1\n\n// b\n\n/// d\nconst y = 2\n// e\n"
 
   Scenario: A module deeper than the fuel budget fails to parse before it formats
-    Given the Gleam source of 150 nested lists
+    Given the Gleam source of a function whose body is 150 nested lists
     When I format it
     Then formatting fails with 1 error diagnostics

@@ -55,3 +55,57 @@ test "a 1000-step guard chain and a 1000-term bit array size format on every tar
     s.expect(@format.format(size_text) == size_expected).to_equal(true)
   })
 }
+
+///|
+test "a 500-deep guard access chain and comments inside guard and operator chains" {
+  @expect.expect_all(s => {
+    // A guard wider than the line breaks the clause around it.
+    let access = "pub fn f() {\n  case x {\n    _ if a" +
+      ".b".repeat(500) +
+      " -> 1\n  }\n}\n"
+    let access_expected = "pub fn f() {\n  case x {\n    _\n      if a" +
+      ".b".repeat(500) +
+      "\n    -> 1\n  }\n}\n"
+    s.expect(@format.format(access) == access_expected).to_equal(true)
+    // Comments before the right operands keep the compiler's order.
+    s
+    .expect(
+      @format.format(
+        "pub fn f() {\n  case x {\n    _ if a\n    // before b\n    || b\n    // before c\n    || c -> 1\n  }\n}\n",
+      ),
+    )
+    .to_equal(
+      "pub fn f() {\n  case x {\n    _\n      if a\n      // before b\n      || b\n      // before c\n      || c\n    -> 1\n  }\n}\n",
+    )
+    s
+    .expect(
+      @format.format(
+        "pub fn f() {\n  case x {\n    _ if a // c\n    || b -> 1\n  }\n}\n",
+      ),
+    )
+    .to_equal(
+      "pub fn f() {\n  case x {\n    _\n      if a\n      // c\n      || b\n    -> 1\n  }\n}\n",
+    )
+    s
+    .expect(
+      @format.format(
+        "pub fn f() {\n  case x {\n    _ if a && b || c && d -> 1\n  }\n}\n",
+      ),
+    )
+    .to_equal(
+      "pub fn f() {\n  case x {\n    _ if a && b || c && d -> 1\n  }\n}\n",
+    )
+    s
+    .expect(
+      @format.format("pub fn f() {\n  a\n  // c\n  + b\n  // d\n  + c\n}\n"),
+    )
+    .to_equal("pub fn f() {\n  a\n  // c\n  + b\n  // d\n  + c\n}\n")
+    s
+    .expect(
+      @format.format(
+        "pub fn f() {\n  case x {\n    _ if a.b.c.0.d -> 1\n  }\n}\n",
+      ),
+    )
+    .to_equal("pub fn f() {\n  case x {\n    _ if a.b.c.0.d -> 1\n  }\n}\n")
+  })
+}

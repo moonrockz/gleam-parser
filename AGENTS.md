@@ -91,7 +91,9 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   text; `FormatError` is `ParseFailed` (the error diagnostics) or
   `OutOfFuel` (`expr`, `pattern`, `type_ast`, `const_expr`, `clause_guard`
   and `bit_array_size` spend one unit per nesting level; `statement` spends
-  none, so the formatter's depth equals the parser's). A private
+  none, and a flat chain (a left-nested operator chain, a field-access or
+  tuple-index chain, a call chain) is walked in a loop with no fuel and no
+  stack per link, so the formatter accepts what the parser accepts). A private
   `Formatter` keeps the comment arrays of `ModuleExtra` with forward
   cursors, as the compiler pops slices; comment text comes from the CST
   source (`ModuleCst::to_source()`). Every compiler function keeps its name

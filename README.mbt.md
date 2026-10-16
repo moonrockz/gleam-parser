@@ -5,7 +5,8 @@ language in MoonBit. One expected user is
 [morphir-moonbit](https://github.com/finos/morphir-moonbit), as a frontend
 that reads Gleam and a backend that writes it.
 
-Status: scanner, AST, parser, CST, diagnostics, syntax tree and formatter are done. The AST mirrors
+Status: scanner, AST, parser, CST, diagnostics, syntax tree and formatter
+are done (the formatter's laws and cookbook article follow). The AST mirrors
 the Gleam compiler's untyped AST at v1.19.2; the parity oracle is the
 compiler itself.
 
