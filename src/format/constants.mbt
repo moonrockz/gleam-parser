@@ -56,9 +56,17 @@ fn[A] Formatter::items_sequence_packing(
   can_have_multiple_per_line : (A) -> Bool,
   list_location : @span.SrcSpan,
 ) -> ItemsPacking {
+  // The trailing comma is looked for after the tail, or after the last item
+  // when there is no tail (`tail.or_else(items.last())`).
   let last_end = match tail {
     Some(tl) => Some(location_of(tl).end)
     None => items.last().map(l => location_of(l).end)
+  }
+  // The empty-line check ends at the last item, or at the tail when there
+  // is no item (`items.last().or(tail)`).
+  let last = match items.last() {
+    Some(l) => Some(l)
+    None => tail
   }
   let ends_with_trailing_comma = match last_end {
     Some(end) => self.has_trailing_comma(end, list_location.end)
@@ -72,7 +80,7 @@ fn[A] Formatter::items_sequence_packing(
     all, location_of,
   )
   let first = if items.length() > 0 { Some(items[0]) } else { None }
-  let has_empty_lines_between_elements = match (first, all.last()) {
+  let has_empty_lines_between_elements = match (first, last) {
     (Some(first), Some(last)) =>
       self.empty_lines_at < self.empty_lines.length() &&
       self.empty_lines[self.empty_lines_at] >= location_of(first).end &&
@@ -501,7 +509,13 @@ fn Formatter::module_constant(
   c : @ast.ModuleConstant,
 ) -> @pretty.Doc raise FormatError {
   let attrs = attributes(c.deprecation, c.publicity, None, None)
-  let head = attrs + pub_(c.publicity) + t("const ") + t(c.name)
+  // The compiler counts `const ` as 5 columns (its CONST_SPACE_DOCUMENT
+  // declares 5), so the space has no width here.
+  let head = attrs +
+    pub_(c.publicity) +
+    t("const") +
+    @pretty.zero_width(" ") +
+    t(c.name)
   let head = match c.annotation {
     None => head
     Some(type_) => head + t(": ") + self.type_ast(type_)

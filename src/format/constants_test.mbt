@@ -86,3 +86,36 @@ test "a doc comment before a regular comment stays above it, then an empty line"
     content="/// a\n// b\n\nconst x = 1\n",
   )
 }
+
+///|
+test "a constant of exactly 81 columns stays on one line; 82 columns break after the equals sign" {
+  // The compiler counts `const ` as 5 columns (CONST_SPACE_DOCUMENT).
+  @expect.expect_all(s => {
+    s
+    .expect(
+      @format.format(
+        "const a = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n",
+      ),
+    )
+    .to_equal(
+      "const a = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n",
+    )
+    s
+    .expect(
+      @format.format(
+        "const a = \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxy\"\n",
+      ),
+    )
+    .to_equal(
+      "const a =\n  \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxy\"\n",
+    )
+  })
+}
+
+///|
+test "a list tail after an empty line does not force one item per line" {
+  inspect(
+    @format.format("const x = [1, 2,\n\n  ..y]\n"),
+    content="const x = [1, 2, ..y]\n",
+  )
+}
