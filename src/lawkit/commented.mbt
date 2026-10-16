@@ -1,10 +1,14 @@
 ///|
-/// A valid module with a `//` comment line before every line of a
-/// `GleamModule`: comments reach every position the formatter must keep
-/// them in (before a closing bracket, an arrow, a pipe, a tail, an `as`
-/// message, an alternative pattern). The comment texts are `// c<n>`, each
-/// once, so a law can count them in the output. Shrinks by dropping one
-/// definition block of the module.
+/// A valid module with a `//` comment line before every code line of a
+/// `GleamModule`: before each definition, each statement, each clause,
+/// each variant and each closing brace (the generator writes one line per
+/// statement, so a comment never sits before a closing bracket inside an
+/// expression, before an arrow, a pipe or an alternative pattern; a
+/// generator for those positions is a follow-up). The comment texts are
+/// `// c<n>`, each once, so a law can count them in the output. A comment
+/// never separates a `///` doc comment or an attribute from its
+/// definition, so the module parses with no diagnostic. Shrinks by
+/// dropping one definition block of the module.
 pub(all) struct Commented(String) derive(Debug)
 
 ///|
@@ -27,8 +31,8 @@ pub fn Commented::comments(self : Commented) -> Array[String] {
 
 ///|
 /// Insert `// c<n>` before every line that holds code (not before an empty
-/// line, not between a `///` doc comment and its definition: a doc comment
-/// line is kept with the line after it).
+/// line, not between a `///` doc comment or an `@` attribute and the
+/// definition after it).
 fn comment_every_line(module_text : String) -> String {
   let out = []
   let mut n = 0
@@ -45,7 +49,7 @@ fn comment_every_line(module_text : String) -> String {
       n += 1
       out.push(l)
     }
-    after_doc = trimmed.has_prefix("///")
+    after_doc = trimmed.has_prefix("///") || trimmed.has_prefix("@")
   }
   out.join("\n")
 }

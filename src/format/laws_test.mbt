@@ -50,6 +50,11 @@ fn count_comment(text : String, needle : String) -> Int32 {
 test "law: every comment of the input is in the output exactly once, and the output is idempotent" {
   @quickcheck.check(
     (c : @lawkit.Commented) => {
+      // The input is valid and clean: a comment between a doc comment or an
+      // attribute and its definition would be a detached-doc warning.
+      if @parser.parse_text(c.text()).diagnostics.length() != 0 {
+        return false
+      }
       let out = @format.format(c.text()) catch { _ => return false }
       let kept = c
         .comments()

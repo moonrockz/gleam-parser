@@ -631,7 +631,10 @@ gleam-parser checks `format` against `gleam format` 1.19.2.
   `format/src/lib.rs` with a test whose expectation comes from the binary.
 - Laws (`src/format/laws_test.mbt`, `nesting_law_test.mbt`,
   `chains_test.mbt`): idempotence and reparse on `GleamModule`, every
-  comment once on `Commented`, never a crash on `GleamText`, the deepest
+  comment once on `Commented` (a comment before every definition,
+  statement, clause, variant and closing brace; the positions inside an
+  expression, such as before `)`, `->` or `|>`, are a follow-up), never a
+  crash on `GleamText`, the deepest
   nesting and the longest flat chains on every target. The cookbook article
   is `docs/cookbook/format.mbt.md`.
 

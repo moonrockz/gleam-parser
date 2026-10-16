@@ -118,7 +118,7 @@ fn score_fixtures() -> Array[FileResult] raise {
         results.push(
           failed_result(
             "\{suite}/\{e}",
-            "no recorded output; run mise run formatter:record",
+            "no recorded output: run mise run formatter:record, or the binary rejects this input",
           ),
         )
         continue
@@ -207,7 +207,8 @@ fn score_corpus() -> Array[FileResult] raise {
             false,
             Some("output hash differs from the lock"),
           )
-        // Both reject the file: that is a match of verdicts.
+        // Both reject the file: that is a match of verdicts. The law counts
+        // are vacuous here (there is no output to check).
         Err(e) if expected == "FORMAT_ERROR" =>
           {
             key,
@@ -272,11 +273,13 @@ fn write_reports(
   match baseline {
     Some(b) =>
       md.write_string(
-        " (baseline \{b.fixtures_matched}/\{b.fixtures}, \{b.corpus_matched}/\{b.corpus})\n",
+        " (baseline: \{b.fixtures_matched}/\{b.fixtures} fixtures, \{b.fixtures_idempotent} idempotent, \{b.fixtures_reparsed} reparsed; \{b.corpus_matched}/\{b.corpus} corpus files, \{b.corpus_idempotent} idempotent, \{b.corpus_reparsed} reparsed)\n",
       )
     None => md.write_string("\n")
   }
-  md.write_string("\n\{unmatched.length()} unmatched.\n")
+  md.write_string(
+    "\n\{unmatched.length()} files with a problem (not matched, not idempotent, or not reparsed).\n",
+  )
   let shown = if unmatched.length() < max_reported {
     unmatched.length()
   } else {
@@ -322,6 +325,51 @@ fn write_reports(
 }
 
 ///|
+/// The next baseline: for a source whose total is unchanged, the maximum
+/// of each count; for a source whose total changed (a fixture added or
+/// removed, a corpus bump), the current counts, so the baseline stays one
+/// a run can meet.
+fn ratchet_counts(current : Counts, baseline : Counts?) -> Counts {
+  guard baseline is Some(b) else { return current }
+  let max = (a : Int32, c : Int32) => if a > c { a } else { c }
+  let same_fixtures = current.fixtures == b.fixtures
+  let same_corpus = current.corpus == b.corpus
+  let up = (same : Bool, now : Int32, before : Int32) => {
+    if same {
+      max(now, before)
+    } else {
+      now
+    }
+  }
+  {
+    fixtures: current.fixtures,
+    fixtures_matched: up(
+      same_fixtures,
+      current.fixtures_matched,
+      b.fixtures_matched,
+    ),
+    fixtures_idempotent: up(
+      same_fixtures,
+      current.fixtures_idempotent,
+      b.fixtures_idempotent,
+    ),
+    fixtures_reparsed: up(
+      same_fixtures,
+      current.fixtures_reparsed,
+      b.fixtures_reparsed,
+    ),
+    corpus: current.corpus,
+    corpus_matched: up(same_corpus, current.corpus_matched, b.corpus_matched),
+    corpus_idempotent: up(
+      same_corpus,
+      current.corpus_idempotent,
+      b.corpus_idempotent,
+    ),
+    corpus_reparsed: up(same_corpus, current.corpus_reparsed, b.corpus_reparsed),
+  }
+}
+
+///|
 fn read_baseline() -> Counts? raise {
   if !@fs.path_exists(baseline_path) {
     return None
@@ -353,30 +401,7 @@ test "format parity" {
           )
       }
     Ratchet => {
-      let max = (a : Int32, b : Int32) => if a > b { a } else { b }
-      let next = match baseline {
-        Some(b) =>
-          {
-            fixtures: counts.fixtures,
-            corpus: counts.corpus,
-            fixtures_matched: max(counts.fixtures_matched, b.fixtures_matched),
-            fixtures_idempotent: max(
-              counts.fixtures_idempotent,
-              b.fixtures_idempotent,
-            ),
-            fixtures_reparsed: max(
-              counts.fixtures_reparsed,
-              b.fixtures_reparsed,
-            ),
-            corpus_matched: max(counts.corpus_matched, b.corpus_matched),
-            corpus_idempotent: max(
-              counts.corpus_idempotent,
-              b.corpus_idempotent,
-            ),
-            corpus_reparsed: max(counts.corpus_reparsed, b.corpus_reparsed),
-          }
-        None => counts
-      }
+      let next = ratchet_counts(counts, baseline)
       @fs.write_string_to_file(
         baseline_path,
         counts_to_json(next).stringify(indent=2) + "\n",

@@ -13,7 +13,9 @@ pub(all) suberror FormatError {
 /// Format Gleam source as `gleam format` (1.19.2) does: 80 columns, two
 /// spaces of indentation, no options. Comments and empty lines are kept
 /// where the compiler keeps them; the output is idempotent and parses
-/// again. Raises `ParseFailed` when the text has a syntax error,
+/// again where the compiler's is (see "Format Parity" in AGENTS.md for
+/// the known differences). Raises `ParseFailed` when the text has a
+/// syntax error,
 /// `OutOfFuel` when `config.fuel` runs out.
 ///
 /// ```mbt check

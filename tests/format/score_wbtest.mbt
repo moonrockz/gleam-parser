@@ -172,3 +172,45 @@ test "a lock without a fetched corpus is an instruction, not a regression" {
     .to_equal(None)
   })
 }
+
+///|
+test "the ratchet keeps the maximum only when a source's total is unchanged" {
+  let base : Counts = {
+    fixtures: 10,
+    fixtures_matched: 9,
+    fixtures_idempotent: 10,
+    fixtures_reparsed: 10,
+    corpus: 3,
+    corpus_matched: 3,
+    corpus_idempotent: 3,
+    corpus_reparsed: 3,
+  }
+  @expect.expect_all(s => {
+    // Same totals: a lower count keeps the baseline, a higher one raises it.
+    s
+    .expect(
+      ratchet_counts(
+        { ..base, fixtures_matched: 8, corpus_matched: 3, },
+        Some(base),
+      ),
+    )
+    .to_equal(base)
+    s
+    .expect(ratchet_counts({ ..base, fixtures_matched: 10, }, Some(base)))
+    .to_equal({ ..base, fixtures_matched: 10, })
+    // A fixture went away: the fixture counts are the current ones, the
+    // corpus counts keep the maximum.
+    let fewer : Counts = {
+      ..base,
+      fixtures: 9,
+      fixtures_matched: 9,
+      fixtures_idempotent: 9,
+      fixtures_reparsed: 9,
+      corpus_matched: 2,
+    }
+    s
+    .expect(ratchet_counts(fewer, Some(base)))
+    .to_equal({ ..fewer, corpus_matched: 3, })
+    s.expect(ratchet_counts(fewer, None)).to_equal(fewer)
+  })
+}

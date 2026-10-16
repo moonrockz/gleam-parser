@@ -56,7 +56,9 @@ test "fm: format a parse result after checking its diagnostics" {
 }
 ```
 
-The formatter is idempotent and keeps every comment once. A module that
+The formatter is idempotent and keeps every comment once where the
+compiler's formatter is and does (the rare exceptions are listed under
+"Format Parity" in AGENTS.md). A module that
 is deeper than the fuel budget of the configuration is rejected by the
 parser first (see the configure article); a flat chain of any length
 (`a + b + c + …`, `a.b.c…`, `f()()…`) formats.
