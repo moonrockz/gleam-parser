@@ -39,7 +39,53 @@ fn format_mode() -> Mode? raise {
 priv struct FileResult {
   key : String
   matched : Bool
+  idempotent : Bool
+  reparsed : Bool
   detail : String? // the first difference, or the error
+}
+
+///|
+/// The two laws on one output: formatting it again gives the same text,
+/// and it parses with no error diagnostic.
+fn laws_of(output : String) -> (Bool, Bool) {
+  let idempotent = match format_or_error(output) {
+    Ok(again) => again == output
+    Err(_) => false
+  }
+  let reparsed = @gleam.parse_text(output).diagnostics
+    .filter(d => d.severity is Error)
+    .length() ==
+    0
+  (idempotent, reparsed)
+}
+
+///|
+/// A result for an output that may differ from the expected text.
+fn result_of(
+  key : String,
+  actual : String,
+  matched : Bool,
+  detail : String?,
+) -> FileResult {
+  let (idempotent, reparsed) = laws_of(actual)
+  let detail = match detail {
+    Some(d) => Some(d)
+    None if !idempotent => Some("not idempotent")
+    None if !reparsed => Some("the output does not parse")
+    None => None
+  }
+  { key, matched, idempotent, reparsed, detail, }
+}
+
+///|
+fn failed_result(key : String, error : String) -> FileResult {
+  {
+    key,
+    matched: false,
+    idempotent: false,
+    reparsed: false,
+    detail: Some(error),
+  }
 }
 
 ///|
@@ -76,15 +122,15 @@ fn score_fixtures() -> Array[FileResult] raise {
       let key = "\{suite}/\{e}"
       results.push(
         match format_or_error(input) {
-          Ok(actual) if actual == expected =>
-            { key, matched: true, detail: None, }
+          Ok(actual) if actual == expected => result_of(key, actual, true, None)
           Ok(actual) =>
-            {
+            result_of(
               key,
-              matched: false,
-              detail: Some(first_difference(expected, actual)),
-            }
-          Err(e) => { key, matched: false, detail: Some(e), }
+              actual,
+              false,
+              Some(first_difference(expected, actual)),
+            )
+          Err(e) => failed_result(key, e)
         },
       )
     }
@@ -130,14 +176,15 @@ fn score_corpus() -> Array[FileResult] raise {
     results.push(
       match format_or_error(text) {
         Ok(actual) if sha256_hex(actual) == expected =>
-          { key, matched: true, detail: None, }
-        Ok(_) =>
-          {
+          result_of(key, actual, true, None)
+        Ok(actual) =>
+          result_of(
             key,
-            matched: false,
-            detail: Some("output hash differs from the lock"),
-          }
-        Err(e) => { key, matched: false, detail: Some(e), }
+            actual,
+            false,
+            Some("output hash differs from the lock"),
+          )
+        Err(e) => failed_result(key, e)
       },
     )
   }
@@ -152,8 +199,12 @@ fn counts_of(
   {
     fixtures: fixtures.length(),
     fixtures_matched: fixtures.filter(r => r.matched).length(),
+    fixtures_idempotent: fixtures.filter(r => r.idempotent).length(),
+    fixtures_reparsed: fixtures.filter(r => r.reparsed).length(),
     corpus: corpus.length(),
     corpus_matched: corpus.filter(r => r.matched).length(),
+    corpus_idempotent: corpus.filter(r => r.idempotent).length(),
+    corpus_reparsed: corpus.filter(r => r.reparsed).length(),
   }
 }
 
@@ -183,7 +234,7 @@ fn write_reports(
   ensure_dir("../_build/reports")
   ensure_dir(reports_dir)
   let all = fixtures + corpus
-  let unmatched = all.filter(r => !r.matched)
+  let unmatched = all.filter(r => !r.matched || !r.idempotent || !r.reparsed)
   let md = StringBuilder()
   md.write_string("## Format parity\n\n\{scoreboard(counts)}")
   match baseline {
@@ -209,6 +260,8 @@ fn write_reports(
     files.push({
       "key": Json(r.key),
       "matched": Json(r.matched),
+      "idempotent": Json(r.idempotent),
+      "reparsed": Json(r.reparsed),
       "detail": match r.detail {
         Some(d) => Json(d)
         None => Json::null()
@@ -225,7 +278,7 @@ fn write_reports(
     "<!doctype html><meta charset=utf-8><title>Format parity</title><style>body{font-family:sans-serif}pre{background:#f4f4f4;padding:4px}.ok{color:green}.no{color:#b00}</style><h1>\{escape_html(scoreboard(counts))}</h1><p><label><input type=checkbox id=f onchange=\"document.querySelectorAll('.ok').forEach(e=>e.style.display=this.checked?'none':'')\"> unmatched only</label></p><ul>",
   )
   for r in all {
-    let cls = if r.matched { "ok" } else { "no" }
+    let cls = if r.matched && r.idempotent && r.reparsed { "ok" } else { "no" }
     html.write_string("<li class=\{cls}><code>\{escape_html(r.key)}</code>")
     if r.detail is Some(d) {
       html.write_string("<pre>\{escape_html(d)}</pre>")
@@ -268,21 +321,27 @@ test "format parity" {
           )
       }
     Ratchet => {
+      let max = (a : Int32, b : Int32) => if a > b { a } else { b }
       let next = match baseline {
         Some(b) =>
           {
             fixtures: counts.fixtures,
             corpus: counts.corpus,
-            fixtures_matched: if counts.fixtures_matched > b.fixtures_matched {
-              counts.fixtures_matched
-            } else {
-              b.fixtures_matched
-            },
-            corpus_matched: if counts.corpus_matched > b.corpus_matched {
-              counts.corpus_matched
-            } else {
-              b.corpus_matched
-            },
+            fixtures_matched: max(counts.fixtures_matched, b.fixtures_matched),
+            fixtures_idempotent: max(
+              counts.fixtures_idempotent,
+              b.fixtures_idempotent,
+            ),
+            fixtures_reparsed: max(
+              counts.fixtures_reparsed,
+              b.fixtures_reparsed,
+            ),
+            corpus_matched: max(counts.corpus_matched, b.corpus_matched),
+            corpus_idempotent: max(
+              counts.corpus_idempotent,
+              b.corpus_idempotent,
+            ),
+            corpus_reparsed: max(counts.corpus_reparsed, b.corpus_reparsed),
           }
         None => counts
       }

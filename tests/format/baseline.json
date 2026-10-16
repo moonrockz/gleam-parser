@@ -1,6 +1,10 @@
 {
   "fixtures": 893,
   "fixtures_matched": 893,
+  "fixtures_idempotent": 892,
+  "fixtures_reparsed": 893,
   "corpus": 233,
-  "corpus_matched": 233
+  "corpus_matched": 233,
+  "corpus_idempotent": 233,
+  "corpus_reparsed": 233
 }

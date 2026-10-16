@@ -1,15 +1,25 @@
 ///|
-test "regressions names the counts below the baseline" {
+test "regressions names the counts below the baseline and the totals that differ" {
   let base : Counts = {
     fixtures: 10,
     fixtures_matched: 5,
+    fixtures_idempotent: 10,
+    fixtures_reparsed: 10,
     corpus: 3,
     corpus_matched: 2,
+    corpus_idempotent: 3,
+    corpus_reparsed: 3,
   }
   @expect.expect_all(s => {
     s
     .expect(regressions({ ..base, fixtures_matched: 4, }, base))
     .to_equal(["fixtures_matched: 4 < baseline 5"])
+    s
+    .expect(regressions({ ..base, corpus_idempotent: 2, }, base))
+    .to_equal(["corpus_idempotent: 2 < baseline 3"])
+    s
+    .expect(regressions({ ..base, fixtures: 9, }, base))
+    .to_equal(["fixtures: 9 != baseline 10"])
     s.expect(regressions(base, base)).to_equal([])
     s.expect(counts_from_json(counts_to_json(base))).to_equal(base)
   })
@@ -32,12 +42,18 @@ test "first_difference reports the first differing line" {
 }
 
 ///|
-/// Format parity counts.
+/// Format parity counts: per source, the files, the files whose output is
+/// the binary's, the files whose output formats to itself, and the files
+/// whose output parses with no error.
 priv struct Counts {
   fixtures : Int32
   fixtures_matched : Int32
+  fixtures_idempotent : Int32
+  fixtures_reparsed : Int32
   corpus : Int32
   corpus_matched : Int32
+  corpus_idempotent : Int32
+  corpus_reparsed : Int32
 } derive(Eq, Debug)
 
 ///|
@@ -45,43 +61,76 @@ fn counts_to_json(c : Counts) -> Json {
   {
     "fixtures": Json(c.fixtures),
     "fixtures_matched": Json(c.fixtures_matched),
+    "fixtures_idempotent": Json(c.fixtures_idempotent),
+    "fixtures_reparsed": Json(c.fixtures_reparsed),
     "corpus": Json(c.corpus),
     "corpus_matched": Json(c.corpus_matched),
+    "corpus_idempotent": Json(c.corpus_idempotent),
+    "corpus_reparsed": Json(c.corpus_reparsed),
   }
 }
 
 ///|
 fn counts_from_json(json : Json) -> Counts raise {
-  guard json is Object(o) &&
-    o.get("fixtures") is Some(Number(a, ..)) &&
-    o.get("fixtures_matched") is Some(Number(b, ..)) &&
-    o.get("corpus") is Some(Number(c, ..)) &&
-    o.get("corpus_matched") is Some(Number(d, ..)) else {
-    fail(
-      "baseline: expected fixtures, fixtures_matched, corpus and corpus_matched",
-    )
+  guard json is Object(o) else { fail("baseline: expected an object") }
+  let field = (name : String) => {
+    match o.get(name) {
+      Some(Number(n, ..)) => n.to_int()
+      _ => fail("baseline: missing count \{name}")
+    }
   }
   {
-    fixtures: a.to_int(),
-    fixtures_matched: b.to_int(),
-    corpus: c.to_int(),
-    corpus_matched: d.to_int(),
+    fixtures: field("fixtures"),
+    fixtures_matched: field("fixtures_matched"),
+    fixtures_idempotent: field("fixtures_idempotent"),
+    fixtures_reparsed: field("fixtures_reparsed"),
+    corpus: field("corpus"),
+    corpus_matched: field("corpus_matched"),
+    corpus_idempotent: field("corpus_idempotent"),
+    corpus_reparsed: field("corpus_reparsed"),
   }
 }
 
 ///|
 fn scoreboard(c : Counts) -> String {
-  "format parity: \{c.fixtures_matched}/\{c.fixtures} fixtures, \{c.corpus_matched}/\{c.corpus} corpus files"
+  "format parity: \{c.fixtures_matched}/\{c.fixtures} fixtures (\{c.fixtures_idempotent} idempotent, \{c.fixtures_reparsed} reparsed), \{c.corpus_matched}/\{c.corpus} corpus files (\{c.corpus_idempotent} idempotent, \{c.corpus_reparsed} reparsed)"
 }
 
 ///|
-/// Names of the counts below the baseline, with both values.
+/// The totals that differ from the baseline and the matched counts below
+/// it, with both values.
 fn regressions(current : Counts, baseline : Counts) -> Array[String] {
   let found = []
   for
     p in [
+      ("fixtures", current.fixtures, baseline.fixtures),
+      ("corpus", current.corpus, baseline.corpus),
+    ] {
+    let (name, now, expected) = p
+    if now != expected {
+      found.push("\{name}: \{now} != baseline \{expected}")
+    }
+  }
+  for
+    p in [
       ("fixtures_matched", current.fixtures_matched, baseline.fixtures_matched),
+      (
+        "fixtures_idempotent",
+        current.fixtures_idempotent,
+        baseline.fixtures_idempotent,
+      ),
+      (
+        "fixtures_reparsed",
+        current.fixtures_reparsed,
+        baseline.fixtures_reparsed,
+      ),
       ("corpus_matched", current.corpus_matched, baseline.corpus_matched),
+      (
+        "corpus_idempotent",
+        current.corpus_idempotent,
+        baseline.corpus_idempotent,
+      ),
+      ("corpus_reparsed", current.corpus_reparsed, baseline.corpus_reparsed),
     ] {
     let (name, now, min) = p
     if now < min {
