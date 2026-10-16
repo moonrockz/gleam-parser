@@ -13,3 +13,4 @@ article prefixes its top-level names (`gs_`, …).
 | [diagnostics.mbt.md](diagnostics.mbt.md) | Render diagnostics as the compiler does, or as JSON |
 | [configure.mbt.md](configure.mbt.md) | Set the dialect and the fuel budget; load a configuration from TOML and the environment |
 | [traverse.mbt.md](traverse.mbt.md) | Choose a traversal: walk, fold, reduce, a visitor, events, a cursor, and the node at a position |
+| [format.mbt.md](format.mbt.md) | Format a module or a parse result as `gleam format` does |

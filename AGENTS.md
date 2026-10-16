@@ -615,16 +615,25 @@ gleam-parser checks `format` against `gleam format` 1.19.2.
   `tests/corpus/format.lock` (`<corpus key> <sha256 of the output>` or
   `FORMAT_ERROR`). Both run locally only.
 - `mise run test:format` (`tests/format`, `GLEAM_FORMAT_MODE=check`) scores
-  `fixtures`, `fixtures_matched`, `corpus` and `corpus_matched` (the corpus
-  part needs `corpus:fetch`) and fails when a matched count drops below
-  `tests/format/baseline.json`. `mise run formatter:ratchet` raises the
+  per source (`fixtures`, `corpus`) the files, the `matched` ones (the
+  binary's bytes), the `idempotent` ones (the output formats to itself)
+  and the `reparsed` ones (the output parses with no error); the corpus
+  part needs `corpus:fetch` (a lock without a corpus is an instruction,
+  not a regression). It fails when a total differs from
+  `tests/format/baseline.json` or a count drops below it. `mise run formatter:ratchet` raises the
   baseline. Reports go to `_build/reports/format/` (`summary.md`,
   `format.json`, `format.html`); for up to 20 unmatched files the summary
   shows the first differing line. CI runs it in the `parity` job and uploads
   `format-report`.
-- The baseline is 893/893 fixtures and 233/233 corpus files: every mismatch
-  is a regression. A new mismatch is a port bug; fix it against
+- The baseline is 893/893 fixtures (892 idempotent: the compiler is not
+  idempotent on `let b = --{a + 3}` either) and 233/233 corpus files: every
+  mismatch is a regression. A new mismatch is a port bug; fix it against
   `format/src/lib.rs` with a test whose expectation comes from the binary.
+- Laws (`src/format/laws_test.mbt`, `nesting_law_test.mbt`,
+  `chains_test.mbt`): idempotence and reparse on `GleamModule`, every
+  comment once on `Commented`, never a crash on `GleamText`, the deepest
+  nesting and the longest flat chains on every target. The cookbook article
+  is `docs/cookbook/format.mbt.md`.
 
 ## Tooling
 
