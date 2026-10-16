@@ -98,5 +98,8 @@ test {
   compiler range. Bit array units use `BitArrayUnit`.
 - `PathStep.index` and `NodePath::child` use `ChildIndex`. Traversal depths
   use `NodeDepth`. Their constructors reject negative integers.
+- Construct comments with `Comment::new(kind~, content~, span~)`. It returns
+  `None` for an EOF sentinel or a span shorter than the slash prefix.
+  Direct comment struct construction is no longer available.
 
 The AST JSON schema and the text of formatted Gleam remain unchanged.

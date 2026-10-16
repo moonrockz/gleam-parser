@@ -15,6 +15,39 @@ fn kind_name(k : @scanner.TokenKind) -> String {
 }
 
 ///|
+test "law: scanned comments reconstruct through the checked constructor and slice to their content" {
+  @quickcheck.check(
+    (t : @lawkit.GleamText) => {
+      ["//", "///", "////"]
+      .iter()
+      .all(prefix => {
+        let source = @scanner.SourceText::new(prefix + t.text())
+        let stream = @scanner.tokenize(source)
+        let trivia = match stream.tokens.get(0) {
+          Some(token) => token.trivia_before
+          None => stream.trivia
+        }
+        guard trivia.get(0) is Some(Comment(comment)) else { return false }
+        match
+          @scanner.Comment::new(
+            kind=comment.kind,
+            content=comment.content,
+            span=comment.span,
+          ) {
+          None => false
+          Some(copy) =>
+            copy == comment &&
+            source.slice(copy.content_span()) == Some(copy.content)
+        }
+      })
+    },
+    count=200,
+    max_size=16,
+    seed=2231,
+  )
+}
+
+///|
 /// Edge values: empty text; a lone `\r` at the end; text that is only
 /// trivia; an open string at the end; lone surrogates inside literals.
 test "law: the scan is lossless for any text" {

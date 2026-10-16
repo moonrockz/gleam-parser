@@ -46,3 +46,23 @@ Feature: Lossless scanning of Gleam source
       | x -1    | Name(x), Int(-1)                  |
       | 1.5e3   | Float(1.5e3)                      |
       | t.1.2   | Name(t), Dot, Int(1), Dot, Int(2) |
+
+  Scenario Outline: Comment construction rejects a span shorter than its prefix
+    When I construct a "<kind>" comment spanning <length> bytes
+    Then comment construction is rejected
+
+    Examples:
+      | kind    | length |
+      | regular | 1      |
+      | doc     | 2      |
+      | module  | 3      |
+
+  Scenario Outline: A comment can have empty content after its prefix
+    When I construct a "<kind>" comment spanning <length> bytes
+    Then the comment content spans bytes <length> to <length>
+
+    Examples:
+      | kind    | length |
+      | regular | 2      |
+      | doc     | 3      |
+      | module  | 4      |

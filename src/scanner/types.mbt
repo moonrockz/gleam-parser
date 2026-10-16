@@ -172,16 +172,46 @@ pub fn CommentKind::prefix_length(self : CommentKind) -> @span.ByteLength {
 ///|
 /// A comment. `span` covers the slashes and the text up to the line break
 /// (not included); `content` is the text after the slashes.
-pub(all) struct Comment {
+/// Construct with `new` so the span can contain the comment's prefix.
+pub struct Comment {
   kind : CommentKind
   content : String
   span : @span.SrcSpan
 } derive(Eq, Debug)
 
 ///|
+/// Create a comment whose span has enough bytes for its slash prefix.
+/// Return `None` for an EOF sentinel or a span shorter than the prefix.
+/// The fields remain readable; direct struct construction is restricted.
+///
+/// ```mbt check
+/// test {
+///   let span = @span.SrcSpan::new(0, 1).unwrap()
+///   debug_inspect(
+///     @scanner.Comment::new(kind=Regular, content="", span~),
+///     content="None",
+///   )
+///   let span = @span.SrcSpan::new(0, 6).unwrap()
+///   let comment = @scanner.Comment::new(kind=Doc, content=" hi", span~).unwrap()
+///   assert_eq(comment.content_span(), @span.SrcSpan::new(3, 6).unwrap())
+/// }
+/// ```
+pub fn Comment::new(
+  kind~ : CommentKind,
+  content~ : String,
+  span~ : @span.SrcSpan,
+) -> Comment? {
+  guard span.length() is Some(length) && length >= kind.prefix_length() else {
+    return None
+  }
+  Some({ kind, content, span, })
+}
+
+///|
 /// The compiler's span for the comment: its content, without the slashes.
+/// Construction proves that the shifted start is in the ordered span.
 pub fn Comment::content_span(self : Comment) -> @span.SrcSpan {
-  @span.SrcSpan::from_compiler(
+  @span.SrcSpan::between(
     self.span.start.shift(self.kind.prefix_length().to_int()).unwrap(),
     self.span.end,
   ).unwrap()

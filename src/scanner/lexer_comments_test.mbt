@@ -20,11 +20,13 @@ test "the three comment kinds, content after the slashes" {
     e
     .expect(t[0])
     .to_equal(
-      @scanner.Trivia::Comment({
-        kind: Regular,
-        content: " a",
-        span: @span.SrcSpan::new(0, 4).unwrap(),
-      }),
+      @scanner.Trivia::Comment(
+        @scanner.Comment::new(
+          kind=Regular,
+          content=" a",
+          span=@span.SrcSpan::new(0, 4).unwrap(),
+        ).unwrap(),
+      ),
     )
     e
     .expect(t[1])
@@ -32,20 +34,24 @@ test "the three comment kinds, content after the slashes" {
     e
     .expect(t[2])
     .to_equal(
-      @scanner.Trivia::Comment({
-        kind: Doc,
-        content: " b",
-        span: @span.SrcSpan::new(5, 10).unwrap(),
-      }),
+      @scanner.Trivia::Comment(
+        @scanner.Comment::new(
+          kind=Doc,
+          content=" b",
+          span=@span.SrcSpan::new(5, 10).unwrap(),
+        ).unwrap(),
+      ),
     )
     e
     .expect(t[4])
     .to_equal(
-      @scanner.Trivia::Comment({
-        kind: Module,
-        content: " c",
-        span: @span.SrcSpan::new(11, 17).unwrap(),
-      }),
+      @scanner.Trivia::Comment(
+        @scanner.Comment::new(
+          kind=Module,
+          content=" c",
+          span=@span.SrcSpan::new(11, 17).unwrap(),
+        ).unwrap(),
+      ),
     )
     e.expect(stream(text).to_source()).to_equal(text)
   })
@@ -65,11 +71,13 @@ test "a comment ends before a CRLF; the CR is not in it" {
     e
     .expect(t[0])
     .to_equal(
-      @scanner.Trivia::Comment({
-        kind: Regular,
-        content: " a",
-        span: @span.SrcSpan::new(0, 4).unwrap(),
-      }),
+      @scanner.Trivia::Comment(
+        @scanner.Comment::new(
+          kind=Regular,
+          content=" a",
+          span=@span.SrcSpan::new(0, 4).unwrap(),
+        ).unwrap(),
+      ),
     )
     e
     .expect(t[1])
@@ -86,29 +94,35 @@ test "a comment at the end of the text and empty comments" {
     .expect(trivia_of("x //", 1))
     .to_equal([
       @scanner.Trivia::Whitespace(" ", @span.SrcSpan::new(1, 2).unwrap()),
-      @scanner.Trivia::Comment({
-        kind: Regular,
-        content: "",
-        span: @span.SrcSpan::new(2, 4).unwrap(),
-      }),
+      @scanner.Trivia::Comment(
+        @scanner.Comment::new(
+          kind=Regular,
+          content="",
+          span=@span.SrcSpan::new(2, 4).unwrap(),
+        ).unwrap(),
+      ),
     ])
     e
     .expect(trivia_of("///", 0))
     .to_equal([
-      @scanner.Trivia::Comment({
-        kind: Doc,
-        content: "",
-        span: @span.SrcSpan::new(0, 3).unwrap(),
-      }),
+      @scanner.Trivia::Comment(
+        @scanner.Comment::new(
+          kind=Doc,
+          content="",
+          span=@span.SrcSpan::new(0, 3).unwrap(),
+        ).unwrap(),
+      ),
     ])
     e
     .expect(trivia_of("/////", 0))
     .to_equal([
-      @scanner.Trivia::Comment({
-        kind: Module,
-        content: "/",
-        span: @span.SrcSpan::new(0, 5).unwrap(),
-      }),
+      @scanner.Trivia::Comment(
+        @scanner.Comment::new(
+          kind=Module,
+          content="/",
+          span=@span.SrcSpan::new(0, 5).unwrap(),
+        ).unwrap(),
+      ),
     ])
     e.expect(stream("x // é\n").to_source()).to_equal("x // é\n")
   })

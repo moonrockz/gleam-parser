@@ -24,12 +24,13 @@ pub fn wrap(String) -> String
 // Errors
 
 // Types and methods
-pub(all) struct Comment {
+pub struct Comment {
   kind : CommentKind
   content : String
   span : @span.SrcSpan
 } derive(Eq, @debug.Debug)
 pub fn Comment::content_span(Self) -> @span.SrcSpan
+pub fn Comment::new(kind~ : CommentKind, content~ : String, span~ : @span.SrcSpan) -> Self?
 
 pub(all) enum CommentKind {
   Regular
