@@ -326,14 +326,6 @@ fn Formatter::statement_fn(
 }
 
 ///|
-fn Formatter::custom_type(
-  self : Formatter,
-  _c : @ast.CustomType,
-) -> @pretty.Doc raise FormatError {
-  t("todo")
-}
-
-///|
 fn Formatter::module_constant(
   self : Formatter,
   _c : @ast.ModuleConstant,
