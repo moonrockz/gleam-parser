@@ -134,7 +134,7 @@ fn dec_uint64(j : Json, path : Path) -> TupleIndex raise DecodeError {
     Number(d, repr~) =>
       match repr {
         Some(digits) =>
-          TupleIndex::from_uint64(
+          TupleIndex(
             @string.parse_uint64(digits) catch {
               _ =>
                 fail(
@@ -147,7 +147,7 @@ fn dec_uint64(j : Json, path : Path) -> TupleIndex raise DecodeError {
           if d < 0.0 || d != d.floor() || d >= 18446744073709551616.0 {
             fail(path, "expected an unsigned 64-bit integer, found \{d}")
           }
-          TupleIndex::from_uint64(d.to_uint64())
+          TupleIndex(d.to_uint64())
         }
       }
     other => fail(path, "expected a number, found \{json_kind(other)}")

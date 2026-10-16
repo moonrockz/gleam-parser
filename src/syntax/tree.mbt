@@ -26,7 +26,7 @@ fn identity(n : NodeRef) -> String {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let body = tree.root().field("definitions")[0].field("body")[0]
@@ -42,7 +42,8 @@ fn identity(n : NodeRef) -> String {
 ///   )
 /// }
 /// ```
-pub fn Tree::new(result : @parser.ParseResult) -> Tree {
+#alias(new, deprecated="Use `Tree(...)` instead")
+pub fn Tree::Tree(result : @parser.ParseResult) -> Tree {
   let root = NodeRef::of_result(result)
   let parents : Map[String, Array[(NodeRef, NodeRef, PathStep)]] = Map([])
   let stack = [root]
@@ -82,7 +83,7 @@ pub fn Tree::parent(self : Tree, n : NodeRef) -> NodeRef? {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let b = tree.root().field("definitions")[0].field("arguments")[1]
@@ -148,7 +149,7 @@ pub fn Tree::path(self : Tree, n : NodeRef) -> Array[NodeRef] {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   // Byte 25 is the `b` in `a + b`.
@@ -243,7 +244,7 @@ fn innermost_at(
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn f() {\n  1\n}\n\nconst x = 2\n"),
 ///   )
 ///   let f = tree.root().field("definitions")[0]

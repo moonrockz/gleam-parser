@@ -10,11 +10,7 @@ fn show(c : CommentOrLine) -> String {
 ///|
 fn fixture(text : String) -> Formatter {
   let r = @parser.parse_text(text)
-  Formatter::new(
-    r.extra,
-    @scanner.SourceText::new(text),
-    @config.Config::default(),
-  )
+  Formatter(r.extra, @scanner.SourceText(text), @config.Config::default())
 }
 
 ///|

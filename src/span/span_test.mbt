@@ -23,7 +23,7 @@ test "an empty span contains nothing" {
 test "positions compare by value" {
   @expect.expect(@span.Position::new(1, 1)).to_equal(
     Some(
-      @span.Position::at(
+      @span.Position(
         @span.LineNumber::new(1).unwrap(),
         @span.ColumnNumber::new(1).unwrap(),
       ),

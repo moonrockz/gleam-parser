@@ -31,7 +31,7 @@ fn module_tree(
   ignore(gleam_root(m))
   let text = m.text()
   let result = @parser.parse_text(text)
-  let tree = @syntax.Tree::new(result)
+  let tree = @syntax.Tree(result)
   let nodes = []
   @syntax.walk(tree.root(), n => {
     nodes.push(n)
@@ -46,7 +46,7 @@ test "law: node_at is a smallest node that contains the offset: deepest among eq
     (m : @lawkit.GleamModule) => {
       let (tree, text, _, nodes) = module_tree(m)
       let depth = nodes.map(n => tree.ancestors(n).length())
-      let length = @scanner.SourceText::new(text).byte_length().to_int()
+      let length = @scanner.SourceText(text).byte_length().to_int()
       edge_offsets(length, nodes.map(n => n.span()))
       .iter()
       .all(p => {
@@ -128,7 +128,7 @@ test "law: the text at a node's span starts with its first token and ends with i
   @quickcheck.check(
     (m : @lawkit.GleamModule) => {
       let (tree, text, _, nodes) = module_tree(m)
-      let source = @scanner.SourceText::new(text)
+      let source = @scanner.SourceText(text)
       nodes
       .iter()
       .all(n => {
@@ -196,7 +196,7 @@ test "law: for any text, every node lies inside the source and inside its parent
     (t : @lawkit.GleamText) => {
       let text = t.text()
       let result = @parser.parse_text(text)
-      let length = @scanner.SourceText::new(text).byte_length().to_int()
+      let length = @scanner.SourceText(text).byte_length().to_int()
       let root = @syntax.NodeRef::of_result(result)
       let mut ok = true
       let open : Array[@syntax.NodeRef] = []

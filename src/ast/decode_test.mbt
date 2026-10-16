@@ -324,7 +324,7 @@ test "tuple and guard indexes are 64-bit like the compiler's u64" {
   for index in [4294967296UL, 18446744073709551615UL, 0UL] {
     let e : @ast.Expr = TupleIndex(
       location=sp(0, 5),
-      index=@ast.TupleIndex::from_uint64(index),
+      index=@ast.TupleIndex(index),
       tuple=Var(location=sp(0, 1), name="t"),
     )
     let text = @ast.canonical(@ast.encode_expr(e))
@@ -334,7 +334,7 @@ test "tuple and guard indexes are 64-bit like the compiler's u64" {
     })
     let g : @ast.ClauseGuard = TupleIndex(
       location=sp(0, 5),
-      index=@ast.TupleIndex::from_uint64(index),
+      index=@ast.TupleIndex(index),
       tuple=Var(location=sp(0, 1), name="t"),
     )
     @expect.expect(
@@ -344,7 +344,7 @@ test "tuple and guard indexes are 64-bit like the compiler's u64" {
     ).to_equal(g)
     let f : @ast.ClauseGuard = FieldAccess(
       label_location=sp(2, 3),
-      index=Some(@ast.TupleIndex::from_uint64(index)),
+      index=Some(@ast.TupleIndex(index)),
       label="a",
       container=Var(location=sp(0, 1), name="t"),
     )
@@ -679,9 +679,7 @@ test "every expression child edge round-trips 2000 deep through the Json value o
     ),
     (
       "tuple index",
-      e => {
-        TupleIndex(location=sp, index=@ast.TupleIndex::from_uint64(0), tuple=e)
-      },
+      e => TupleIndex(location=sp, index=@ast.TupleIndex(0), tuple=e),
     ),
     ("negate bool", e => NegateBool(location=sp, value=e)),
     ("list tail", e => List(location=sp, elements=[][:], tail=Some(e))),

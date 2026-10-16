@@ -12,7 +12,7 @@ test "di: render a syntax error" {
   let r = @gleam.parse_text(text)
   let out = @gleam.render_plain(
     r.diagnostics[0],
-    @gleam.SourceText::new(text),
+    @gleam.SourceText(text),
     "src/main.gleam",
   )
   inspect(

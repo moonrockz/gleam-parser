@@ -84,7 +84,7 @@ fn Parser::parse_custom_type(
 fn Parser::parse_record_constructor(
   self : Parser,
 ) -> @ast.RecordConstructor? raise ParseError {
-  let attributes = Attributes::new()
+  let attributes = Attributes()
   let attr_loc = self.parse_attributes(attributes)
   if attr_loc is Some(attr_span) {
     if attributes.external_erlang is Some(_) ||

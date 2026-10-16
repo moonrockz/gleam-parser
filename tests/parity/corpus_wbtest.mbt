@@ -243,7 +243,7 @@ fn score() -> Array[FileReport] raise {
     let parsed = !result.has_errors()
     let actual = @gleam.encode_parsed(result.parsed())
     let matched = golden_matches(entry.golden, result, actual)
-    let source = @gleam.SourceText::new(text)
+    let source = @gleam.SourceText(text)
     let diagnostic = result.diagnostics
       .get(0)
       .map(d => {

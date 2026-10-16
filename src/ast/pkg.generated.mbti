@@ -464,7 +464,8 @@ pub(all) enum TodoKind {
   EmptyBlock
 } derive(Eq, @debug.Debug)
 
-pub struct TupleIndex(UInt64) derive(Compare, Eq, Hash, @debug.Debug)
+pub(all) struct TupleIndex(UInt64) derive(Compare, Eq, Hash, @debug.Debug)
+#deprecated
 pub fn TupleIndex::from_uint64(UInt64) -> Self
 pub fn TupleIndex::new(Int64) -> Self?
 pub fn TupleIndex::to_uint64(Self) -> UInt64

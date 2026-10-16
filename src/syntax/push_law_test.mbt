@@ -21,7 +21,7 @@ impl @syntax.Handler for PolicyHandler with fn on_leave(self, e) {
 ///|
 fn pushed_events(root : @syntax.NodeRef, p : Policy) -> Array[String] {
   let h : PolicyHandler = { policy: p, log: [], taken: 0, }
-  @syntax.push_events(@syntax.EventReader::new(root), h)
+  @syntax.push_events(@syntax.EventReader(root), h)
   h.log
 }
 
@@ -72,13 +72,13 @@ test "law: push_events reads one event at a time, skips only on SkipChildren and
       let (m, p) = input
       let root = gleam_root(m)
       let source : LoggedSource = {
-        inner: @syntax.EventReader::new(root),
+        inner: @syntax.EventReader(root),
         calls: [],
       }
       let h : PolicyHandler = { policy: p, log: [], taken: 0, }
       @syntax.push_events(source, h)
       let expected = []
-      let r = @syntax.EventReader::new(root)
+      let r = @syntax.EventReader(root)
       let mut k = 0
       let mut stopped = false
       while r.next() is Some(e) {
@@ -149,9 +149,9 @@ test "law: push_events hands the handler exactly the reader's event records" {
       let (m, p) = input
       let root = gleam_root(m)
       let h : RecordHandler = { policy: p, lines: [], taken: 0, }
-      @syntax.push_events(@syntax.EventReader::new(root), h)
+      @syntax.push_events(@syntax.EventReader(root), h)
       let expected = []
-      let r = @syntax.EventReader::new(root)
+      let r = @syntax.EventReader(root)
       let mut k = 0
       while r.next() is Some(e) {
         expected.push(record_line(e))

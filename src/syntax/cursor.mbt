@@ -21,7 +21,7 @@ priv struct CursorFrame {
 ///   let root = @syntax.NodeRef::of_result(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let cursor = @syntax.TreeCursor::new(root)
+///   let cursor = @syntax.TreeCursor(root)
 ///   inspect(cursor.goto_first_child(), content="true")
 ///   inspect(cursor.node().kind(), content="function")
 ///   inspect(cursor.goto_next_sibling(), content="false")
@@ -43,7 +43,8 @@ pub struct TreeCursor {
 
 ///|
 /// A cursor at `root` (depth 0, no field).
-pub fn TreeCursor::new(root : NodeRef) -> TreeCursor {
+#alias(new, deprecated="Use `TreeCursor(...)` instead")
+pub fn TreeCursor::TreeCursor(root : NodeRef) -> TreeCursor {
   {
     frames: [
       { siblings: [(None, root)], parent_path: NodePath::root(), index: 0, },
@@ -178,12 +179,12 @@ pub fn TreeCursor::goto_parent(self : TreeCursor) -> Bool {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let p = @span.ByteOffset::new(23).unwrap() // the `+` in `a + b`
 ///   let contains = (s : @span.SrcSpan) => s.start <= p && p < s.end
-///   let cursor = @syntax.TreeCursor::new(tree.root())
+///   let cursor = @syntax.TreeCursor(tree.root())
 ///   while cursor.goto_first_child_for(p) {
 ///     if !contains(cursor.node().span()) {
 ///       ignore(cursor.goto_parent())
@@ -193,7 +194,7 @@ pub fn TreeCursor::goto_parent(self : TreeCursor) -> Bool {
 ///   inspect(cursor.node().kind(), content="bin_op")
 ///   inspect(tree.node_at(p) == Some(cursor.node()), content="true")
 ///   // A plain loop goes one node too far, to `b` after the `+`.
-///   let naive = @syntax.TreeCursor::new(tree.root())
+///   let naive = @syntax.TreeCursor(tree.root())
 ///   while naive.goto_first_child_for(p) {
 ///
 ///   }
@@ -237,10 +238,10 @@ pub fn TreeCursor::goto_first_child_for(
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let cursor = @syntax.TreeCursor::new(tree.root())
+///   let cursor = @syntax.TreeCursor(tree.root())
 ///   inspect(
 ///     cursor.goto_node_at(@span.ByteOffset::new(23).unwrap()),
 ///     content="true",

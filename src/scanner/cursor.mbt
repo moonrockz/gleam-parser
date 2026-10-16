@@ -10,7 +10,7 @@ priv struct Cursor {
 }
 
 ///|
-fn Cursor::new(text : String) -> Cursor {
+fn Cursor::Cursor(text : String) -> Cursor {
   { text, unit: @span.Utf16Offset::zero(), byte: @span.ByteOffset::zero(), }
 }
 

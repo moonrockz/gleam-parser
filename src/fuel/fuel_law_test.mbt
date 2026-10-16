@@ -31,11 +31,11 @@ test "law: fuel chains budget times, fails on budget + 1, and counts every push"
     (t : Trace) => {
       let Trace(budget, ops) = t
       let b = @fuel.Budget::new(budget).unwrap()
-      let mut f = @fuel.Fuel::new(budget=b)
+      let mut f = @fuel.Fuel(budget=b)
       let mut ok = true
       for i, name in ops {
         let before = f
-        let r = Some(f.spend(@fuel.Operation::new(name))) catch {
+        let r = Some(f.spend(@fuel.Operation(name))) catch {
           @fuel.FuelExhausted(budget=eb, spent~) => {
             let sum = spent.fold(init=0, (acc, s) => acc + s.levels)
             if i != budget || eb != b || sum != budget {

@@ -450,6 +450,10 @@ Two kinds of user documentation, both tested:
 
 - MoonBit block style: blocks separated by `///|`; block order irrelevant.
 - Deprecated code in `deprecated.mbt` per directory.
+- Use native `Type(...)` constructors for total value construction. Define
+  custom constructors with `fn Type::Type(...) -> Type`. Keep checked
+  factories that return `Option` explicit. Do not expose an unchecked
+  constructor for a type whose underlying value can violate its invariant.
 
 ## Conventional Commits
 

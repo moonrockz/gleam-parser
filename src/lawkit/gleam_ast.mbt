@@ -448,15 +448,13 @@ pub fn gen_clause_guard(
     5 =>
       TupleIndex(
         location=ast_span(rs),
-        index=@ast.TupleIndex::from_uint64(ast_pick(rs, 5).to_uint64()),
+        index=@ast.TupleIndex(ast_pick(rs, 5).to_uint64()),
         tuple=gen_clause_guard(s, rs),
       )
     _ =>
       FieldAccess(
         label_location=ast_span(rs),
-        index=ast_opt(rs, () => {
-          @ast.TupleIndex::from_uint64(ast_pick(rs, 5).to_uint64())
-        }),
+        index=ast_opt(rs, () => @ast.TupleIndex(ast_pick(rs, 5).to_uint64())),
         label=ast_name(rs),
         container=gen_clause_guard(s, rs),
       )
@@ -600,7 +598,7 @@ pub fn gen_expr(size : Int32, rs : @splitmix.RandomState) -> @ast.Expr {
     13 =>
       TupleIndex(
         location=ast_span(rs),
-        index=@ast.TupleIndex::from_uint64(ast_pick(rs, 5).to_uint64()),
+        index=@ast.TupleIndex(ast_pick(rs, 5).to_uint64()),
         tuple=gen_expr(s, rs),
       )
     14 =>

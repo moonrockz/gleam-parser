@@ -33,7 +33,7 @@ priv struct Formatter {
 }
 
 ///|
-let op_format : @fuel.Operation = @fuel.Operation::new("format")
+let op_format : @fuel.Operation = @fuel.Operation("format")
 
 ///|
 fn comments_of(
@@ -47,7 +47,7 @@ fn comments_of(
 }
 
 ///|
-fn Formatter::new(
+fn Formatter::Formatter(
   extra : @ast.ModuleExtra,
   source : @scanner.SourceText,
   config : @config.Config,
@@ -62,7 +62,7 @@ fn Formatter::new(
     comments_at: 0,
     doc_comments_at: 0,
     empty_lines_at: 0,
-    fuel: { val: @fuel.Fuel::new(budget=config.fuel), },
+    fuel: { val: @fuel.Fuel(budget=config.fuel), },
   }
 }
 

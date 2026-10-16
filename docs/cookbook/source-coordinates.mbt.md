@@ -17,10 +17,23 @@ Use the typed offsets to query a source. Line and column numbers start at
 one. Use `to_int()` when an editor protocol, JSON encoder or string API
 needs a raw number.
 
+Use `Position(line, column)` when both coordinates are already valid.
+This constructor takes domain types and needs no validation.
+
 ```mbt check
 ///|
 test {
-  let source = @gleam.SourceText::new("é\n𝄞")
+  let line = @gleam.LineNumber::new(2).unwrap()
+  let column = @gleam.ColumnNumber::new(1).unwrap()
+  let position = @gleam.Position(line, column)
+  @expect.expect(position).to_equal(@gleam.Position::new(2, 1).unwrap())
+}
+```
+
+```mbt check
+///|
+test {
+  let source = @gleam.SourceText("é\n𝄞")
   guard @gleam.ByteOffset::new(3) is Some(byte) else { fail("invalid offset") }
   guard source.utf16_offset_of(byte) is Some(utf16) else {
     fail("not a boundary")
@@ -50,7 +63,7 @@ the source. Source lookups return `None` at those offsets.
 ```mbt check
 ///|
 test {
-  let source = @gleam.SourceText::new("é")
+  let source = @gleam.SourceText("é")
   let inside = @gleam.ByteOffset::new(1).unwrap()
   let outside = @gleam.ByteOffset::new(3).unwrap()
   @expect.expect_all(e => {
@@ -94,12 +107,30 @@ test {
 - `byte_offset_of` takes `Utf16Offset`. `utf16_offset_of` returns it.
 - `byte_length` returns `ByteLength`. Use `end_offset` for the final byte
   offset. `line_count` returns `LineCount`.
-- AST tuple indexes use `TupleIndex`. Use `from_uint64` to preserve the full
-  compiler range. Bit array units use `BitArrayUnit`.
+- AST tuple indexes use `TupleIndex`. Use `TupleIndex(value)` with a
+  `UInt64` to preserve the full compiler range. Bit array units use
+  `BitArrayUnit`.
 - `PathStep.index` and `NodePath::child` use `ChildIndex`. Traversal depths
   use `NodeDepth`. Their constructors reject negative integers.
 - Construct comments with `Comment::new(kind~, content~, span~)`. It returns
   `None` for an EOF sentinel or a span shorter than the slash prefix.
   Direct comment struct construction is no longer available.
+
+## Use MoonBit constructors
+
+Use `SourceText(text)`, `Tree(result)`, `TreeCursor(root)` and
+`EventReader(root)` to build source and syntax values. Use `Fuel(budget~)`
+and `Operation(name)` for recursion fuel. These constructors return the
+value directly. The old `::new` methods are deprecated aliases.
+
+`Position(line, column)` replaces `Position::at`. `TupleIndex(value)`
+replaces `TupleIndex::from_uint64`. The old methods remain deprecated.
+If the tuple index constructor is ambiguous with the AST node variant,
+use `TupleIndex::TupleIndex(value)` or supply an expected `TupleIndex` type.
+
+The checked `::new` factories for coordinates, ranges, comments, budgets
+and bounded AST values still return `Option`. Handle `None` when raw input
+is invalid. A MoonBit constructor must return its own type, so these
+factories keep their explicit validation result.
 
 The AST JSON schema and the text of formatted Gleam remain unchanged.

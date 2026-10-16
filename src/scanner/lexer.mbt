@@ -19,8 +19,8 @@ priv enum Piece {
 }
 
 ///|
-fn Lexer::new(text : String) -> Lexer {
-  { cursor: Cursor::new(text), text, pieces: [], diagnostics: [], }
+fn Lexer::Lexer(text : String) -> Lexer {
+  { cursor: Cursor(text), text, pieces: [], diagnostics: [], }
 }
 
 ///|
@@ -106,7 +106,7 @@ fn Lexer::fail_literal_value(
 ) -> Unit {
   let location = @span.SrcSpan::from_compiler(start, self.cursor.position()).unwrap()
   self.diagnostics.push(
-    @diagnostic.Diagnostic::new(
+    @diagnostic.Diagnostic(
       code="GL-SCAN-001",
       kind="LiteralValue",
       severity=Error,

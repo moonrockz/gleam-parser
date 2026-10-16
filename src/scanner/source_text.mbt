@@ -26,9 +26,11 @@ fn is_low(c : Int32) -> Bool {
 }
 
 ///|
+/// Index source text for UTF-8, UTF-16 and line/column lookups.
+///
 /// ```mbt check
 /// test {
-///   let st = @scanner.SourceText::new("é\nx")
+///   let st = @scanner.SourceText("é\nx")
 ///   debug_inspect(st.byte_length().to_int(), content="4")
 ///   debug_inspect(
 ///     st
@@ -42,7 +44,8 @@ fn is_low(c : Int32) -> Bool {
 ///   )
 /// }
 /// ```
-pub fn SourceText::new(text : String) -> SourceText {
+#alias(new, deprecated="Use `SourceText(...)` instead")
+pub fn SourceText::SourceText(text : String) -> SourceText {
   let n = text.length()
   let bound_bytes = [@span.ByteOffset::zero()]
   let bound_units = [@span.Utf16Offset::zero()]

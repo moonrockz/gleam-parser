@@ -57,8 +57,8 @@ pub fn format_parsed(
     Some(c) => c
     None => @config.Config::default()
   }
-  let source = @scanner.SourceText::new(result.cst.to_source())
-  let formatter = Formatter::new(result.extra, source, config)
+  let source = @scanner.SourceText(result.cst.to_source())
+  let formatter = Formatter(result.extra, source, config)
   pretty_print(formatter.format_module(result.module_))
 }
 

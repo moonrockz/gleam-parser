@@ -42,7 +42,7 @@ turn one into a line and column:
 ///|
 test "tk: token position" {
   let text = "let é = 1"
-  let source = @gleam.SourceText::new(text)
+  let source = @gleam.SourceText(text)
   let stream = @gleam.tokenize(source)
   let equal = stream.tokens[2]
   @expect.expect_all(e => {

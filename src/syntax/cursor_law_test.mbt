@@ -213,7 +213,7 @@ test "law: every cursor move agrees with a path model, resets included" {
         nodes.push(n)
         Continue
       })
-      let c = @syntax.TreeCursor::new(root)
+      let c = @syntax.TreeCursor(root)
       let mut base = root
       let path = []
       moves
@@ -242,7 +242,7 @@ test "law: a cursor's copy moves independently" {
     (input : (@lawkit.GleamModule, Array[UInt32], Array[UInt32])) => {
       let (m, first, second) = input
       let root = gleam_root(m)
-      let c = @syntax.TreeCursor::new(root)
+      let c = @syntax.TreeCursor(root)
       let path = []
       for mv in first {
         ignore(cursor_move(c, mv))
@@ -285,7 +285,7 @@ test "law: at every node, goto_first_child_for(p) moves to the innermost child t
   @quickcheck.check(
     (m : @lawkit.GleamModule) => {
       let root = gleam_root(m)
-      let c = @syntax.TreeCursor::new(root)
+      let c = @syntax.TreeCursor(root)
       let mut ok = true
       @syntax.walk(root, n => {
         let kids = n.children()
@@ -318,12 +318,12 @@ test "law: descending with goto_first_child_for ends at node_at" {
     (m : @lawkit.GleamModule) => {
       let (tree, text, _, nodes) = module_tree(m)
       let root = tree.root()
-      let length = @scanner.SourceText::new(text).byte_length().to_int()
+      let length = @scanner.SourceText(text).byte_length().to_int()
       edge_offsets(length, nodes.map(n => n.span()))
       .iter()
       .filter(p => contains(root.span(), p))
       .all(p => {
-        let c = @syntax.TreeCursor::new(root)
+        let c = @syntax.TreeCursor(root)
         while c.goto_first_child_for(@span.ByteOffset::new(p).unwrap()) {
           if !contains(c.node().span(), p) {
             ignore(c.goto_parent())
@@ -362,11 +362,11 @@ test "law: goto_node_at from the root or from any ancestor of node_at(p) moves t
     (m : @lawkit.GleamModule) => {
       let (tree, text, _, nodes) = module_tree(m)
       let root = tree.root()
-      let length = @scanner.SourceText::new(text).byte_length().to_int()
+      let length = @scanner.SourceText(text).byte_length().to_int()
       edge_offsets(length, nodes.map(n => n.span()))
       .iter()
       .all(p => {
-        let c = @syntax.TreeCursor::new(root)
+        let c = @syntax.TreeCursor(root)
         let moved = c.goto_node_at(@span.ByteOffset::new(p).unwrap())
         match tree.node_at(@span.ByteOffset::new(p).unwrap()) {
           None =>
@@ -381,7 +381,7 @@ test "law: goto_node_at from the root or from any ancestor of node_at(p) moves t
             .ancestors(found)
             .iter()
             .all(a => {
-              let from_a = @syntax.TreeCursor::new(a)
+              let from_a = @syntax.TreeCursor(a)
               from_a.goto_node_at(@span.ByteOffset::new(p).unwrap()) &&
               from_a.node() == found &&
               tree.node_path(a).map(ap => ap.append(from_a.path())) ==
@@ -441,7 +441,7 @@ test "law: among children with equal spans goto_first_child_for picks the first"
         ),
       )
       let kids = list.children()
-      let c = @syntax.TreeCursor::new(list)
+      let c = @syntax.TreeCursor(list)
       let offsets = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
       offsets
       .iter()

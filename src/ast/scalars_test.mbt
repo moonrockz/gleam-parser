@@ -11,7 +11,7 @@ test "bounded AST scalars reject invalid construction" {
     e.expect(@ast.TupleIndex::new(-9223372036854775808L)).to_equal(None)
     e.expect(@ast.TupleIndex::new(0L).unwrap().to_uint64()).to_equal(0UL)
     e
-    .expect(@ast.TupleIndex::from_uint64(18446744073709551615UL).to_uint64())
+    .expect(@ast.TupleIndex::TupleIndex(18446744073709551615UL).to_uint64())
     .to_equal(18446744073709551615UL)
   })
 }
@@ -37,7 +37,7 @@ test "law: tuple indexes keep every unsigned digit through JSON" {
       let span = @span.SrcSpan::new(0, 1).unwrap()
       let expr : @ast.Expr = TupleIndex(
         location=span,
-        index=@ast.TupleIndex::from_uint64(value),
+        index=@ast.TupleIndex(value),
         tuple=Var(location=span, name="x"),
       )
       try {

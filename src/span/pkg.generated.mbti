@@ -36,7 +36,8 @@ pub struct Position {
   line : LineNumber
   column : ColumnNumber
 } derive(Eq, Hash, @debug.Debug)
-pub fn Position::at(LineNumber, ColumnNumber) -> Self
+#alias(at, deprecated)
+pub fn Position::Position(LineNumber, ColumnNumber) -> Self
 pub fn Position::new(Int, Int) -> Self?
 
 pub struct SrcSpan {

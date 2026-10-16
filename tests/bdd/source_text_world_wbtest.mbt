@@ -41,7 +41,7 @@ impl @moonspec.World for SourceTextWorld with fn configure(self, setup) {
     @expect.expect(self.constructed).to_equal(result == "succeeds")
   })
   setup.given1("the source text {string}", fn(text : String) {
-    self.text = Some(@gleam.SourceText::new(unescape(text)))
+    self.text = Some(@gleam.SourceText(unescape(text)))
   })
   setup.when1("I look up byte offset {int}", fn(byte : Int32) raise {
     guard self.text is Some(text) else { fail("no source text") }

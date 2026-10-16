@@ -1,6 +1,6 @@
 ///|
 test "the cursor reads code points and reports byte positions" {
-  let c = Cursor::new("aé𝄞")
+  let c = Cursor("aé𝄞")
   @expect.expect_all(e => {
     e.expect(c.peek()).to_equal(Some('a'))
     e.expect(c.peek1()).to_equal(Some('é'))
@@ -22,7 +22,7 @@ test "the cursor reads code points and reports byte positions" {
 
 ///|
 test "CRLF and a lone CR read as a line feed at the CR" {
-  let c = Cursor::new("a\r\nb\rc")
+  let c = Cursor("a\r\nb\rc")
   @expect.expect_all(e => {
     c.advance()
     e.expect(c.peek()).to_equal(Some('\n'))
@@ -42,7 +42,7 @@ test "CRLF and a lone CR read as a line feed at the CR" {
 
 ///|
 test "a lone surrogate is one code point of three bytes" {
-  let c = Cursor::new(@lawkit.units([0xD800, 0x61]))
+  let c = Cursor(@lawkit.units([0xD800, 0x61]))
   c.advance()
   @expect.expect_all(e => {
     e.expect(c.position()).to_equal(@span.ByteOffset::new(3).unwrap())

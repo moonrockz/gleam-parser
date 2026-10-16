@@ -1,6 +1,6 @@
 ///|
 test "a diagnostic keeps its fields and knows its severity" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-PARSE-001",
     severity=Error,
     title="Syntax error",
@@ -23,7 +23,7 @@ test "a diagnostic keeps its fields and knows its severity" {
 
 ///|
 test "a warning is not an error" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-PARSE-002",
     severity=Warning,
     title="Deprecated syntax",
@@ -53,7 +53,7 @@ test "the code table matches AGENTS.md" {
 
 ///|
 test "a diagnostic carries the compiler's error kind" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-SCAN-001",
     kind="UnrecognizedToken",
     severity=Error,
@@ -66,7 +66,7 @@ test "a diagnostic carries the compiler's error kind" {
 
 ///|
 test "the kind defaults to the empty string" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-PARSE-004",
     severity=Error,
     title="Syntax error",
@@ -78,14 +78,14 @@ test "the kind defaults to the empty string" {
 
 ///|
 test "a diagnostic carries the compiler's body text; the default is empty" {
-  let plain = @diagnostic.Diagnostic::new(
+  let plain = @diagnostic.Diagnostic(
     code="GL-PARSE-001",
     severity=Error,
     title="Syntax error",
     message="I was not expecting this",
     span=@span.SrcSpan::new(0, 1).unwrap(),
   )
-  let with_text = @diagnostic.Diagnostic::new(
+  let with_text = @diagnostic.Diagnostic(
     code="GL-PARSE-001",
     severity=Error,
     title="Syntax error",

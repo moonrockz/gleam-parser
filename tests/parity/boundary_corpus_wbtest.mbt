@@ -77,7 +77,7 @@ fn span_in_bounds(source : @gleam.SourceText, d : @gleam.Diagnostic) -> Bool {
 /// its header; the JSON report decodes.
 fn prefix_problems(label : String, text : String) -> Array[String] {
   let problems = []
-  let source = @gleam.SourceText::new(text)
+  let source = @gleam.SourceText(text)
   let stream = @gleam.tokenize_text(text)
   if stream.to_source() != text {
     problems.push("\{label}: the token stream does not rebuild the text")
@@ -113,7 +113,7 @@ fn prefix_problems(label : String, text : String) -> Array[String] {
 /// one byte into each token longer than one byte when that is a code point
 /// boundary, and the end of the text; sorted, without duplicates.
 fn token_boundaries(text : String) -> Array[Int32] {
-  let source = @gleam.SourceText::new(text)
+  let source = @gleam.SourceText(text)
   let found = [0, source.byte_length().to_int()]
   for t in @gleam.tokenize_text(text).tokens {
     found.push(t.span.start.to_int())
@@ -195,7 +195,7 @@ test "boundary laws over the corpus" {
         if !@gleam.parse_text(text).has_errors() {
           problems.append(round_trip_problems(key, text))
         }
-        let st = @gleam.SourceText::new(text)
+        let st = @gleam.SourceText(text)
         for cut in prefix_cuts(token_boundaries(text)) {
           match prefix(st, cut) {
             Some(p) =>
@@ -220,9 +220,9 @@ test "boundary laws over the corpus" {
 
 ///|
 test "span_in_bounds allows end 0 only for the compiler's EOF spans" {
-  let source = @gleam.SourceText::new("pub fn f() {\n  1\n}\n")
+  let source = @gleam.SourceText("pub fn f() {\n  1\n}\n")
   fn diag(kind : String, start : Int32, end : Int32) -> @gleam.Diagnostic {
-    @gleam.Diagnostic::new(
+    @gleam.Diagnostic(
       code="GL-PARSE-001",
       severity=Error,
       title="Syntax error",
@@ -254,7 +254,7 @@ test "span_in_bounds allows end 0 only for the compiler's EOF spans" {
 
 ///|
 test "prefix refuses a cut inside a character" {
-  let source = @gleam.SourceText::new("é x")
+  let source = @gleam.SourceText("é x")
   @expect.expect_all(s => {
     s.expect(prefix(source, 2)).to_equal(Some("é"))
     s.expect(prefix(source, 1)).to_equal(None)

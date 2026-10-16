@@ -54,7 +54,7 @@ fn reference_line_count(text : String) -> Int32 {
 test "law: byte_length and line_count agree with the reference" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
-      let st = @scanner.SourceText::new(u.text())
+      let st = @scanner.SourceText(u.text())
       st.byte_length().to_int() == reference_byte_length(u.text()) &&
       st.line_count().to_int() == reference_line_count(u.text())
     },
@@ -69,7 +69,7 @@ test "law: byte_offset_of and utf16_offset_of are inverse at every boundary" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
       let text = u.text()
-      let st = @scanner.SourceText::new(text)
+      let st = @scanner.SourceText(text)
       let mut ok = true
       for i = 0; i <= text.length(); i = i + 1 {
         match st.byte_offset_of(@span.Utf16Offset::new(i).unwrap()) {
@@ -101,7 +101,7 @@ test "law: positions are monotonic and columns restart after a line break" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
       let text = u.text()
-      let st = @scanner.SourceText::new(text)
+      let st = @scanner.SourceText(text)
       let mut ok = true
       let mut previous : @span.Position? = None
       for b = 0; b <= st.byte_length().to_int(); b = b + 1 {
@@ -133,7 +133,7 @@ test "law: positions are monotonic and columns restart after a line break" {
 test "law: no byte offset makes a lookup panic" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
-      let st = @scanner.SourceText::new(u.text())
+      let st = @scanner.SourceText(u.text())
       for b = -2; b <= st.byte_length().to_int() + 2; b = b + 1 {
         @span.ByteOffset::new(b).bind(x => st.position_of(x)) |> ignore
         @span.ByteOffset::new(b).bind(x => st.utf16_offset_of(x)) |> ignore
@@ -213,7 +213,7 @@ test "law: position_of agrees with a reference count over the source" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
       let text = u.text()
-      let st = @scanner.SourceText::new(text)
+      let st = @scanner.SourceText(text)
       let mut ok = true
       for b = 0; b <= st.byte_length().to_int(); b = b + 1 {
         ok = ok &&

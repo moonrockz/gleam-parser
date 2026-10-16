@@ -1,6 +1,6 @@
 ///|
 fn tree_of(text : String) -> @syntax.Tree {
-  @syntax.Tree::new(@parser.parse_text(text))
+  @syntax.Tree(@parser.parse_text(text))
 }
 
 ///|
@@ -149,7 +149,7 @@ test "node_at inside a function body finds the statement through the head-only l
 test "a skipped definition keeps the tree of the others, and tokens_in gives whole tokens" {
   let text = "fn broken( {\n  1\n}\n\npub fn ok(a) {\n  a\n}\n"
   let result = @parser.parse_text(text)
-  let tree = @syntax.Tree::new(result)
+  let tree = @syntax.Tree(result)
   let defs = tree.root().field("definitions")
   @expect.expect_all(s => {
     s.expect(result.has_errors()).to_be_true()

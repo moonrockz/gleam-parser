@@ -39,13 +39,7 @@ pub let default_budget : Budget = Budget(100)
 ///|
 /// The name of a fuel-checked operation (`expression`, `pattern`, ...).
 /// Each package that spends fuel defines its operations as constants.
-pub struct Operation(String) derive(Eq, Hash, Debug)
-
-///|
-/// An operation with this name; the name appears in `FuelExhausted`.
-pub fn Operation::new(name : String) -> Operation {
-  Operation(name)
-}
+pub(all) struct Operation(String) derive(Eq, Hash, Debug)
 
 ///|
 /// The operation's name.
@@ -67,8 +61,8 @@ pub(all) struct Spent {
 ///
 /// ```mbt check
 /// test {
-///   let f = @fuel.Fuel::new(budget=@fuel.Budget::new(2).unwrap())
-///   let inner = f.spend(@fuel.Operation::new("expression"))
+///   let f = @fuel.Fuel(budget=@fuel.Budget::new(2).unwrap())
+///   let inner = f.spend(@fuel.Operation("expression"))
 ///   inspect(inner.left(), content="1")
 ///   inspect(f.left(), content="2")
 /// }
@@ -81,7 +75,8 @@ pub struct Fuel {
 
 ///|
 /// A full budget (`default_budget` when none is given).
-pub fn Fuel::new(budget~ : Budget = default_budget) -> Fuel {
+#alias(new, deprecated="Use `Fuel(...)` instead")
+pub fn Fuel::Fuel(budget~ : Budget = default_budget) -> Fuel {
   { budget, left: budget.units(), ops: @list.List([]), }
 }
 

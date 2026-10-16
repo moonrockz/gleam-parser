@@ -117,9 +117,9 @@ fn Parser::parse_case_clause_guard_unit_inner(
         match self.next_token() {
           Some({ kind: Int(value~, ..), span: int_span, .. }) =>
             match
-              parse_u64(value.replace(old="_", new="")).map(
-                @ast.TupleIndex::from_uint64,
-              ) {
+              parse_u64(value.replace(old="_", new="")).map(value => {
+                @ast.TupleIndex::TupleIndex(value)
+              }) {
               Some(index) =>
                 unit = TupleIndex(
                   location=sp(dot_s, int_span.end),

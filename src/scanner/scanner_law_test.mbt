@@ -21,7 +21,7 @@ test "law: scanned comments reconstruct through the checked constructor and slic
       ["//", "///", "////"]
       .iter()
       .all(prefix => {
-        let source = @scanner.SourceText::new(prefix + t.text())
+        let source = @scanner.SourceText(prefix + t.text())
         let stream = @scanner.tokenize(source)
         let trivia = match stream.tokens.get(0) {
           Some(token) => token.trivia_before
@@ -67,7 +67,7 @@ test "law: token and trivia spans tile the text on code point boundaries" {
   @quickcheck.check(
     (t : @lawkit.GleamText) => {
       let text = t.text()
-      let source = @scanner.SourceText::new(text)
+      let source = @scanner.SourceText(text)
       let s = @scanner.tokenize(source)
       let mut at = @span.ByteOffset::zero()
       let mut ok = true
@@ -130,7 +130,7 @@ test "law: a lexeme is the source text of its span" {
   @quickcheck.check(
     (t : @lawkit.GleamText) => {
       let text = t.text()
-      let source = @scanner.SourceText::new(text)
+      let source = @scanner.SourceText(text)
       let s = @scanner.tokenize(source)
       let mut ok = true
       for tok in s.tokens {

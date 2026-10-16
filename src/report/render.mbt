@@ -840,7 +840,7 @@ fn inner_gutter_column(out : Out, underline : (Style, Bool)?) -> Unit {
 ///   let r = @parser.parse_text(text)
 ///   let out = @report.render_plain(
 ///     r.diagnostics[0],
-///     @scanner.SourceText::new(text),
+///     @scanner.SourceText(text),
 ///     "x.gleam",
 ///   )
 ///   inspect(

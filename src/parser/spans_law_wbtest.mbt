@@ -311,7 +311,7 @@ test "law: every span of a parsed module lies inside the text" {
       let text = m.text()
       let r = parse_text(text)
       guard r.diagnostics.length() == 0 else { return false }
-      let end = @scanner.SourceText::new(text).end_offset()
+      let end = @scanner.SourceText(text).end_offset()
       let stack : Array[Node] = []
       for t in r.module_.definitions {
         stack.push(D(t.definition))

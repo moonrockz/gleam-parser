@@ -78,7 +78,7 @@ pub fn parse_type_text(
   config? : @config.Config,
 ) -> @ast.TypeAst raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_type())
   p.finish_snippet(stream, result, ExpectedType)
 }
@@ -90,7 +90,7 @@ pub fn parse_pattern_text(
   config? : @config.Config,
 ) -> @ast.Pattern raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_pattern())
   p.finish_snippet(stream, result, ExpectedPattern)
 }
@@ -103,7 +103,7 @@ pub fn parse_constant_text(
   config? : @config.Config,
 ) -> @ast.Constant raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_const_value())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
@@ -128,7 +128,7 @@ pub fn parse_expression_text(
   config? : @config.Config,
 ) -> @ast.Expr raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_expression())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
@@ -141,7 +141,7 @@ pub fn parse_statements_text(
   config? : @config.Config,
 ) -> ArrayView[@ast.Statement] raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_statement_sequence().map(r => r.0[:]))
   p.finish_snippet(stream, result, ExpectedExpr)
 }

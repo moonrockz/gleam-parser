@@ -23,7 +23,7 @@ priv struct Attributes {
 }
 
 ///|
-fn Attributes::new() -> Attributes {
+fn Attributes::Attributes() -> Attributes {
   {
     target: None,
     deprecated: NotDeprecated,
@@ -95,7 +95,7 @@ priv struct Parser {
 }
 
 ///|
-fn Parser::new(
+fn Parser::Parser(
   stream : @scanner.TokenStream,
   config : @config.Config,
 ) -> Parser {
@@ -127,7 +127,7 @@ fn Parser::new(
     token0: None,
     token1: None,
     farthest: @span.ByteOffset::zero(),
-    fuel: { val: @fuel.Fuel::new(budget=config.fuel), },
+    fuel: { val: @fuel.Fuel(budget=config.fuel), },
     warnings: [],
     trailing_commas: [],
     doc_comments,

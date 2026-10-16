@@ -13,14 +13,14 @@ let two_defs : String = "pub fn f(x) {\n  x\n}\n\nconst y = 1\n"
 
 ///|
 test "a cursor starts at its node with depth 0 and no field" {
-  let c = @syntax.TreeCursor::new(root_of(two_defs))
+  let c = @syntax.TreeCursor(root_of(two_defs))
   @expect.expect(at(c)).to_equal("module/module - 0")
 }
 
 ///|
 test "goto_first_child, goto_next_sibling and goto_parent move and report fields" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(root_of(two_defs))
+    let c = @syntax.TreeCursor(root_of(two_defs))
     let seen = []
     s.expect(c.goto_first_child()).to_equal(true)
     seen.push(at(c))
@@ -44,7 +44,7 @@ test "goto_first_child, goto_next_sibling and goto_parent move and report fields
 ///|
 test "goto_last_child and goto_previous_sibling" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(root_of(two_defs))
+    let c = @syntax.TreeCursor(root_of(two_defs))
     s.expect(c.goto_last_child()).to_equal(true)
     s.expect(at(c)).to_equal("definition/module_constant definitions 1")
     s.expect(c.goto_previous_sibling()).to_equal(true)
@@ -55,7 +55,7 @@ test "goto_last_child and goto_previous_sibling" {
 ///|
 test "a move that has nowhere to go returns false and leaves the cursor in place" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(root_of(two_defs))
+    let c = @syntax.TreeCursor(root_of(two_defs))
     s.expect(c.goto_parent()).to_equal(false)
     s.expect(c.goto_next_sibling()).to_equal(false)
     s.expect(c.goto_previous_sibling()).to_equal(false)
@@ -76,7 +76,7 @@ test "a move that has nowhere to go returns false and leaves the cursor in place
 ///|
 test "goto_first_child_for picks the first child that contains or follows the offset" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(root_of(two_defs))
+    let c = @syntax.TreeCursor(root_of(two_defs))
     // Inside the function head.
     s
     .expect(c.goto_first_child_for(@span.ByteOffset::new(5).unwrap()))
@@ -100,7 +100,7 @@ test "goto_first_child_for picks the first child that contains or follows the of
 ///|
 test "reset moves the cursor to a new start node" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(root_of(two_defs))
+    let c = @syntax.TreeCursor(root_of(two_defs))
     ignore(c.goto_first_child())
     let function = c.node()
     ignore(c.goto_first_child())
@@ -113,7 +113,7 @@ test "reset moves the cursor to a new start node" {
 ///|
 test "a copy moves independently of its cursor" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(root_of(two_defs))
+    let c = @syntax.TreeCursor(root_of(two_defs))
     ignore(c.goto_first_child())
     let d = c.copy()
     ignore(d.goto_next_sibling())
@@ -129,7 +129,7 @@ test "a copy moves independently of its cursor" {
 /// The tags a full navigation (first child, next sibling, parent) enters.
 /// It fails unless the navigation ends back at the start node.
 fn navigate(root : @syntax.NodeRef) -> Array[String] raise {
-  let c = @syntax.TreeCursor::new(root)
+  let c = @syntax.TreeCursor(root)
   let out = [tag(c.node())]
   while true {
     if c.goto_first_child() {
@@ -159,7 +159,7 @@ test "a full cursor navigation enters children() pre-order" {
 ///|
 test "a cursor handles 3000 nested lists" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(deep_list(3000))
+    let c = @syntax.TreeCursor(deep_list(3000))
     while c.goto_first_child() {
 
     }
@@ -175,7 +175,7 @@ test "a cursor handles 3000 nested lists" {
 ///|
 test "a cursor reports the path of its node" {
   @expect.expect_all(s => {
-    let c = @syntax.TreeCursor::new(root_of(two_defs))
+    let c = @syntax.TreeCursor(root_of(two_defs))
     s.expect(c.path().to_string()).to_equal("")
     ignore(c.goto_first_child())
     ignore(c.goto_last_child())
@@ -207,7 +207,7 @@ test "among children with equal spans goto_first_child_for picks the first" {
       tail=None,
     ),
   )
-  let c = @syntax.TreeCursor::new(list)
+  let c = @syntax.TreeCursor(list)
   @expect.expect_all(s => {
     s
     .expect(c.goto_first_child_for(@span.ByteOffset::new(2).unwrap()))
@@ -219,7 +219,7 @@ test "among children with equal spans goto_first_child_for picks the first" {
 ///|
 test "goto_node_at moves below the current node only, and stays when the node does not contain p" {
   let tree = tree_of("pub fn add(a, b) {\n  a + b\n}\n")
-  let cursor = @syntax.TreeCursor::new(tree.root())
+  let cursor = @syntax.TreeCursor(tree.root())
   @expect.expect_all(s => {
     // The `+` in `a + b` is byte 23.
     s

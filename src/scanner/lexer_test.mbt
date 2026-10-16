@@ -1,6 +1,6 @@
 ///|
 fn stream(text : String) -> @scanner.TokenStream {
-  @scanner.tokenize(@scanner.SourceText::new(text))
+  @scanner.tokenize(@scanner.SourceText(text))
 }
 
 ///|

@@ -87,11 +87,12 @@ pub fn LexicalErrorType::label(Self) -> String
 pub struct SourceText {
   // private fields
 }
+#alias(new, deprecated)
+pub fn SourceText::SourceText(String) -> Self
 pub fn SourceText::byte_length(Self) -> @span.ByteLength
 pub fn SourceText::byte_offset_of(Self, @span.Utf16Offset) -> @span.ByteOffset?
 pub fn SourceText::end_offset(Self) -> @span.ByteOffset
 pub fn SourceText::line_count(Self) -> @span.LineCount
-pub fn SourceText::new(String) -> Self
 pub fn SourceText::position_of(Self, @span.ByteOffset) -> @span.Position?
 pub fn SourceText::slice(Self, @span.SrcSpan) -> String?
 pub fn SourceText::text(Self) -> String

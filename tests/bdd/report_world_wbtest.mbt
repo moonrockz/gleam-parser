@@ -19,11 +19,7 @@ impl @moonspec.World for ReportWorld with fn configure(self, setup) {
   ) raise {
     let r = @gleam.parse_text(self.source)
     guard r.diagnostics.get(0) is Some(d) else { fail("no diagnostic") }
-    self.report = @gleam.render_plain(
-      d,
-      @gleam.SourceText::new(self.source),
-      path,
-    )
+    self.report = @gleam.render_plain(d, @gleam.SourceText(self.source), path)
   })
   setup.then("the report is:", fn(ctx) raise {
     match ctx[0] {

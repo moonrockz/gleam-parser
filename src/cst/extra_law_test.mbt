@@ -5,7 +5,7 @@ fn line_breaks_outside_tokens(
   text : String,
   stream : @scanner.TokenStream,
 ) -> Array[@span.ByteOffset] {
-  let source = @scanner.SourceText::new(text)
+  let source = @scanner.SourceText(text)
   let out : Array[@span.ByteOffset] = []
   let mut i = 0
   while i < text.length() {

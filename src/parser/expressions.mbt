@@ -194,7 +194,7 @@ fn Parser::parse_expression_unit_inner(
     }
     Some({ kind: Keyword(Fn), span, .. }) => {
       self.advance()
-      match self.parse_function(span.start, false, true, Attributes::new()) {
+      match self.parse_function(span.start, false, true, Attributes()) {
         Some(Function(f)) => {
           if f.body.length() == 0 {
             parse_error(ExpectedFunctionBody, f.location)
@@ -272,9 +272,9 @@ fn Parser::parse_expression_unit_inner(
           Some({ kind: Int(value~, ..), span, .. }) => {
             self.advance()
             match
-              parse_u64(value.replace(old="_", new="")).map(
-                @ast.TupleIndex::from_uint64,
-              ) {
+              parse_u64(value.replace(old="_", new="")).map(value => {
+                @ast.TupleIndex::TupleIndex(value)
+              }) {
               Some(index) =>
                 expr = TupleIndex(
                   location=sp(start, span.end),

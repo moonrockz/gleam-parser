@@ -5,7 +5,7 @@ fn pos(line : Int32, column : Int32) -> @span.Position? {
 
 ///|
 test "ASCII text: bytes equal units, lines split at LF" {
-  let st = @scanner.SourceText::new("ab\ncd")
+  let st = @scanner.SourceText("ab\ncd")
   @expect.expect_all(e => {
     e.expect(st.byte_length().to_int()).to_equal(5)
     e.expect(st.line_count().to_int()).to_equal(2)
@@ -39,7 +39,7 @@ test "ASCII text: bytes equal units, lines split at LF" {
 
 ///|
 test "the empty text has one line and position 1:1 at offset 0" {
-  let st = @scanner.SourceText::new("")
+  let st = @scanner.SourceText("")
   @expect.expect_all(e => {
     e.expect(st.byte_length().to_int()).to_equal(0)
     e.expect(st.line_count().to_int()).to_equal(1)
@@ -57,7 +57,7 @@ test "the empty text has one line and position 1:1 at offset 0" {
 
 ///|
 test "two-byte character: é is one column and two bytes" {
-  let st = @scanner.SourceText::new("é!")
+  let st = @scanner.SourceText("é!")
   @expect.expect_all(e => {
     e.expect(st.byte_length().to_int()).to_equal(3)
     e
@@ -78,7 +78,7 @@ test "two-byte character: é is one column and two bytes" {
 
 ///|
 test "surrogate pair: one column, four bytes, no boundary at the low unit" {
-  let st = @scanner.SourceText::new("𝄞x")
+  let st = @scanner.SourceText("𝄞x")
   @expect.expect_all(e => {
     e.expect(st.text().length()).to_equal(3)
     e.expect(st.byte_length().to_int()).to_equal(5)
@@ -102,7 +102,7 @@ test "surrogate pair: one column, four bytes, no boundary at the low unit" {
 
 ///|
 test "lone surrogate: one column, three bytes" {
-  let st = @scanner.SourceText::new(@lawkit.units([0xD800, 0x61]))
+  let st = @scanner.SourceText(@lawkit.units([0xD800, 0x61]))
   @expect.expect_all(e => {
     e.expect(st.byte_length().to_int()).to_equal(4)
     e
@@ -116,7 +116,7 @@ test "lone surrogate: one column, three bytes" {
 
 ///|
 test "CRLF is one line break; the line starts after the LF" {
-  let st = @scanner.SourceText::new("a\r\nb")
+  let st = @scanner.SourceText("a\r\nb")
   @expect.expect_all(e => {
     e.expect(st.line_count().to_int()).to_equal(2)
     e
@@ -133,7 +133,7 @@ test "CRLF is one line break; the line starts after the LF" {
 
 ///|
 test "a lone CR is a line break" {
-  let st = @scanner.SourceText::new("a\rb")
+  let st = @scanner.SourceText("a\rb")
   @expect.expect_all(e => {
     e.expect(st.line_count().to_int()).to_equal(2)
     e
@@ -144,7 +144,7 @@ test "a lone CR is a line break" {
 
 ///|
 test "a BOM is column 1 and three bytes" {
-  let st = @scanner.SourceText::new("\u{FEFF}x")
+  let st = @scanner.SourceText("\u{FEFF}x")
   @expect.expect_all(e => {
     e.expect(st.byte_length().to_int()).to_equal(4)
     e
@@ -158,7 +158,7 @@ test "a BOM is column 1 and three bytes" {
 
 ///|
 test "a text that ends with a line break has an empty last line" {
-  let st = @scanner.SourceText::new("a\n")
+  let st = @scanner.SourceText("a\n")
   @expect.expect_all(e => {
     e.expect(st.line_count().to_int()).to_equal(2)
     e
@@ -169,7 +169,7 @@ test "a text that ends with a line break has an empty last line" {
 
 ///|
 test "slice gives the text of a byte span" {
-  let st = @scanner.SourceText::new("let é = \"𝄞\"\nx")
+  let st = @scanner.SourceText("let é = \"𝄞\"\nx")
   @expect.expect_all(e => {
     e.expect(st.slice(@span.SrcSpan::new(0, 3).unwrap())).to_equal(Some("let"))
     e.expect(st.slice(@span.SrcSpan::new(4, 6).unwrap())).to_equal(Some("é"))

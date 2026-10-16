@@ -44,7 +44,7 @@ pub fn parse_module(
   config? : @config.Config,
 ) -> ParseResult {
   let config = config.unwrap_or(@config.Config::default())
-  let p = Parser::new(stream, config)
+  let p = Parser(stream, config)
   let definitions : Array[@ast.TargetedDefinition] = []
   let cst_definitions : Array[@cst.DefinitionCst] = []
   let parse_diagnostics : Array[@diagnostic.Diagnostic] = []
@@ -68,7 +68,7 @@ pub fn parse_module(
         let tokens = p.tokens[start_index:p.index0]
         definitions.push(targeted)
         let (kind, name) = cst_kind(targeted.definition)
-        cst_definitions.push(@cst.DefinitionCst::new(kind~, name~, tokens~))
+        cst_definitions.push(@cst.DefinitionCst(kind~, name~, tokens~))
       }
       Ok(None) => {
         // Not a definition start: a stray token (reported as the compiler
@@ -109,7 +109,7 @@ pub fn parse_module(
     module_: { definitions: definitions[:], },
     extra,
     warnings: warnings[:],
-    cst: @cst.ModuleCst::new(stream, cst_definitions),
+    cst: @cst.ModuleCst(stream, cst_definitions),
     diagnostics: order_diagnostics(
       stream.diagnostics,
       parse_diagnostics,
@@ -150,7 +150,7 @@ fn Parser::recover(
     i += 1
   }
   cst_definitions.push(
-    @cst.DefinitionCst::new(kind=Skipped, name=None, tokens=self.tokens[from:i]),
+    @cst.DefinitionCst(kind=Skipped, name=None, tokens=self.tokens[from:i]),
   )
   // Doc comments inside the skipped run belong to the skipped definition,
   // not to the next one.
@@ -215,7 +215,7 @@ fn order_diagnostics(
 fn Parser::parse_definition(
   self : Parser,
 ) -> @ast.TargetedDefinition? raise ParseError {
-  let attributes = Attributes::new()
+  let attributes = Attributes()
   let location = self.parse_attributes(attributes)
   let def : @ast.Definition? = match (self.token0, self.token1) {
     (Some({ kind: Keyword(Import), span, .. }), _) => {

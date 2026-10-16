@@ -1,9 +1,9 @@
 ///|
 /// A formatter with no comments, for snippets.
 fn bare() -> Formatter {
-  Formatter::new(
+  Formatter(
     @ast.ModuleExtra::empty(),
-    @scanner.SourceText::new(""),
+    @scanner.SourceText(""),
     @config.Config::default(),
   )
 }

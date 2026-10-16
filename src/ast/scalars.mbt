@@ -1,6 +1,13 @@
 ///|
 /// A tuple element index. The full unsigned 64-bit range matches Gleam.
-pub struct TupleIndex(UInt64) derive(Eq, Compare, Hash, Debug)
+///
+/// ```mbt check
+/// test {
+///   let index : @ast.TupleIndex = @ast.TupleIndex(18446744073709551615UL)
+///   assert_eq(index.to_uint64(), 18446744073709551615UL)
+/// }
+/// ```
+pub(all) struct TupleIndex(UInt64) derive(Eq, Compare, Hash, Debug)
 
 ///|
 /// Validate a signed input. Return `None` for a negative index.
@@ -10,19 +17,6 @@ pub fn TupleIndex::new(value : Int64) -> TupleIndex? {
   } else {
     Some(TupleIndex(value.reinterpret_as_uint64()))
   }
-}
-
-///|
-/// Import an unsigned index without loss of precision.
-///
-/// ```mbt check
-/// test {
-///   let index = @ast.TupleIndex::from_uint64(18446744073709551615UL)
-///   assert_eq(index.to_uint64(), 18446744073709551615UL)
-/// }
-/// ```
-pub fn TupleIndex::from_uint64(value : UInt64) -> TupleIndex {
-  TupleIndex(value)
 }
 
 ///|

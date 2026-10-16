@@ -136,7 +136,7 @@ fn report_rows(
       Some(d) => {
         let rendered = @gleam.render_plain(
           d,
-          @gleam.SourceText::new(text),
+          @gleam.SourceText(text),
           fixture_path,
         )
         messages[snapshot_path(fixture)] = rendered

@@ -32,7 +32,7 @@ byte offset to a line and column, and to a UTF-16 offset for editors:
 ```mbt check
 ///|
 test "gs: byte offset to position" {
-  let st = @gleam.SourceText::new("let x = 1\nlet y = \"é\"")
+  let st = @gleam.SourceText("let x = 1\nlet y = \"é\"")
   @expect.expect(st.position_of(@gleam.ByteOffset::new(10).unwrap())).to_equal(
     Some(@gleam.Position::new(2, 1).unwrap()),
   )

@@ -103,13 +103,24 @@ pub struct Position {
 /// ```
 pub fn Position::new(line : Int32, column : Int32) -> Position? {
   match (LineNumber::new(line), ColumnNumber::new(column)) {
-    (Some(line), Some(column)) => Some(Position::at(line, column))
+    (Some(line), Some(column)) => Some(Position(line, column))
     _ => None
   }
 }
 
 ///|
 /// Create a position from validated coordinates.
-pub fn Position::at(line : LineNumber, column : ColumnNumber) -> Position {
+///
+/// ```mbt check
+/// test {
+///   let position = @span.Position(
+///     @span.LineNumber::new(2).unwrap(),
+///     @span.ColumnNumber::new(1).unwrap(),
+///   )
+///   assert_eq(position, @span.Position::new(2, 1).unwrap())
+/// }
+/// ```
+#alias(at, deprecated="Use `Position(line, column)` instead")
+pub fn Position::Position(line : LineNumber, column : ColumnNumber) -> Position {
   { line, column, }
 }
