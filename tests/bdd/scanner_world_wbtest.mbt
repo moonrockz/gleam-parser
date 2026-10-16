@@ -3,6 +3,7 @@
 struct ScannerWorld {
   mut source : String
   mut stream : @gleam.TokenStream?
+  mut comment : @gleam.Comment?
 } derive(Default)
 
 ///|
@@ -44,6 +45,31 @@ fn ScannerWorld::tokens(self : ScannerWorld) -> ArrayView[@gleam.Token] raise {
 
 ///|
 impl @moonspec.World for ScannerWorld with fn configure(self, setup) {
+  setup.when2("I construct a {string} comment spanning {int} bytes", fn(
+    name : String,
+    length : Int32,
+  ) raise {
+    let kind : @gleam.CommentKind = match name {
+      "regular" => Regular
+      "doc" => Doc
+      "module" => Module
+      _ => fail("unknown comment kind: \{name}")
+    }
+    self.comment = @gleam.SrcSpan::from_ints(0, length).bind(span => {
+      @gleam.Comment::from_parts(kind~, content="", span~)
+    })
+  })
+  setup.then("comment construction is rejected", fn(_ctx) raise {
+    @expect.expect(self.comment).to_equal(None)
+  })
+  setup.then2("the comment content spans bytes {int} to {int}", fn(
+    start : Int32,
+    end : Int32,
+  ) raise {
+    @expect.expect(self.comment.map(c => c.content_span())).to_equal(
+      @gleam.SrcSpan::from_ints(start, end),
+    )
+  })
   setup.given("the Gleam source:", fn(ctx) {
     match ctx[0] {
       { value: @moonspec.StepValue::DocStringVal(doc), .. } =>
@@ -108,7 +134,7 @@ impl @moonspec.World for ScannerWorld with fn configure(self, setup) {
   ) raise {
     guard self.stream is Some(s) else { fail("no scan") }
     @expect.expect(s.diagnostics[index - 1].span).to_equal(
-      @gleam.SrcSpan::new(start, end),
+      @gleam.SrcSpan::from_ints(start, end).unwrap(),
     )
   })
 }

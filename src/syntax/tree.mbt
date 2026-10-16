@@ -17,7 +17,7 @@ pub struct Tree {
 /// key would collide; the parser makes none.
 fn identity(n : NodeRef) -> String {
   let s = n.span()
-  "\{n.category()}/\{n.kind()}/\{s.start}-\{s.end}"
+  "\{n.category()}/\{n.kind()}/\{s.start.to_int()}-\{s.end.to_int()}"
 }
 
 ///|
@@ -26,7 +26,7 @@ fn identity(n : NodeRef) -> String {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let body = tree.root().field("definitions")[0].field("body")[0]
@@ -42,7 +42,8 @@ fn identity(n : NodeRef) -> String {
 ///   )
 /// }
 /// ```
-pub fn Tree::new(result : @parser.ParseResult) -> Tree {
+#alias(new, deprecated="Use `Tree(...)` instead")
+pub fn Tree::Tree(result : @parser.ParseResult) -> Tree {
   let root = NodeRef::of_result(result)
   let parents : Map[String, Array[(NodeRef, NodeRef, PathStep)]] = Map([])
   let stack = [root]
@@ -82,13 +83,15 @@ pub fn Tree::parent(self : Tree, n : NodeRef) -> NodeRef? {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let b = tree.root().field("definitions")[0].field("arguments")[1]
 ///   debug_inspect(
 ///     tree.step(b),
-///     content="Some({ field: \"arguments\", index: 1 })",
+///     content=(
+///       #|Some({ field: "arguments", index: { value: 1 } })
+///     ),
 ///   )
 ///   debug_inspect(tree.field_of(b), content="Some(\"arguments\")")
 ///   debug_inspect(tree.field_of(tree.root()), content="None")
@@ -146,11 +149,11 @@ pub fn Tree::path(self : Tree, n : NodeRef) -> Array[NodeRef] {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   // Byte 25 is the `b` in `a + b`.
-///   let b = tree.node_at(25).unwrap()
+///   let b = tree.node_at(@span.ByteOffset::from_int(25).unwrap()).unwrap()
 ///   inspect("\{b.category()}/\{b.kind()}", content="expression/var")
 ///   inspect(
 ///     tree.node_path(b).unwrap(),
@@ -176,7 +179,7 @@ pub fn Tree::node_path(self : Tree, n : NodeRef) -> NodePath? {
 ///|
 /// Whether `s` contains `p` (`start <= p < end`; an empty span contains
 /// nothing).
-fn contains(s : @span.SrcSpan, p : Int32) -> Bool {
+fn contains(s : @span.SrcSpan, p : @span.ByteOffset) -> Bool {
   s.start <= p && p < s.end
 }
 
@@ -191,7 +194,7 @@ fn within(a : @span.SrcSpan, b : @span.SrcSpan) -> Bool {
 /// outside the text. Every branch that contains `p` is searched; the
 /// smallest span wins; for equal spans the deeper node wins, then the
 /// first in source order. See `node_path` for an example.
-pub fn Tree::node_at(self : Tree, p : Int32) -> NodeRef? {
+pub fn Tree::node_at(self : Tree, p : @span.ByteOffset) -> NodeRef? {
   innermost_at(self.root, p).map(found => found.0)
 }
 
@@ -199,7 +202,10 @@ pub fn Tree::node_at(self : Tree, p : Int32) -> NodeRef? {
 /// The innermost node at or below `start` whose span contains `p` (the
 /// rule of `Tree::node_at`), with the index of each step down in its
 /// parent's `children()`, or `None` when `start` does not contain `p`.
-fn innermost_at(start : NodeRef, p : Int32) -> (NodeRef, Array[Int32])? {
+fn innermost_at(
+  start : NodeRef,
+  p : @span.ByteOffset,
+) -> (NodeRef, Array[Int32])? {
   if !contains(start.span(), p) {
     return None
   }
@@ -238,7 +244,7 @@ fn innermost_at(start : NodeRef, p : Int32) -> (NodeRef, Array[Int32])? {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn f() {\n  1\n}\n\nconst x = 2\n"),
 ///   )
 ///   let f = tree.root().field("definitions")[0]

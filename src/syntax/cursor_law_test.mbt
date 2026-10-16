@@ -9,13 +9,13 @@ fn node_positions(n : @syntax.NodeRef) -> Array[Int32] {
   })
   let out = []
   for s in spans {
-    out.push(s.start)
-    out.push(s.end)
-    out.push(s.start - 1)
-    out.push(s.end - 1)
+    out.push(s.start.to_int())
+    out.push(s.end.to_int())
+    out.push(s.start.to_int() - 1)
+    out.push(s.end.to_int() - 1)
   }
-  out.push(n.span().end + 1)
-  out
+  out.push(n.span().end.to_int() + 1)
+  out.filter(x => x >= 0)
 }
 
 ///|
@@ -38,7 +38,10 @@ fn child_for(kids : Array[@syntax.NodeRef], p : Int32) -> Int32? {
   }
   match best {
     Some(_) => best
-    None => kids.search_by(k => k.span().start >= p)
+    None =>
+      kids.search_by(k => {
+        k.span().start >= @span.ByteOffset::from_int(p).unwrap()
+      })
   }
 }
 
@@ -135,7 +138,10 @@ fn cursor_move(c : @syntax.TreeCursor, m : UInt32) -> Bool {
     2 => c.goto_next_sibling()
     3 => c.goto_previous_sibling()
     4 => c.goto_parent()
-    _ => c.goto_first_child_for(pick_position(c.node(), m))
+    _ =>
+      c.goto_first_child_for(
+        @span.ByteOffset::from_int(pick_position(c.node(), m)).unwrap(),
+      )
   }
 }
 
@@ -171,7 +177,10 @@ fn model_steps(
   let steps = []
   for k in path {
     let (field, index, child) = slot_order(n)[k]
-    let step : @syntax.PathStep = { field, index, }
+    let step : @syntax.PathStep = {
+      field,
+      index: @syntax.ChildIndex::from_int(index).unwrap(),
+    }
     steps.push(step)
     n = child
   }
@@ -188,8 +197,8 @@ fn agrees(
   let (n, field) = node_at_path(base, path)
   tag(c.node()) == tag(n) &&
   c.field_name() == field &&
-  c.depth() == path.length() &&
-  c.path().depth() == path.length() &&
+  c.depth() == @syntax.NodeDepth::from_int(path.length()).unwrap() &&
+  c.path().depth() == @syntax.NodeDepth::from_int(path.length()).unwrap() &&
   c.path().last().map(s => s.field) == field &&
   c.path().resolve(base).map(tag) == Some(tag(n)) &&
   c.path().steps() == model_steps(base, path)
@@ -206,7 +215,7 @@ test "law: every cursor move agrees with a path model, resets included" {
         nodes.push(n)
         Continue
       })
-      let c = @syntax.TreeCursor::new(root)
+      let c = @syntax.TreeCursor(root)
       let mut base = root
       let path = []
       moves
@@ -235,7 +244,7 @@ test "law: a cursor's copy moves independently" {
     (input : (@lawkit.GleamModule, Array[UInt32], Array[UInt32])) => {
       let (m, first, second) = input
       let root = gleam_root(m)
-      let c = @syntax.TreeCursor::new(root)
+      let c = @syntax.TreeCursor(root)
       let path = []
       for mv in first {
         ignore(cursor_move(c, mv))
@@ -278,19 +287,22 @@ test "law: at every node, goto_first_child_for(p) moves to the innermost child t
   @quickcheck.check(
     (m : @lawkit.GleamModule) => {
       let root = gleam_root(m)
-      let c = @syntax.TreeCursor::new(root)
+      let c = @syntax.TreeCursor(root)
       let mut ok = true
       @syntax.walk(root, n => {
         let kids = n.children()
         for p in node_positions(n) {
           c.reset(n)
-          let moved = c.goto_first_child_for(p)
+          let moved = c.goto_first_child_for(
+            @span.ByteOffset::from_int(p).unwrap(),
+          )
           ok = ok &&
             (match child_for(kids, p) {
-              None => !moved && c.depth() == 0
+              None =>
+                !moved && c.depth() == @syntax.NodeDepth::from_int(0).unwrap()
               Some(i) =>
                 moved &&
-                c.depth() == 1 &&
+                c.depth() == @syntax.NodeDepth::from_int(1).unwrap() &&
                 tag(c.node()) == tag(kids[i]) &&
                 c.field_name() == n.field_of(kids[i])
             })
@@ -311,19 +323,22 @@ test "law: descending with goto_first_child_for ends at node_at" {
     (m : @lawkit.GleamModule) => {
       let (tree, text, _, nodes) = module_tree(m)
       let root = tree.root()
-      let length = @scanner.SourceText::new(text).byte_length()
+      let length = @scanner.SourceText(text).byte_length().to_int()
       edge_offsets(length, nodes.map(n => n.span()))
       .iter()
       .filter(p => contains(root.span(), p))
       .all(p => {
-        let c = @syntax.TreeCursor::new(root)
-        while c.goto_first_child_for(p) {
+        let c = @syntax.TreeCursor(root)
+        while c.goto_first_child_for(@span.ByteOffset::from_int(p).unwrap()) {
           if !contains(c.node().span(), p) {
             ignore(c.goto_parent())
             break
           }
         }
-        guard tree.node_at(p) is Some(found) else { return false }
+        guard tree.node_at(@span.ByteOffset::from_int(p).unwrap())
+          is Some(found) else {
+          return false
+        }
         contains(c.node().span(), p) &&
         !c.node().children().iter().any(k => contains(k.span(), p)) &&
         (tag(c.node()) == tag(found) || capture_exception(c.node(), found))
@@ -353,14 +368,17 @@ test "law: goto_node_at from the root or from any ancestor of node_at(p) moves t
     (m : @lawkit.GleamModule) => {
       let (tree, text, _, nodes) = module_tree(m)
       let root = tree.root()
-      let length = @scanner.SourceText::new(text).byte_length()
+      let length = @scanner.SourceText(text).byte_length().to_int()
       edge_offsets(length, nodes.map(n => n.span()))
       .iter()
       .all(p => {
-        let c = @syntax.TreeCursor::new(root)
-        let moved = c.goto_node_at(p)
-        match tree.node_at(p) {
-          None => !moved && c.depth() == 0 && c.node() == root
+        let c = @syntax.TreeCursor(root)
+        let moved = c.goto_node_at(@span.ByteOffset::from_int(p).unwrap())
+        match tree.node_at(@span.ByteOffset::from_int(p).unwrap()) {
+          None =>
+            !moved &&
+            c.depth() == @syntax.NodeDepth::from_int(0).unwrap() &&
+            c.node() == root
           Some(found) =>
             moved &&
             c.node() == found &&
@@ -369,8 +387,8 @@ test "law: goto_node_at from the root or from any ancestor of node_at(p) moves t
             .ancestors(found)
             .iter()
             .all(a => {
-              let from_a = @syntax.TreeCursor::new(a)
-              from_a.goto_node_at(p) &&
+              let from_a = @syntax.TreeCursor(a)
+              from_a.goto_node_at(@span.ByteOffset::from_int(p).unwrap()) &&
               from_a.node() == found &&
               tree.node_path(a).map(ap => ap.append(from_a.path())) ==
               tree.node_path(found)
@@ -416,22 +434,28 @@ test "law: among children with equal spans goto_first_child_for picks the first"
       let Spans(pairs) = input
       let elements : Array[@ast.Expr] = pairs.mapi((i, s) => {
         Int(
-          location=@span.SrcSpan::new(s.0, s.1),
+          location=@span.SrcSpan::from_ints(s.0, s.1).unwrap(),
           value="\{i}",
           int_value=BigInt::from_int(i),
         )
       })
       let list = @syntax.NodeRef::Expr(
-        List(location=@span.SrcSpan::new(0, 8), elements=elements[:], tail=None),
+        List(
+          location=@span.SrcSpan::from_ints(0, 8).unwrap(),
+          elements=elements[:],
+          tail=None,
+        ),
       )
       let kids = list.children()
-      let c = @syntax.TreeCursor::new(list)
-      let offsets = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      let c = @syntax.TreeCursor(list)
+      let offsets = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
       offsets
       .iter()
       .all(p => {
         c.reset(list)
-        let moved = c.goto_first_child_for(p)
+        let moved = c.goto_first_child_for(
+          @span.ByteOffset::from_int(p).unwrap(),
+        )
         match child_for(kids, p) {
           None => !moved
           Some(i) => moved && c.node() == kids[i]

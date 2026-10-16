@@ -70,7 +70,7 @@ Find the node at a byte offset and its path (from a tested doc example):
 
 ```moonbit
 test {
-  let tree = @gleam.Tree::new(@gleam.parse_text("pub fn add(a, b) {\n  a + b\n}\n"))
+  let tree = @gleam.Tree(@gleam.parse_text("pub fn add(a, b) {\n  a + b\n}\n"))
   // Byte 25 is the `b` in `a + b`.
   let b = tree.node_at(25).unwrap()
   inspect("\{b.category()}/\{b.kind()}", content="expression/var")

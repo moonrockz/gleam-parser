@@ -4,7 +4,7 @@
 /// farthest token loaded.
 fn first_lexical_error(
   stream : @scanner.TokenStream,
-  farthest : Int32,
+  farthest : @span.ByteOffset,
 ) -> @diagnostic.Diagnostic? {
   for d in stream.diagnostics {
     if d.code == "GL-SCAN-001" && d.span.start < farthest {
@@ -42,7 +42,9 @@ fn[A] Parser::finish_snippet(
     Ok(v) => v
     Err(e) => raise e
   }
-  guard parsed is Some(value) else { parse_error(missing, sp(0, 0)) }
+  guard parsed is Some(value) else {
+    parse_error(missing, sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()))
+  }
   match self.next_token() {
     Some(t) =>
       parse_error(
@@ -63,7 +65,12 @@ fn[A] Parser::finish_snippet(
 /// ```mbt check
 /// test {
 ///   let t = @parser.parse_type_text("List(a)")
-///   debug_inspect(t.location(), content="{ start: 0, end: 7 }")
+///   debug_inspect(
+///     t.location(),
+///     content=(
+///       #|{ start: { value: 0 }, end: { value: 7 } }
+///     ),
+///   )
 /// }
 /// ```
 pub fn parse_type_text(
@@ -71,7 +78,7 @@ pub fn parse_type_text(
   config? : @config.Config,
 ) -> @ast.TypeAst raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_type())
   p.finish_snippet(stream, result, ExpectedType)
 }
@@ -83,7 +90,7 @@ pub fn parse_pattern_text(
   config? : @config.Config,
 ) -> @ast.Pattern raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_pattern())
   p.finish_snippet(stream, result, ExpectedPattern)
 }
@@ -96,7 +103,7 @@ pub fn parse_constant_text(
   config? : @config.Config,
 ) -> @ast.Constant raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_const_value())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
@@ -108,7 +115,12 @@ pub fn parse_constant_text(
 /// ```mbt check
 /// test {
 ///   let e = @parser.parse_expression_text("1 + 2")
-///   debug_inspect(e.location(), content="{ start: 0, end: 5 }")
+///   debug_inspect(
+///     e.location(),
+///     content=(
+///       #|{ start: { value: 0 }, end: { value: 5 } }
+///     ),
+///   )
 /// }
 /// ```
 pub fn parse_expression_text(
@@ -116,7 +128,7 @@ pub fn parse_expression_text(
   config? : @config.Config,
 ) -> @ast.Expr raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_expression())
   p.finish_snippet(stream, result, ExpectedExpr)
 }
@@ -129,7 +141,7 @@ pub fn parse_statements_text(
   config? : @config.Config,
 ) -> ArrayView[@ast.Statement] raise ParseError {
   let stream = @scanner.tokenize_text(text)
-  let p = Parser::new(stream, config.unwrap_or(@config.Config::default()))
+  let p = Parser(stream, config.unwrap_or(@config.Config::default()))
   let result = attempt_parse(() => p.parse_statement_sequence().map(r => r.0[:]))
   p.finish_snippet(stream, result, ExpectedExpr)
 }

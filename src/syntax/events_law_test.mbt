@@ -1,7 +1,11 @@
 ///|
 /// What an `Enter` can show of a node: category/kind@start (no end yet).
-fn start_tag(category : String, kind : String, start : Int32) -> String {
-  "\{category}/\{kind}@\{start}"
+fn start_tag(
+  category : String,
+  kind : String,
+  start : @span.ByteOffset,
+) -> String {
+  "\{category}/\{kind}@\{start.to_int()}"
 }
 
 ///|
@@ -24,7 +28,7 @@ fn walk_projection(root : @syntax.NodeRef, p : Policy) -> Array[String] {
 ///|
 /// The events a reader gives when its caller follows `p` after each `Enter`.
 fn reader_events(root : @syntax.NodeRef, p : Policy) -> Array[String] {
-  let r = @syntax.EventReader::new(root)
+  let r = @syntax.EventReader(root)
   let events = []
   let mut k = 0
   while r.next() is Some(e) {
@@ -61,7 +65,7 @@ test "law: an event reader driven by a Control policy gives walk's events" {
 ///|
 /// `reader_events`, read through `iter()` with a `for` loop.
 fn iter_events(root : @syntax.NodeRef, p : Policy) -> Array[String] {
-  let r = @syntax.EventReader::new(root)
+  let r = @syntax.EventReader(root)
   let events = []
   let mut k = 0
   for e in r.iter() {
@@ -101,7 +105,7 @@ test "law: each Enter's field is the parent's field_of the child" {
     (m : @lawkit.GleamModule) => {
       let root = gleam_root(m)
       let from_reader = []
-      let r = @syntax.EventReader::new(root)
+      let r = @syntax.EventReader(root)
       while r.next() is Some(e) {
         if e is Enter({ field, .. }) {
           from_reader.push(field)
@@ -163,8 +167,8 @@ test "law: two readers, each with its own policy, interleaved in any order, give
     (input : (@lawkit.GleamModule, (Policy, Policy), Array[Bool])) => {
       let (m, (p, q), schedule) = input
       let root = gleam_root(m)
-      let a = @syntax.EventReader::new(root)
-      let b = @syntax.EventReader::new(root)
+      let a = @syntax.EventReader(root)
+      let b = @syntax.EventReader(root)
       let (from_a, from_b) = ([], [])
       let ka = Ref(0)
       let kb = Ref(0)
@@ -202,7 +206,7 @@ test "law: skip_children anywhere but right after an Enter changes nothing" {
     (input : (@lawkit.GleamModule, Policy, Array[Bool])) => {
       let (m, p, extra) = input
       let root = gleam_root(m)
-      let r = @syntax.EventReader::new(root)
+      let r = @syntax.EventReader(root)
       r.skip_children()
       let events = []
       let mut k = 0
@@ -254,7 +258,7 @@ test "law: under any Control policy, each event's depth and path lead to its nod
     (input : (@lawkit.GleamModule, Policy)) => {
       let (m, p) = input
       let root = gleam_root(m)
-      let r = @syntax.EventReader::new(root)
+      let r = @syntax.EventReader(root)
       let open : Array[@syntax.EnterEvent] = []
       let mut ok = true
       let mut k = 0
@@ -262,7 +266,7 @@ test "law: under any Control policy, each event's depth and path lead to its nod
         match e {
           Enter(e) => {
             ok = ok &&
-              e.depth == open.length() &&
+              e.depth == @syntax.NodeDepth::from_int(open.length()).unwrap() &&
               e.depth == e.path.depth() &&
               e.path.parent() == open.last().map(o => o.path) &&
               e.path.last().map(s => s.field) == e.field &&
@@ -301,7 +305,7 @@ test "law: under any Control policy, each event's depth and path lead to its nod
 /// The path of every Enter, in pre-order (all events read with Continue).
 fn reader_paths(root : @syntax.NodeRef) -> Array[@syntax.NodePath] {
   let paths = []
-  let r = @syntax.EventReader::new(root)
+  let r = @syntax.EventReader(root)
   while r.next() is Some(e) {
     if e is Enter(e) {
       paths.push(e.path)
@@ -328,13 +332,25 @@ test "law: a path resolves exactly the field slot it names, and nothing else" {
         for f in n.fields() {
           let slots = n.field(f)
           for i, child in slots {
-            ok = ok && p.child(f, i).resolve(root).map(tag) == Some(tag(child))
+            ok = ok &&
+              p
+              .child(f, @syntax.ChildIndex::from_int(i).unwrap())
+              .resolve(root)
+              .map(tag) ==
+              Some(tag(child))
           }
           ok = ok &&
-            p.child(f, -1).resolve(root) is None &&
-            p.child(f, slots.length()).resolve(root) is None
+            @syntax.ChildIndex::from_int(-1) is None &&
+            p
+            .child(f, @syntax.ChildIndex::from_int(slots.length()).unwrap())
+            .resolve(root)
+            is None
         }
-        ok = ok && p.child("no such field", 0).resolve(root) is None
+        ok = ok &&
+          p
+          .child("no such field", @syntax.ChildIndex::from_int(0).unwrap())
+          .resolve(root)
+          is None
       }
       ok
     },

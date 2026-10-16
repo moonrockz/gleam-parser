@@ -138,7 +138,7 @@ test "tr: pull events" {
   let root = @gleam.NodeRef::of_result(
     @gleam.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
   )
-  let reader = @gleam.EventReader::new(root)
+  let reader = @gleam.EventReader(root)
   let args = []
   for event in reader.iter() {
     if event is Enter(e) {
@@ -179,7 +179,7 @@ test "tr: push events" {
     @gleam.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
   )
   let paths : TrPaths = { found: [], }
-  @gleam.push_events(@gleam.EventReader::new(root), paths)
+  @gleam.push_events(@gleam.EventReader(root), paths)
   @expect.expect(paths.found).to_equal([
     "definitions[0].body[0].expression[0].left[0]", "definitions[0].body[0].expression[0].right[0]",
   ])
@@ -194,18 +194,20 @@ its path:
 ///|
 test "tr: a cursor and a tree" {
   let text = "pub fn add(a, b) {\n  a + b\n}\n"
-  let tree = @gleam.Tree::new(@gleam.parse_text(text))
+  let tree = @gleam.Tree(@gleam.parse_text(text))
   // Byte 23 is the `+`.
-  let cursor = @gleam.TreeCursor::new(tree.root())
+  let cursor = @gleam.TreeCursor(tree.root())
   @expect.expect_all(e => {
-    e.expect(cursor.goto_node_at(23)).to_be_true()
+    e
+    .expect(cursor.goto_node_at(@gleam.ByteOffset::from_int(23).unwrap()))
+    .to_be_true()
     e.expect(cursor.node().kind()).to_equal("bin_op")
     e
     .expect(cursor.path().to_string())
     .to_equal("definitions[0].body[0].expression[0]")
     e.expect(cursor.goto_first_child()).to_be_true()
     e.expect(cursor.field_name()).to_equal(Some("left"))
-    let plus = tree.node_at(23).unwrap()
+    let plus = tree.node_at(@gleam.ByteOffset::from_int(23).unwrap()).unwrap()
     e.expect(tree.parent(plus).map(n => n.kind())).to_equal(Some("expression"))
     e
     .expect(tree.node_path(plus).map(p => p.to_string()))

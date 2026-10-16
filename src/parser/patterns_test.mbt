@@ -106,7 +106,9 @@ test "string prefix patterns" {
     e.expect(location).to_equal(sp(0, 18))
     e.expect(left_location).to_equal(sp(0, 10))
     e.expect(a.name).to_equal("p")
-    e.expect(a.name_start_position).to_equal(9)
+    e
+    .expect(a.name_start_position)
+    .to_equal(@span.ByteOffset::from_int(9).unwrap())
     e.expect(a.location).to_equal(sp(5, 10))
     e.expect(right_location).to_equal(sp(14, 18))
   })
@@ -141,7 +143,7 @@ test "tuple, bit array and literal patterns" {
             short_form=false,
             location=sl
           ),
-          Unit(value=2, location=ul),
+          Unit(value=scalar_144_22, location=ul),
         ],
         location: segl,
       },
@@ -149,6 +151,7 @@ test "tuple, bit array and literal patterns" {
     ] else {
     fail("segments \{@debug.to_string(segments)}")
   }
+  @expect.expect(scalar_144_22.to_int()).to_equal(2)
   @expect.expect_all(e => {
     e.expect(location).to_equal(sp(0, 40))
     e.expect(bl).to_equal(sp(10, 39))

@@ -20,7 +20,7 @@ priv enum ParserArg {
 /// function literal: no name, no labels. Returns `Definition::Function`.
 fn Parser::parse_function(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
   public : Bool,
   is_anon : Bool,
   attributes : Attributes,
@@ -74,7 +74,7 @@ fn Parser::parse_function(
             Expression(
               Todo(
                 kind=EmptyFunction(function_location=sp(start, end)),
-                location=sp(left_brace_start + 1, right_brace_end),
+                location=sp(left_brace_start.shift(1).unwrap(), right_brace_end),
                 message=None,
               ),
             ),
@@ -125,7 +125,7 @@ fn Parser::parse_fn_param(
   self : Parser,
   is_anon : Bool,
 ) -> @ast.Arg? raise ParseError {
-  let (start, names, end0) : (Int32, @ast.ArgNames, Int32) = match
+  let (start, names, end0) : (@span.ByteOffset, @ast.ArgNames, @span.ByteOffset) = match
     (self.token0, self.token1) {
     // labelled discard
     (
@@ -200,7 +200,8 @@ fn Parser::parse_fn_arguments(
 ///|
 /// One call argument: `_`, `expr`, `a: _`, `a: expr`, `a:`.
 fn Parser::parse_fn_argument(self : Parser) -> ParserArg? raise ParseError {
-  let label : (Int32, String, Int32)? = match (self.token0, self.token1) {
+  let label : (@span.ByteOffset, String, @span.ByteOffset)? = match
+    (self.token0, self.token1) {
     (
       Some({ kind: Name(name), span, .. }),
       Some({ kind: Colon, span: colon, .. }),
@@ -278,9 +279,9 @@ fn Parser::parse_fn_argument(self : Parser) -> ParserArg? raise ParseError {
 fn make_call(
   fun : @ast.Expr,
   arguments : Array[ParserArg],
-  start : Int32,
-  end : Int32,
-  open_parenthesis : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
+  open_parenthesis : @span.ByteOffset,
 ) -> @ast.Expr raise ParseError {
   let mut hole_location : @span.SrcSpan? = None
   let call_arguments : Array[@ast.CallArg[@ast.Expr]] = []
@@ -345,10 +346,10 @@ fn make_call(
 /// definition.
 fn Parser::take_documentation(
   self : Parser,
-  until : Int32,
+  until : @span.ByteOffset,
 ) -> @ast.Documentation? {
   let content = StringBuilder()
-  let mut doc_start = 0x7fffffff
+  let mut doc_start = @span.ByteOffset::from_int(2147483647).unwrap()
   while self.doc_head < self.doc_comments.length() {
     let (span, line) = self.doc_comments[self.doc_head]
     if span.start < doc_start {
@@ -380,8 +381,8 @@ fn Parser::take_documentation(
 /// ends), as `ModuleExtra::has_comment_between`.
 fn Parser::has_comment_between(
   self : Parser,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> Bool {
   for c in self.comments {
     if c.end >= start && c.start <= end {

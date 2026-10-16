@@ -18,7 +18,7 @@ fn first_warning(text : String) -> @diagnostic.Diagnostic raise {
 
 ///|
 fn plain(d : @diagnostic.Diagnostic, text : String, path : String) -> String {
-  @report.render_plain(d, @scanner.SourceText::new(text), path)
+  @report.render_plain(d, @scanner.SourceText(text), path)
 }
 
 ///|
@@ -300,7 +300,7 @@ test "render_terminal adds colours around the same text" {
   let d = first_error(text)
   let coloured = @report.render_terminal(
     d,
-    @scanner.SourceText::new(text),
+    @scanner.SourceText(text),
     "x.gleam",
   )
   @expect.expect_all(e => {

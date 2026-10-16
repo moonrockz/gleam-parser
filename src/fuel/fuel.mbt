@@ -8,17 +8,24 @@
 ///
 /// ```mbt check
 /// test {
-///   debug_inspect(@fuel.Budget::new(100).map(b => b.units()), content="Some(100)")
-///   debug_inspect(@fuel.Budget::new(0), content="None")
+///   debug_inspect(
+///     @fuel.Budget::from_int(100).map(b => b.units()),
+///     content="Some(100)",
+///   )
+///   debug_inspect(@fuel.Budget::from_int(0), content="None")
 /// }
 /// ```
-pub struct Budget(Int32) derive(Eq, Compare, Debug)
+#valtype
+pub struct Budget {
+  priv value : Int32
+} derive(Eq, Compare, Debug)
 
 ///|
 /// A budget of `units`; `None` below 1.
-pub fn Budget::new(units : Int32) -> Budget? {
+#alias(new, deprecated="Use `Budget::from_int(...)` instead")
+pub fn Budget::from_int(units : Int32) -> Budget? {
   if units >= 1 {
-    Some(Budget(units))
+    Some({ value: units, })
   } else {
     None
   }
@@ -27,25 +34,19 @@ pub fn Budget::new(units : Int32) -> Budget? {
 ///|
 /// The number of units.
 pub fn Budget::units(self : Budget) -> Int32 {
-  self.0
+  self.value
 }
 
 ///|
 /// The default budget, 100 units: measured safe on wasm, the smallest
 /// stack (it overflows at about 140 nested lists). Raise it only on
 /// native or js.
-pub let default_budget : Budget = Budget(100)
+pub let default_budget : Budget = { value: 100, }
 
 ///|
 /// The name of a fuel-checked operation (`expression`, `pattern`, ...).
 /// Each package that spends fuel defines its operations as constants.
-pub struct Operation(String) derive(Eq, Hash, Debug)
-
-///|
-/// An operation with this name; the name appears in `FuelExhausted`.
-pub fn Operation::new(name : String) -> Operation {
-  Operation(name)
-}
+pub(all) struct Operation(String) derive(Eq, Hash, Debug)
 
 ///|
 /// The operation's name.
@@ -67,8 +68,8 @@ pub(all) struct Spent {
 ///
 /// ```mbt check
 /// test {
-///   let f = @fuel.Fuel::new(budget=@fuel.Budget::new(2).unwrap())
-///   let inner = f.spend(@fuel.Operation::new("expression"))
+///   let f = @fuel.Fuel(budget=@fuel.Budget::from_int(2).unwrap())
+///   let inner = f.spend(@fuel.Operation("expression"))
 ///   inspect(inner.left(), content="1")
 ///   inspect(f.left(), content="2")
 /// }
@@ -81,7 +82,8 @@ pub struct Fuel {
 
 ///|
 /// A full budget (`default_budget` when none is given).
-pub fn Fuel::new(budget~ : Budget = default_budget) -> Fuel {
+#alias(new, deprecated="Use `Fuel(...)` instead")
+pub fn Fuel::Fuel(budget~ : Budget = default_budget) -> Fuel {
   { budget, left: budget.units(), ops: @list.List([]), }
 }
 
@@ -134,3 +136,25 @@ pub fn Fuel::spent(self : Fuel) -> Array[Spent] {
 pub(all) suberror FuelExhausted {
   FuelExhausted(budget~ : Budget, spent~ : Array[Spent])
 } derive(Eq, Debug)
+
+///|
+/// A recursion budget must contain at least one unit.
+pub(all) suberror InvalidBudget {
+  InvalidBudget(Int32)
+} derive(Eq, Debug)
+
+///|
+/// Create a recursion budget. Raise `InvalidBudget` below one unit.
+/// Use `from_int` to get `Option`.
+///
+/// ```mbt check
+/// test {
+///   assert_eq(@fuel.Budget(100).units(), 100)
+/// }
+/// ```
+pub fn Budget::Budget(units : Int32) -> Budget raise InvalidBudget {
+  guard Budget::from_int(units) is Some(budget) else {
+    raise InvalidBudget(units)
+  }
+  budget
+}

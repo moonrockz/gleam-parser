@@ -1,14 +1,14 @@
 ///|
 test "a diagnostic keeps its fields and knows its severity" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-PARSE-001",
     severity=Error,
     title="Syntax error",
     message="I was expecting a '=' after this",
-    span=@span.SrcSpan::new(4, 5),
+    span=@span.SrcSpan::from_ints(4, 5).unwrap(),
     labels=[
       @diagnostic.Label::{
-        span: @span.SrcSpan::new(4, 5),
+        span: @span.SrcSpan::from_ints(4, 5).unwrap(),
         text: "I was expecting a '=' after this",
       },
     ],
@@ -23,12 +23,12 @@ test "a diagnostic keeps its fields and knows its severity" {
 
 ///|
 test "a warning is not an error" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-PARSE-002",
     severity=Warning,
     title="Deprecated syntax",
     message="This syntax is deprecated",
-    span=@span.SrcSpan::new(0, 1),
+    span=@span.SrcSpan::from_ints(0, 1).unwrap(),
   )
   @expect.expect(d.is_error()).to_be_false()
 }
@@ -53,44 +53,44 @@ test "the code table matches AGENTS.md" {
 
 ///|
 test "a diagnostic carries the compiler's error kind" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-SCAN-001",
     kind="UnrecognizedToken",
     severity=Error,
     title="Syntax error",
     message="I can't figure out what to do with this character",
-    span=@span.SrcSpan::new(0, 0),
+    span=@span.SrcSpan::from_ints(0, 0).unwrap(),
   )
   @expect.expect(d.kind).to_equal("UnrecognizedToken")
 }
 
 ///|
 test "the kind defaults to the empty string" {
-  let d = @diagnostic.Diagnostic::new(
+  let d = @diagnostic.Diagnostic(
     code="GL-PARSE-004",
     severity=Error,
     title="Syntax error",
     message="Too much nesting",
-    span=@span.SrcSpan::new(0, 0),
+    span=@span.SrcSpan::from_ints(0, 0).unwrap(),
   )
   @expect.expect(d.kind).to_equal("")
 }
 
 ///|
 test "a diagnostic carries the compiler's body text; the default is empty" {
-  let plain = @diagnostic.Diagnostic::new(
+  let plain = @diagnostic.Diagnostic(
     code="GL-PARSE-001",
     severity=Error,
     title="Syntax error",
     message="I was not expecting this",
-    span=@span.SrcSpan::new(0, 1),
+    span=@span.SrcSpan::from_ints(0, 1).unwrap(),
   )
-  let with_text = @diagnostic.Diagnostic::new(
+  let with_text = @diagnostic.Diagnostic(
     code="GL-PARSE-001",
     severity=Error,
     title="Syntax error",
     message="I was not expecting this",
-    span=@span.SrcSpan::new(0, 1),
+    span=@span.SrcSpan::from_ints(0, 1).unwrap(),
     text="Found an Int, expected one of: \n- `=`",
     hint=Some("Try removing it?"),
   )

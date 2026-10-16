@@ -21,7 +21,7 @@ priv struct CursorFrame {
 ///   let root = @syntax.NodeRef::of_result(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let cursor = @syntax.TreeCursor::new(root)
+///   let cursor = @syntax.TreeCursor(root)
 ///   inspect(cursor.goto_first_child(), content="true")
 ///   inspect(cursor.node().kind(), content="function")
 ///   inspect(cursor.goto_next_sibling(), content="false")
@@ -43,7 +43,8 @@ pub struct TreeCursor {
 
 ///|
 /// A cursor at `root` (depth 0, no field).
-pub fn TreeCursor::new(root : NodeRef) -> TreeCursor {
+#alias(new, deprecated="Use `TreeCursor(...)` instead")
+pub fn TreeCursor::TreeCursor(root : NodeRef) -> TreeCursor {
   {
     frames: [
       { siblings: [(None, root)], parent_path: NodePath::root(), index: 0, },
@@ -85,8 +86,8 @@ pub fn TreeCursor::path(self : TreeCursor) -> NodePath {
 ///|
 /// The number of `goto_*` steps below the start node (0 at the start
 /// node).
-pub fn TreeCursor::depth(self : TreeCursor) -> Int32 {
-  self.frames.length() - 1
+pub fn TreeCursor::depth(self : TreeCursor) -> NodeDepth {
+  NodeDepth::from_int(self.frames.length() - 1).unwrap()
 }
 
 ///|
@@ -178,12 +179,12 @@ pub fn TreeCursor::goto_parent(self : TreeCursor) -> Bool {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let p = 23 // the `+` in `a + b`
+///   let p = @span.ByteOffset::from_int(23).unwrap() // the `+` in `a + b`
 ///   let contains = (s : @span.SrcSpan) => s.start <= p && p < s.end
-///   let cursor = @syntax.TreeCursor::new(tree.root())
+///   let cursor = @syntax.TreeCursor(tree.root())
 ///   while cursor.goto_first_child_for(p) {
 ///     if !contains(cursor.node().span()) {
 ///       ignore(cursor.goto_parent())
@@ -193,14 +194,17 @@ pub fn TreeCursor::goto_parent(self : TreeCursor) -> Bool {
 ///   inspect(cursor.node().kind(), content="bin_op")
 ///   inspect(tree.node_at(p) == Some(cursor.node()), content="true")
 ///   // A plain loop goes one node too far, to `b` after the `+`.
-///   let naive = @syntax.TreeCursor::new(tree.root())
+///   let naive = @syntax.TreeCursor(tree.root())
 ///   while naive.goto_first_child_for(p) {
 ///
 ///   }
 ///   inspect(naive.path(), content="definitions[0].body[0].expression[0].right[0]")
 /// }
 /// ```
-pub fn TreeCursor::goto_first_child_for(self : TreeCursor, p : Int32) -> Bool {
+pub fn TreeCursor::goto_first_child_for(
+  self : TreeCursor,
+  p : @span.ByteOffset,
+) -> Bool {
   self.descend(kids => {
     let mut best : Int32? = None
     for i, x in kids {
@@ -234,19 +238,28 @@ pub fn TreeCursor::goto_first_child_for(self : TreeCursor, p : Int32) -> Bool {
 ///
 /// ```mbt check
 /// test {
-///   let tree = @syntax.Tree::new(
+///   let tree = @syntax.Tree(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let cursor = @syntax.TreeCursor::new(tree.root())
-///   inspect(cursor.goto_node_at(23), content="true")
+///   let cursor = @syntax.TreeCursor(tree.root())
+///   inspect(
+///     cursor.goto_node_at(@span.ByteOffset::from_int(23).unwrap()),
+///     content="true",
+///   )
 ///   inspect(cursor.node().kind(), content="bin_op")
 ///   inspect(cursor.path(), content="definitions[0].body[0].expression[0]")
 ///   // `pub` is outside the current node: the cursor stays.
-///   inspect(cursor.goto_node_at(0), content="false")
+///   inspect(
+///     cursor.goto_node_at(@span.ByteOffset::from_int(0).unwrap()),
+///     content="false",
+///   )
 ///   inspect(cursor.node().kind(), content="bin_op")
 /// }
 /// ```
-pub fn TreeCursor::goto_node_at(self : TreeCursor, p : Int32) -> Bool {
+pub fn TreeCursor::goto_node_at(
+  self : TreeCursor,
+  p : @span.ByteOffset,
+) -> Bool {
   guard innermost_at(self.node(), p) is Some((_, indices)) else { return false }
   for i in indices {
     ignore(self.descend(_ => Some(i)))

@@ -42,14 +42,14 @@ turn one into a line and column:
 ///|
 test "tk: token position" {
   let text = "let é = 1"
-  let source = @gleam.SourceText::new(text)
+  let source = @gleam.SourceText(text)
   let stream = @gleam.tokenize(source)
   let equal = stream.tokens[2]
   @expect.expect_all(e => {
-    e.expect(equal.span).to_equal(@gleam.SrcSpan::new(7, 8))
+    e.expect(equal.span).to_equal(@gleam.SrcSpan::from_ints(7, 8).unwrap())
     e
     .expect(source.position_of(equal.span.start))
-    .to_equal(Some(@gleam.Position::new(1, 7)))
+    .to_equal(Some(@gleam.Position::from_ints(1, 7).unwrap()))
   })
 }
 ```

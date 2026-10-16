@@ -3,8 +3,8 @@
 fn Parser::parse_const_value(self : Parser) -> @ast.Constant? raise ParseError {
   let opstack : Array[OpEntry] = []
   let estack : Array[@ast.Constant] = []
-  let mut last_op_start = 0
-  let mut last_op_end = 0
+  let mut last_op_start = @span.ByteOffset::zero()
+  let mut last_op_end = @span.ByteOffset::zero()
   while true {
     match self.parse_const_value_unit() {
       Some(unit) => estack.push(unit)
@@ -94,7 +94,7 @@ fn Parser::parse_const_value_unit_inner(
       )
       let mut tail : @ast.Constant? = None
       let mut elements_after_tail : Array[@ast.Constant]? = None
-      let mut dot_dot_location : (Int32, Int32)? = None
+      let mut dot_dot_location : (@span.ByteOffset, @span.ByteOffset)? = None
       // With no elements a tail is still parsed, for a better error.
       if elements_end_with_comma || elements.length() == 0 {
         if self.maybe_one(DotDot) is Some((dots_start, dots_end)) {
@@ -210,7 +210,11 @@ fn Parser::parse_const_value_unit_inner(
             ),
             t.span,
           )
-        None => parse_error(UnexpectedEof, sp(0, 0))
+        None =>
+          parse_error(
+            UnexpectedEof,
+            sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()),
+          )
       }
     }
     Some({ kind: Name(name), span, .. }) => {
@@ -250,10 +254,10 @@ fn Parser::maybe_parse_constant_as_message(
 /// or a bare constructor.
 fn Parser::parse_const_record_finish(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
   module_ : @ast.SpannedString?,
   name : String,
-  end : Int32,
+  end : @span.ByteOffset,
 ) -> @ast.Constant? raise ParseError {
   match self.maybe_one(LeftParen) {
     Some((par_s, _)) =>
@@ -262,7 +266,7 @@ fn Parser::parse_const_record_finish(
           self.parse_const_value() {
           Some(value) =>
             { location: sp(dot_dot_start, value.location().end), base: value, }
-          None => parse_error(UnexpectedEof, sp(par_s, par_s + 2))
+          None => parse_error(UnexpectedEof, sp(par_s, par_s.shift(2).unwrap()))
         }
         let update_arguments = if self.maybe_one(Comma) is Some(_) {
           self.series_of(
@@ -349,7 +353,8 @@ fn Parser::parse_const_record_finish(
 fn Parser::parse_const_record_argument(
   self : Parser,
 ) -> @ast.CallArg[@ast.Constant]? raise ParseError {
-  let label : (Int32, String, Int32)? = match (self.token0, self.token1) {
+  let label : (@span.ByteOffset, String, @span.ByteOffset)? = match
+    (self.token0, self.token1) {
     (
       Some({ kind: Name(name), span, .. }),
       Some({ kind: Colon, span: colon, .. }),
@@ -446,8 +451,8 @@ fn Parser::expect_const_int(self : Parser) -> @ast.Constant raise ParseError {
 /// report `UnexpectedFunction` over the call.
 fn Parser::function_call_in_constant(
   self : Parser,
-  start : Int32,
-  start_paren : Int32,
+  start : @span.ByteOffset,
+  start_paren : @span.ByteOffset,
 ) -> @ast.Constant? raise ParseError {
   let mut depth = 1
   let mut end = start_paren

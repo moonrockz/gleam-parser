@@ -28,11 +28,7 @@ test "fm: a syntax error" {
     "formatted"
   } catch {
     ParseFailed(diagnostics) =>
-      @gleam.render_plain(
-        diagnostics[0],
-        @gleam.SourceText::new(text),
-        "main.gleam",
-      )
+      @gleam.render_plain(diagnostics[0], @gleam.SourceText(text), "main.gleam")
     OutOfFuel(_) => "out of fuel"
   }
   @expect.expect(message).to_contain("Syntax error")

@@ -6,7 +6,7 @@
 ///
 /// ```mbt check
 /// test {
-///   let s = @scanner.tokenize(@scanner.SourceText::new("let x = 1"))
+///   let s = @scanner.tokenize(@scanner.SourceText("let x = 1"))
 ///   debug_inspect(
 ///     s.tokens.iter().map(t => t.kind).collect(),
 ///     content="[Keyword(Let), Name(\"x\"), Equal, Int(value=\"1\", int_value=1)]",
@@ -15,11 +15,11 @@
 /// }
 /// ```
 pub fn tokenize(source : SourceText) -> TokenStream {
-  Lexer::new(source.text()).run()
+  Lexer(source.text()).run()
 }
 
 ///|
 /// `tokenize` of a `SourceText` built from `text`.
 pub fn tokenize_text(text : String) -> TokenStream {
-  tokenize(SourceText::new(text))
+  tokenize(SourceText(text))
 }

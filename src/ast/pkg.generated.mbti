@@ -69,6 +69,10 @@ pub(all) suberror DecodeError {
   DecodeError(path~ : String, message~ : String)
 } derive(Eq, @debug.Debug)
 
+pub(all) suberror InvalidBitArrayUnit {
+  InvalidBitArrayUnit(Int)
+} derive(Eq, @debug.Debug)
+
 // Types and methods
 pub(all) struct Arg {
   names : ArgNames
@@ -105,7 +109,7 @@ pub(all) struct Assignment {
 pub(all) enum AssignmentKind {
   Let
   Generated
-  Assert(location~ : @span.SrcSpan, assert_keyword_start~ : Int, message~ : Expr?)
+  Assert(location~ : @span.SrcSpan, assert_keyword_start~ : @span.ByteOffset, message~ : Expr?)
 } derive(Eq, @debug.Debug)
 
 pub(all) enum BinOp {
@@ -153,7 +157,7 @@ pub(all) enum BitArrayOption[V] {
   Little(location~ : @span.SrcSpan)
   Native(location~ : @span.SrcSpan)
   Size(location~ : @span.SrcSpan, value~ : V, short_form~ : Bool)
-  Unit(location~ : @span.SrcSpan, value~ : Int)
+  Unit(location~ : @span.SrcSpan, value~ : BitArrayUnit)
 } derive(Eq, @debug.Debug)
 
 pub(all) struct BitArraySegment[V] {
@@ -169,6 +173,14 @@ pub(all) enum BitArraySize {
   Block(location~ : @span.SrcSpan, inner~ : BitArraySize)
 } derive(Eq, @debug.Debug)
 pub fn BitArraySize::location(Self) -> @span.SrcSpan
+
+pub struct BitArrayUnit {
+  // private fields
+} derive(Compare, Eq, Hash, @debug.Debug)
+pub fn BitArrayUnit::BitArrayUnit(Int) -> Self raise InvalidBitArrayUnit
+#alias(new, deprecated)
+pub fn BitArrayUnit::from_int(Int) -> Self?
+pub fn BitArrayUnit::to_int(Self) -> Int
 
 pub(all) struct CallArg[A] {
   label : String?
@@ -187,11 +199,11 @@ pub(all) struct Clause {
 
 pub(all) enum ClauseGuard {
   Block(location~ : @span.SrcSpan, value~ : ClauseGuard)
-  BinaryOperator(location~ : @span.SrcSpan, operator~ : BinOp, operator_start~ : Int, left~ : ClauseGuard, right~ : ClauseGuard)
+  BinaryOperator(location~ : @span.SrcSpan, operator~ : BinOp, operator_start~ : @span.ByteOffset, left~ : ClauseGuard, right~ : ClauseGuard)
   Not(location~ : @span.SrcSpan, expression~ : ClauseGuard)
   Var(location~ : @span.SrcSpan, name~ : String)
-  TupleIndex(location~ : @span.SrcSpan, index~ : UInt64, tuple~ : ClauseGuard)
-  FieldAccess(label_location~ : @span.SrcSpan, index~ : UInt64?, label~ : String, container~ : ClauseGuard)
+  TupleIndex(location~ : @span.SrcSpan, index~ : TupleIndex, tuple~ : ClauseGuard)
+  FieldAccess(label_location~ : @span.SrcSpan, index~ : TupleIndex?, label~ : String, container~ : ClauseGuard)
   Constant(Constant)
 } derive(Eq, @debug.Debug)
 pub fn ClauseGuard::location(Self) -> @span.SrcSpan
@@ -202,18 +214,18 @@ pub(all) enum Constant {
   String(location~ : @span.SrcSpan, value~ : String)
   Tuple(location~ : @span.SrcSpan, elements~ : ArrayView[Constant])
   List(location~ : @span.SrcSpan, elements~ : ArrayView[Constant], tail~ : Constant?)
-  Record(location~ : @span.SrcSpan, arguments_start_position~ : Int, module_~ : SpannedString?, name~ : String, arguments~ : ArrayView[CallArg[Constant]]?)
+  Record(location~ : @span.SrcSpan, arguments_start_position~ : @span.ByteOffset, module_~ : SpannedString?, name~ : String, arguments~ : ArrayView[CallArg[Constant]]?)
   RecordUpdate(location~ : @span.SrcSpan, constructor_location~ : @span.SrcSpan, module_~ : SpannedString?, name~ : String, record~ : RecordBeingUpdated[Constant], arguments~ : ArrayView[RecordUpdateArg[Constant]])
   BitArray(location~ : @span.SrcSpan, segments~ : ArrayView[BitArraySegment[Constant]])
   Var(location~ : @span.SrcSpan, module_~ : SpannedString?, name~ : String)
-  BinaryOperator(location~ : @span.SrcSpan, operator_start~ : Int, operator~ : BinOp, left~ : Constant, right~ : Constant)
+  BinaryOperator(location~ : @span.SrcSpan, operator_start~ : @span.ByteOffset, operator~ : BinOp, left~ : Constant, right~ : Constant)
   Todo(location~ : @span.SrcSpan, message~ : Constant?)
 } derive(Eq, @debug.Debug)
 pub fn Constant::location(Self) -> @span.SrcSpan
 
 pub(all) struct CustomType {
   location : @span.SrcSpan
-  end_position : Int
+  end_position : @span.ByteOffset
   name : String
   name_location : @span.SrcSpan
   publicity : Publicity
@@ -241,7 +253,7 @@ pub(all) enum Deprecation {
 } derive(Eq, @debug.Debug)
 
 pub(all) struct Documentation {
-  start : Int
+  start : @span.ByteOffset
   text : String
 } derive(Eq, @debug.Debug)
 
@@ -251,20 +263,20 @@ pub(all) enum Expr {
   String(location~ : @span.SrcSpan, value~ : String)
   Block(location~ : @span.SrcSpan, statements~ : ArrayView[Statement])
   Var(location~ : @span.SrcSpan, name~ : String)
-  Fn(location~ : @span.SrcSpan, kind~ : FunctionLiteralKind, end_of_head_byte_index~ : Int, arguments~ : ArrayView[Arg], body~ : ArrayView[Statement], return_annotation~ : TypeAst?)
+  Fn(location~ : @span.SrcSpan, kind~ : FunctionLiteralKind, end_of_head_byte_index~ : @span.ByteOffset, arguments~ : ArrayView[Arg], body~ : ArrayView[Statement], return_annotation~ : TypeAst?)
   List(location~ : @span.SrcSpan, elements~ : ArrayView[Expr], tail~ : Expr?)
-  Call(location~ : @span.SrcSpan, fun~ : Expr, arguments~ : ArrayView[CallArg[Expr]], open_parenthesis~ : Int)
-  BinOp(location~ : @span.SrcSpan, operator~ : BinOp, operator_start~ : Int, left~ : Expr, right~ : Expr)
+  Call(location~ : @span.SrcSpan, fun~ : Expr, arguments~ : ArrayView[CallArg[Expr]], open_parenthesis~ : @span.ByteOffset)
+  BinOp(location~ : @span.SrcSpan, operator~ : BinOp, operator_start~ : @span.ByteOffset, left~ : Expr, right~ : Expr)
   Pipeline(expressions~ : ArrayView[Expr])
   Case(location~ : @span.SrcSpan, subjects~ : ArrayView[Expr], clauses~ : ArrayView[Clause]?)
   FieldAccess(location~ : @span.SrcSpan, label_location~ : @span.SrcSpan, label~ : String, container~ : Expr)
   Tuple(location~ : @span.SrcSpan, elements~ : ArrayView[Expr])
-  TupleIndex(location~ : @span.SrcSpan, index~ : UInt64, tuple~ : Expr)
+  TupleIndex(location~ : @span.SrcSpan, index~ : TupleIndex, tuple~ : Expr)
   Todo(kind~ : TodoKind, location~ : @span.SrcSpan, message~ : Expr?)
   Panic(location~ : @span.SrcSpan, message~ : Expr?)
-  Echo(location~ : @span.SrcSpan, keyword_end~ : Int, expression~ : Expr?, message~ : Expr?)
+  Echo(location~ : @span.SrcSpan, keyword_end~ : @span.ByteOffset, expression~ : Expr?, message~ : Expr?)
   BitArray(location~ : @span.SrcSpan, segments~ : ArrayView[BitArraySegment[Expr]])
-  RecordUpdate(location~ : @span.SrcSpan, spread_start~ : Int, constructor_~ : Expr, record~ : RecordBeingUpdated[Expr], arguments~ : ArrayView[RecordUpdateArg[Expr]])
+  RecordUpdate(location~ : @span.SrcSpan, spread_start~ : @span.ByteOffset, constructor_~ : Expr, record~ : RecordBeingUpdated[Expr], arguments~ : ArrayView[RecordUpdateArg[Expr]])
   NegateBool(location~ : @span.SrcSpan, value~ : Expr)
   NegateInt(location~ : @span.SrcSpan, value~ : Expr)
 } derive(Eq, @debug.Debug)
@@ -278,8 +290,8 @@ pub(all) struct External {
 
 pub(all) struct Function {
   location : @span.SrcSpan
-  body_start : Int?
-  end_position : Int
+  body_start : @span.ByteOffset?
+  end_position : @span.ByteOffset
   name : SpannedString?
   arguments : ArrayView[Arg]
   body : ArrayView[Statement]
@@ -351,9 +363,9 @@ pub(all) struct ModuleExtra {
   module_comments : ArrayView[@span.SrcSpan]
   doc_comments : ArrayView[@span.SrcSpan]
   comments : ArrayView[@span.SrcSpan]
-  empty_lines : ArrayView[Int]
-  new_lines : ArrayView[Int]
-  trailing_commas : ArrayView[Int]
+  empty_lines : ArrayView[@span.ByteOffset]
+  new_lines : ArrayView[@span.ByteOffset]
+  trailing_commas : ArrayView[@span.ByteOffset]
 } derive(Eq, @debug.Debug)
 pub fn ModuleExtra::empty() -> Self
 
@@ -432,7 +444,7 @@ pub fn Statement::location(Self) -> @span.SrcSpan
 
 pub(all) struct StringPrefixLeftSideAssignment {
   name : String
-  name_start_position : Int
+  name_start_position : @span.ByteOffset
   location : @span.SrcSpan
 } derive(Eq, @debug.Debug)
 
@@ -460,6 +472,13 @@ pub(all) enum TodoKind {
   EmptyBlock
 } derive(Eq, @debug.Debug)
 
+pub(all) struct TupleIndex(UInt64) derive(Compare, Eq, Hash, @debug.Debug)
+#alias(new, deprecated)
+pub fn TupleIndex::from_int64(Int64) -> Self?
+#deprecated
+pub fn TupleIndex::from_uint64(UInt64) -> Self
+pub fn TupleIndex::to_uint64(Self) -> UInt64
+
 pub(all) struct TypeAlias {
   location : @span.SrcSpan
   alias_ : String
@@ -484,11 +503,11 @@ pub(all) struct TypeAstConstructor {
   location : @span.SrcSpan
   name : TypeAstConstructorName
   arguments : ArrayView[TypeAst]
-  start_parentheses : Int?
+  start_parentheses : @span.ByteOffset?
 } derive(Eq, @debug.Debug)
 
 pub(all) enum TypeAstConstructorName {
-  Qualified(module_~ : String, module_location~ : @span.SrcSpan, dot_location~ : Int, name~ : SpannedString?)
+  Qualified(module_~ : String, module_location~ : @span.SrcSpan, dot_location~ : @span.ByteOffset, name~ : SpannedString?)
   Unqualified(name~ : String, location~ : @span.SrcSpan)
 } derive(Eq, @debug.Debug)
 
@@ -516,7 +535,7 @@ pub(all) struct TypeAstVar {
 pub(all) struct UnqualifiedImport {
   location : @span.SrcSpan
   name : String
-  name_position : Int
+  name_position : @span.ByteOffset
   as_name : String?
 } derive(Eq, @debug.Debug)
 

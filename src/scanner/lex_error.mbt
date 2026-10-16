@@ -155,7 +155,7 @@ pub fn lexical_diagnostic(
   error : LexicalErrorType,
   location : @span.SrcSpan,
 ) -> @diagnostic.Diagnostic {
-  @diagnostic.Diagnostic::new(
+  @diagnostic.Diagnostic(
     code="GL-SCAN-001",
     kind=error.kind(),
     severity=Error,

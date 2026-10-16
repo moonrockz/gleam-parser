@@ -8,7 +8,7 @@ test "oracle output: a parsed module and an error round-trip" {
   let err : @ast.OracleOutput = Error(
     kind="LexError",
     lexical_kind=Some("BadStringEscape"),
-    location=@span.SrcSpan::new(3, 4),
+    location=@span.SrcSpan::from_ints(3, 4).unwrap(),
   )
   @expect.expect_all(e => {
     e

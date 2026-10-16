@@ -24,18 +24,20 @@ pub(all) struct DefinitionCst {
 } derive(Eq, Debug)
 
 ///|
-pub fn DefinitionCst::new(
+/// Group a definition's tokens and derive its span, or `0..0` when empty.
+#alias(new, deprecated="Use `DefinitionCst(...)` instead")
+pub fn DefinitionCst::DefinitionCst(
   kind~ : DefinitionKind,
   name~ : String?,
   tokens~ : ArrayView[@scanner.Token],
 ) -> DefinitionCst {
   let span = if tokens.length() == 0 {
-    @span.SrcSpan::new(0, 0)
+    @span.SrcSpan::from_ints(0, 0).unwrap()
   } else {
-    @span.SrcSpan::new(
+    @span.SrcSpan::from_compiler(
       tokens[0].span.start,
       tokens[tokens.length() - 1].span.end,
-    )
+    ).unwrap()
   }
   { kind, name, tokens, span, }
 }
@@ -58,12 +60,12 @@ pub fn DefinitionCst::to_source(self : DefinitionCst) -> String {
 /// ```mbt check
 /// test {
 ///   let stream = @scanner.tokenize_text("const x = 1\n")
-///   let d = @cst.DefinitionCst::new(
+///   let d = @cst.DefinitionCst(
 ///     kind=Constant,
 ///     name=Some("x"),
 ///     tokens=stream.tokens,
 ///   )
-///   let cst = @cst.ModuleCst::new(stream, [d])
+///   let cst = @cst.ModuleCst(stream, [d])
 ///   inspect(cst.to_source(), content="const x = 1\n")
 /// }
 /// ```
@@ -74,7 +76,9 @@ pub(all) struct ModuleCst {
 } derive(Eq, Debug)
 
 ///|
-pub fn ModuleCst::new(
+/// Group a token stream with its parsed definitions and trivia.
+#alias(new, deprecated="Use `ModuleCst(...)` instead")
+pub fn ModuleCst::ModuleCst(
   stream : @scanner.TokenStream,
   definitions : Array[DefinitionCst],
 ) -> ModuleCst {

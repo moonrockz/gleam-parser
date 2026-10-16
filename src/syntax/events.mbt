@@ -7,8 +7,8 @@ pub struct EnterEvent {
   category : String
   kind : String
   field : String?
-  start : Int32
-  depth : Int32
+  start : @span.ByteOffset
+  depth : NodeDepth
   path : NodePath
 } derive(Eq, Debug)
 
@@ -17,34 +17,38 @@ pub struct EnterEvent {
 /// of its `Enter`.
 pub struct LeaveEvent {
   node : NodeRef
-  depth : Int32
+  depth : NodeDepth
   path : NodePath
 } derive(Eq, Debug)
 
 ///|
 /// An `EnterEvent`; its `depth` is `path.depth()`. Event sources outside
-/// this package build events with `new`, so fields added later need not
+/// this package use `EnterEvent(...)`, so fields added later need not
 /// break them.
 ///
 /// ```mbt check
 /// test {
-///   let path = @syntax.NodePath::root().child("definitions", 0)
-///   let e = @syntax.EnterEvent::new(
+///   let path = @syntax.NodePath::root().child(
+///     "definitions",
+///     @syntax.ChildIndex::from_int(0).unwrap(),
+///   )
+///   let e = @syntax.EnterEvent(
 ///     category="definition",
 ///     kind="function",
 ///     field=Some("definitions"),
-///     start=0,
+///     start=@span.ByteOffset::zero(),
 ///     path~,
 ///   )
 ///   inspect(e.depth, content="1")
 ///   inspect(e.path, content="definitions[0]")
 /// }
 /// ```
-pub fn EnterEvent::new(
+#alias(new, deprecated="Use `EnterEvent(...)` instead")
+pub fn EnterEvent::EnterEvent(
   category~ : String,
   kind~ : String,
   field~ : String?,
-  start~ : Int32,
+  start~ : @span.ByteOffset,
   path~ : NodePath,
 ) -> EnterEvent {
   { category, kind, field, start, depth: path.depth(), path, }
@@ -56,12 +60,13 @@ pub fn EnterEvent::new(
 /// ```mbt check
 /// test {
 ///   let root = @syntax.NodeRef::of_result(@parser.parse_text("const x = 1\n"))
-///   let e = @syntax.LeaveEvent::new(node=root, path=@syntax.NodePath::root())
+///   let e = @syntax.LeaveEvent(node=root, path=@syntax.NodePath::root())
 ///   inspect(e.depth, content="0")
 ///   inspect(e.node.kind(), content="module")
 /// }
 /// ```
-pub fn LeaveEvent::new(node~ : NodeRef, path~ : NodePath) -> LeaveEvent {
+#alias(new, deprecated="Use `LeaveEvent(...)` instead")
+pub fn LeaveEvent::LeaveEvent(node~ : NodeRef, path~ : NodePath) -> LeaveEvent {
   { node, depth: path.depth(), path, }
 }
 
@@ -100,7 +105,7 @@ priv struct ReaderFrame {
 ///   let root = @syntax.NodeRef::of_result(
 ///     @parser.parse_text("pub fn f(x) {\n  x\n}\n"),
 ///   )
-///   let reader = @syntax.EventReader::new(root)
+///   let reader = @syntax.EventReader(root)
 ///   let log = []
 ///   let mut body = ""
 ///   while reader.next() is Some(event) {
@@ -139,7 +144,8 @@ pub struct EventReader {
 
 ///|
 /// A reader positioned before `root`'s `Enter`.
-pub fn EventReader::new(root : NodeRef) -> EventReader {
+#alias(new, deprecated="Use `EventReader(...)` instead")
+pub fn EventReader::EventReader(root : NodeRef) -> EventReader {
   { stack: [], pending: None, root: Some(root), }
 }
 
@@ -154,7 +160,7 @@ pub fn EventReader::new(root : NodeRef) -> EventReader {
 ///   let root = @syntax.NodeRef::of_result(
 ///     @parser.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
-///   let reader = @syntax.EventReader::new(root)
+///   let reader = @syntax.EventReader(root)
 ///   let args = []
 ///   for event in reader.iter() {
 ///     if event is Enter(e) {
@@ -182,7 +188,7 @@ pub extend EventReader with EventSource::{next, skip_children}
 ///|
 fn enter_event(n : NodeRef, field : String?, path : NodePath) -> Event {
   Enter(
-    EnterEvent::new(
+    EnterEvent(
       category=n.category(),
       kind=n.kind(),
       field~,
@@ -219,7 +225,7 @@ pub impl EventSource for EventReader with fn next(self) {
     Some(enter_event(child, Some(step.field), path))
   } else {
     ignore(self.stack.pop())
-    Some(Leave(LeaveEvent::new(node=top.entered, path=top.path)))
+    Some(Leave(LeaveEvent(node=top.entered, path=top.path)))
   }
 }
 

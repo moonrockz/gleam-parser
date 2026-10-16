@@ -1,6 +1,6 @@
 ///|
 /// The compiler's `UntypedExpr::start_byte_index`.
-fn start_byte_index(e : @ast.Expr) -> Int32 {
+fn start_byte_index(e : @ast.Expr) -> @span.ByteOffset {
   match e {
     Pipeline(expressions~) => start_byte_index(expressions[0])
     _ => e.location().start
@@ -179,7 +179,7 @@ fn Formatter::access_chain(
         base = container
       }
       TupleIndex(tuple~, index~, ..) => {
-        suffixes.push(index.to_string())
+        suffixes.push(index.to_uint64().to_string())
         match tuple {
           Block(statements~, ..) if statements.length() == 1 &&
             statements[0] is Expression(TupleIndex(tuple=t2, ..) as inner) &&
@@ -286,7 +286,7 @@ fn Formatter::expr_fn(
   return_annotation : @ast.TypeAst?,
   body : ArrayView[@ast.Statement],
   location : @span.SrcSpan,
-  end_of_head_byte_index : Int32,
+  end_of_head_byte_index : @span.ByteOffset,
 ) -> @pretty.Doc raise FormatError {
   let docs = []
   for a in arguments {

@@ -97,9 +97,6 @@ fn dec_int(j : Json, path : Path) -> Int32 raise DecodeError {
       if i.to_double() != d {
         fail(path, "expected an integer, found \{d}")
       }
-      if i < 0 {
-        fail(path, "expected a non-negative integer, found \{d}")
-      }
       i
     }
     other => fail(path, "expected a number, found \{json_kind(other)}")
@@ -107,31 +104,50 @@ fn dec_int(j : Json, path : Path) -> Int32 raise DecodeError {
 }
 
 ///|
-fn dec_unit(j : Json, path : Path) -> Int32 raise DecodeError {
+fn dec_offset(j : Json, path : Path) -> @span.ByteOffset raise DecodeError {
   let value = dec_int(j, path)
-  if value > 255 {
-    fail(path, "expected an integer in 0..255, found \{value}")
+  match @span.ByteOffset::from_int(value) {
+    Some(offset) => offset
+    None => fail(path, "expected a non-negative integer, found \{value}")
   }
-  value
+}
+
+///|
+fn dec_unit(j : Json, path : Path) -> BitArrayUnit raise DecodeError {
+  let value = dec_int(j, path)
+  match BitArrayUnit::from_int(value) {
+    Some(unit) => unit
+    None =>
+      if value < 0 {
+        fail(path, "expected a non-negative integer, found \{value}")
+      } else {
+        fail(path, "expected an integer in 0..255, found \{value}")
+      }
+  }
 }
 
 ///|
 /// A `u64` of the compiler: exact digits from `repr` when the number is
 /// too big for a `Double`, else the `Double` itself.
-fn dec_uint64(j : Json, path : Path) -> UInt64 raise DecodeError {
+fn dec_uint64(j : Json, path : Path) -> TupleIndex raise DecodeError {
   match j {
     Number(d, repr~) =>
       match repr {
         Some(digits) =>
-          @string.parse_uint64(digits) catch {
-            _ =>
-              fail(path, "expected an unsigned 64-bit integer, found \{digits}")
-          }
+          TupleIndex(
+            @string.parse_uint64(digits) catch {
+              _ =>
+                fail(
+                  path,
+                  "expected an unsigned 64-bit integer, found \{digits}",
+                )
+            },
+          )
         None => {
           if d < 0.0 || d != d.floor() || d >= 18446744073709551616.0 {
             fail(path, "expected an unsigned 64-bit integer, found \{d}")
           }
-          d.to_uint64()
+          TupleIndex(d.to_uint64())
         }
       }
     other => fail(path, "expected a number, found \{json_kind(other)}")
@@ -264,10 +280,12 @@ fn dec_big_int(j : Json, path : Path) -> BigInt raise DecodeError {
 
 ///|
 fn dec_span(j : Json, path : Path) -> @span.SrcSpan raise DecodeError {
-  @span.SrcSpan::new(
-    dec_field(j, path, "start", dec_int),
-    dec_field(j, path, "end", dec_int),
-  )
+  let start = dec_field(j, path, "start", dec_offset)
+  let end = dec_field(j, path, "end", dec_offset)
+  match @span.SrcSpan::from_compiler(start, end) {
+    Some(span) => span
+    None => fail(Key(path, "end"), "span end precedes start")
+  }
 }
 
 ///|
@@ -281,7 +299,7 @@ fn dec_spanned_string(j : Json, path : Path) -> SpannedString raise DecodeError 
 ///|
 fn dec_documentation(j : Json, path : Path) -> Documentation raise DecodeError {
   {
-    start: dec_field(j, path, "start", dec_int),
+    start: dec_field(j, path, "start", dec_offset),
     text: dec_field(j, path, "text", dec_string),
   }
 }
@@ -494,7 +512,7 @@ fn[R] dec_definition(
     }
     "custom_type" => {
       let location = dec_field(j, path, "location", dec_span)
-      let end_position = dec_field(j, path, "end_position", dec_int)
+      let end_position = dec_field(j, path, "end_position", dec_offset)
       let name = dec_field(j, path, "name", dec_string)
       let name_location = dec_field(j, path, "name_location", dec_span)
       let publicity = dec_field(j, path, "publicity", dec_publicity)
@@ -595,9 +613,9 @@ fn[R] dec_function(
 ) -> Decode[R] raise DecodeError {
   let location = dec_field(j, path, "location", dec_span)
   let body_start = dec_field(j, path, "body_start", (v, p) => {
-    dec_nullable(v, p, dec_int)
+    dec_nullable(v, p, dec_offset)
   })
-  let end_position = dec_field(j, path, "end_position", dec_int)
+  let end_position = dec_field(j, path, "end_position", dec_offset)
   let name = dec_field(j, path, "name", (v, p) => {
     dec_nullable(v, p, dec_spanned_string)
   })
@@ -642,7 +660,7 @@ fn dec_unqualified_import(
   {
     location: dec_field(j, path, "location", dec_span),
     name: dec_field(j, path, "name", dec_string),
-    name_position: dec_field(j, path, "name_position", dec_int),
+    name_position: dec_field(j, path, "name_position", dec_offset),
     as_name: dec_field(j, path, "as_name", (v, p) => {
       dec_nullable(v, p, dec_string)
     }),
@@ -755,7 +773,7 @@ fn[R] dec_type_ast(
       let location = dec_field(j, path, "location", dec_span)
       let name = dec_field(j, path, "name", dec_type_ast_constructor_name)
       let start_parentheses = dec_field(j, path, "start_parentheses", (v, p) => {
-        dec_nullable(v, p, dec_int)
+        dec_nullable(v, p, dec_offset)
       })
       child_list(j, path, "arguments", dec_type_ast, arguments => {
         yield_(
@@ -808,7 +826,7 @@ fn dec_type_ast_constructor_name(
       Qualified(
         module_=dec_field(j, path, "module", dec_string),
         module_location=dec_field(j, path, "module_location", dec_span),
-        dot_location=dec_field(j, path, "dot_location", dec_int),
+        dot_location=dec_field(j, path, "dot_location", dec_offset),
         name=dec_field(j, path, "name", (v, p) => {
           dec_nullable(v, p, dec_spanned_string)
         }),
@@ -901,7 +919,7 @@ fn[R] dec_assignment_kind(
     "assert" => {
       let location = dec_field(j, path, "location", dec_span)
       let assert_keyword_start = dec_field(
-        j, path, "assert_keyword_start", dec_int,
+        j, path, "assert_keyword_start", dec_offset,
       )
       child_opt(j, path, "message", dec_expr, message => {
         yield_(k, Assert(location~, assert_keyword_start~, message~))
@@ -1057,7 +1075,10 @@ fn dec_function_literal_kind(
 ///
 /// ```mbt check
 /// test {
-///   let value : @ast.Expr = Var(location=@span.SrcSpan::new(0, 1), name="x")
+///   let value : @ast.Expr = Var(
+///     location=@span.SrcSpan::from_ints(0, 1).unwrap(),
+///     name="x",
+///   )
 ///   assert_eq(@ast.decode_expr(@ast.encode_expr(value)), value)
 /// }
 /// ```
@@ -1118,7 +1139,7 @@ fn[R] dec_expr(
       let location = dec_field(j, path, "location", dec_span)
       let kind = dec_field(j, path, "fn_kind", dec_function_literal_kind)
       let end_of_head_byte_index = dec_field(
-        j, path, "end_of_head_byte_index", dec_int,
+        j, path, "end_of_head_byte_index", dec_offset,
       )
       child_list(j, path, "arguments", dec_arg, arguments => {
         child_list(j, path, "body", dec_statement, body => {
@@ -1148,7 +1169,7 @@ fn[R] dec_expr(
     }
     "call" => {
       let location = dec_field(j, path, "location", dec_span)
-      let open_parenthesis = dec_field(j, path, "open_parenthesis", dec_int)
+      let open_parenthesis = dec_field(j, path, "open_parenthesis", dec_offset)
       child(j, path, "fun", dec_expr, fun => {
         child_list(
           j,
@@ -1164,7 +1185,7 @@ fn[R] dec_expr(
     "bin_op" => {
       let location = dec_field(j, path, "location", dec_span)
       let operator = dec_field(j, path, "operator", dec_bin_op)
-      let operator_start = dec_field(j, path, "operator_start", dec_int)
+      let operator_start = dec_field(j, path, "operator_start", dec_offset)
       child(j, path, "left", dec_expr, left => {
         child(j, path, "right", dec_expr, right => {
           yield_(k, BinOp(location~, operator~, operator_start~, left~, right~))
@@ -1223,7 +1244,7 @@ fn[R] dec_expr(
     }
     "echo" => {
       let location = dec_field(j, path, "location", dec_span)
-      let keyword_end = dec_field(j, path, "keyword_end", dec_int)
+      let keyword_end = dec_field(j, path, "keyword_end", dec_offset)
       child_opt(j, path, "expression", dec_expr, expression => {
         child_opt(j, path, "message", dec_expr, message => {
           yield_(k, Echo(location~, keyword_end~, expression~, message~))
@@ -1242,7 +1263,7 @@ fn[R] dec_expr(
     }
     "record_update" => {
       let location = dec_field(j, path, "location", dec_span)
-      let spread_start = dec_field(j, path, "spread_start", dec_int)
+      let spread_start = dec_field(j, path, "spread_start", dec_offset)
       child(j, path, "constructor", dec_expr, constructor_ => {
         child(
           j,
@@ -1336,7 +1357,7 @@ fn[R] dec_clause_guard(
     "binary_operator" => {
       let location = dec_field(j, path, "location", dec_span)
       let operator = dec_field(j, path, "operator", dec_bin_op)
-      let operator_start = dec_field(j, path, "operator_start", dec_int)
+      let operator_start = dec_field(j, path, "operator_start", dec_offset)
       child(j, path, "left", dec_clause_guard, left => {
         child(j, path, "right", dec_clause_guard, right => {
           yield_(
@@ -1523,7 +1544,7 @@ fn[R] dec_pattern(
             dec_nullable(v, p, (v2, p2) => {
               name: dec_field(v2, p2, "name", dec_string),
               name_start_position: dec_field(
-                v2, p2, "name_start_position", dec_int,
+                v2, p2, "name_start_position", dec_offset,
               ),
               location: dec_field(v2, p2, "location", dec_span),
             })
@@ -1641,7 +1662,7 @@ fn[R] dec_constant(
     "record" => {
       let location = dec_field(j, path, "location", dec_span)
       let arguments_start_position = dec_field(
-        j, path, "arguments_start_position", dec_int,
+        j, path, "arguments_start_position", dec_offset,
       )
       let module_ = dec_field(j, path, "module", (v, p) => {
         dec_nullable(v, p, dec_spanned_string)
@@ -1733,7 +1754,7 @@ fn[R] dec_constant(
       )
     "binary_operator" => {
       let location = dec_field(j, path, "location", dec_span)
-      let operator_start = dec_field(j, path, "operator_start", dec_int)
+      let operator_start = dec_field(j, path, "operator_start", dec_offset)
       let operator = dec_field(j, path, "operator", dec_bin_op)
       child(j, path, "left", dec_constant, left => {
         child(j, path, "right", dec_constant, right => {
@@ -1773,13 +1794,13 @@ fn dec_extra(j : Json, path : Path) -> ModuleExtra raise DecodeError {
     }),
     comments: dec_field(j, path, "comments", (v, p) => dec_array(v, p, dec_span)),
     empty_lines: dec_field(j, path, "empty_lines", (v, p) => {
-      dec_array(v, p, dec_int)
+      dec_array(v, p, dec_offset)
     }),
     new_lines: dec_field(j, path, "new_lines", (v, p) => {
-      dec_array(v, p, dec_int)
+      dec_array(v, p, dec_offset)
     }),
     trailing_commas: dec_field(j, path, "trailing_commas", (v, p) => {
-      dec_array(v, p, dec_int)
+      dec_array(v, p, dec_offset)
     }),
   }
 }

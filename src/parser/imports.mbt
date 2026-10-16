@@ -2,12 +2,12 @@
 /// `import a/b.{c, type D as E} as f`, with `import` consumed.
 fn Parser::parse_import(
   self : Parser,
-  import_start : Int32,
+  import_start : @span.ByteOffset,
 ) -> @ast.Definition? raise ParseError {
-  let mut start = 0
-  let mut end = 0
+  let mut start = @span.ByteOffset::zero()
+  let mut end = @span.ByteOffset::zero()
   let module_ = StringBuilder()
-  let mut last_segment_end = 0
+  let mut last_segment_end = @span.ByteOffset::zero()
   // Gather module names
   while true {
     let (s, name, e) = self.expect_name(Module)
@@ -21,7 +21,10 @@ fn Parser::parse_import(
     last_segment_end = e
     // Useful error for `import a/.{b}`
     if self.maybe_one(SlashDot) is Some((slash, _)) {
-      parse_error(ExpectedName, sp(slash + 1, slash + 1))
+      parse_error(
+        ExpectedName,
+        sp(slash.shift(1).unwrap(), slash.shift(1).unwrap()),
+      )
     }
     if self.maybe_one(Slash) is None {
       break
@@ -151,7 +154,7 @@ fn Parser::parse_unqualified_imports(
 /// `const name (: T)? = value`, with `const` (and `pub`) consumed.
 fn Parser::parse_module_const(
   self : Parser,
-  start : Int32,
+  start : @span.ByteOffset,
   public : Bool,
   attributes : Attributes,
 ) -> @ast.Definition? raise ParseError {
@@ -163,7 +166,7 @@ fn Parser::parse_module_const(
     Some(value) => {
       let annotation_end = match annotation {
         Some(a) => a.location().end
-        None => 0
+        None => @span.ByteOffset::zero()
       }
       let publicity = publicity(public, attributes.internal)
       Some(

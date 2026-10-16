@@ -87,6 +87,7 @@ fn[V] segment_option(
       } else {
         t("size") + t("(") + to_doc(value) + t(")")
       }
-    Unit(value~, ..) => t("unit") + t("(") + t(value.to_string()) + t(")")
+    Unit(value~, ..) =>
+      t("unit") + t("(") + t(value.to_int().to_string()) + t(")")
   }
 }

@@ -1,8 +1,8 @@
 ///|
 fn span_json(s : @span.SrcSpan) -> Json {
   {
-    "start": Json::number(s.start.to_double()),
-    "end": Json::number(s.end.to_double()),
+    "start": Json::number(s.start.to_int().to_double()),
+    "end": Json::number(s.end.to_int().to_double()),
   }
 }
 

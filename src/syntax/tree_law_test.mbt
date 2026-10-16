@@ -13,7 +13,7 @@ test "law: Tree::step and Tree::field_of agree with the parent's field_of and wi
               Some(step) =>
                 tree.field_of(n) == Some(step.field) &&
                 parent.field_of(n) == Some(step.field) &&
-                parent.field(step.field).get(step.index).map(tag) ==
+                parent.field(step.field).get(step.index.to_int()).map(tag) ==
                 Some(tag(n)) &&
                 tree.node_path(n).bind(p => p.last()) == Some(step)
               None => false

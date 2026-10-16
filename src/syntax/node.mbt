@@ -350,11 +350,11 @@ fn guard_span(g : @ast.ClauseGuard) -> @span.SrcSpan {
       Block(..) | Not(..) | Var(..) | Constant(_) => break
     }
   }
-  @span.SrcSpan::new(start, own.end)
+  @span.SrcSpan::from_compiler(start, own.end).unwrap()
 }
 
 ///|
-fn later(a : Int32, b : Int32) -> Int32 {
+fn later(a : @span.ByteOffset, b : @span.ByteOffset) -> @span.ByteOffset {
   if a > b {
     a
   } else {
@@ -401,15 +401,21 @@ fn[V] option_span(o : @ast.BitArrayOption[V]) -> @span.SrcSpan {
 /// test {
 ///   let r = @parser.parse_text("pub fn main() {\n  1\n}\n")
 ///   let def = @syntax.NodeRef::of_result(r).children()[0]
-///   debug_inspect(def.span(), content="{ start: 0, end: 21 }")
+///   debug_inspect(
+///     def.span(),
+///     content=(
+///       #|{ start: { value: 0 }, end: { value: 21 } }
+///     ),
+///   )
 /// }
 /// ```
 pub fn NodeRef::span(self : NodeRef) -> @span.SrcSpan {
   match self {
     Module(_, cst) =>
       match cst.tokens {
-        [] => @span.SrcSpan::new(0, 0)
-        [.., last] => @span.SrcSpan::new(0, last.span.end)
+        [] => @span.SrcSpan::from_ints(0, 0).unwrap()
+        [.., last] =>
+          @span.SrcSpan::from_compiler(@span.ByteOffset::zero(), last.span.end).unwrap()
       }
     Definition(t) =>
       match t.definition {
@@ -427,21 +433,22 @@ pub fn NodeRef::span(self : NodeRef) -> @span.SrcSpan {
           for a in f.arguments {
             end = later(end, a.location.end)
           }
-          @span.SrcSpan::new(f.location.start, end)
+          @span.SrcSpan::from_compiler(f.location.start, end).unwrap()
         }
-        CustomType(c) => @span.SrcSpan::new(c.location.start, c.end_position)
+        CustomType(c) =>
+          @span.SrcSpan::from_compiler(c.location.start, c.end_position).unwrap()
         TypeAlias(a) =>
-          @span.SrcSpan::new(
+          @span.SrcSpan::from_compiler(
             a.location.start,
             later(a.location.end, a.type_ast.location().end),
-          )
+          ).unwrap()
         ModuleConstant(c) => {
           // The compiler's location covers `const name` only.
           let mut end = later(c.location.end, c.value.location().end)
           if c.annotation is Some(t) {
             end = later(end, t.location().end)
           }
-          @span.SrcSpan::new(c.location.start, end)
+          @span.SrcSpan::from_compiler(c.location.start, end).unwrap()
         }
         Import(i) => i.location
       }

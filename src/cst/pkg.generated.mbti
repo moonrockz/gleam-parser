@@ -20,7 +20,8 @@ pub(all) struct DefinitionCst {
   tokens : ArrayView[@scanner.Token]
   span : @span.SrcSpan
 } derive(Eq, @debug.Debug)
-pub fn DefinitionCst::new(kind~ : DefinitionKind, name~ : String?, tokens~ : ArrayView[@scanner.Token]) -> Self
+#alias(new, deprecated)
+pub fn DefinitionCst::DefinitionCst(kind~ : DefinitionKind, name~ : String?, tokens~ : ArrayView[@scanner.Token]) -> Self
 pub fn DefinitionCst::to_source(Self) -> String
 
 pub(all) enum DefinitionKind {
@@ -37,7 +38,8 @@ pub(all) struct ModuleCst {
   trivia : ArrayView[@scanner.Trivia]
   definitions : ArrayView[DefinitionCst]
 } derive(Eq, @debug.Debug)
-pub fn ModuleCst::new(@scanner.TokenStream, Array[DefinitionCst]) -> Self
+#alias(new, deprecated)
+pub fn ModuleCst::ModuleCst(@scanner.TokenStream, Array[DefinitionCst]) -> Self
 pub fn ModuleCst::to_source(Self) -> String
 
 // Type aliases

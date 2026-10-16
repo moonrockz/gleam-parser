@@ -42,7 +42,7 @@ test "a smaller fuel budget stops the formatter with OutOfFuel when the parser g
   let r = @parser.parse_text(@lawkit.nested(List, 20))
   let small : @config.Config = {
     ..@config.Config::default(),
-    fuel: @fuel.Budget::new(3).unwrap(),
+    fuel: @fuel.Budget::from_int(3).unwrap(),
   }
   let out = try {
     @format.format_parsed(r, config=small) |> ignore

@@ -46,7 +46,7 @@ impl Handler with fn on_leave(_self, _event) {
 ///     @gleam.parse_text("pub fn add(a, b) {\n  a + b\n}\n"),
 ///   )
 ///   let paths : Paths = { found: [], }
-///   @gleam.push_events(@gleam.EventReader::new(root), paths)
+///   @gleam.push_events(@gleam.EventReader(root), paths)
 ///   inspect(paths.found[1], content="definitions[0].arguments[1]")
 /// }
 /// ```

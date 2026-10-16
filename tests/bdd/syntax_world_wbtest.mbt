@@ -87,7 +87,7 @@ fn traversals(root : @gleam.NodeRef) -> Array[(String, Array[String])] {
   @gleam.accept(root, visited)
   out.push(("visitor", visited.kinds))
   let read = []
-  let reader = @gleam.EventReader::new(root)
+  let reader = @gleam.EventReader(root)
   for e in reader.iter() {
     if e is Enter(e) {
       read.push(e.kind)
@@ -95,9 +95,9 @@ fn traversals(root : @gleam.NodeRef) -> Array[(String, Array[String])] {
   }
   out.push(("event reader", read))
   let pushed : Recorder = { kinds: [], }
-  @gleam.push_events(@gleam.EventReader::new(root), pushed)
+  @gleam.push_events(@gleam.EventReader(root), pushed)
   out.push(("push events", pushed.kinds))
-  let c = @gleam.TreeCursor::new(root)
+  let c = @gleam.TreeCursor(root)
   let cursor = [c.node().kind()]
   let mut going = true
   while going {

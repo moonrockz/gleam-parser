@@ -105,7 +105,12 @@ fn write_lock() -> Unit raise {
         is Error(kind~, lexical_kind~, location~) else {
         fail("\{raw}.error is not an oracle error")
       }
-      ParseError(kind, lexical_kind, location.start, location.end)
+      ParseError(
+        kind,
+        lexical_kind,
+        location.start.to_int(),
+        location.end.to_int(),
+      )
     } else {
       fail("missing oracle output for \{key}; run mise run corpus:goldens")
     }
@@ -166,7 +171,14 @@ fn golden_matches(
     ParseError(kind, lexical_kind, start, end) =>
       first_error_matches(
         result,
-        Error(kind~, lexical_kind~, location={ start, end, }),
+        Error(
+          kind~,
+          lexical_kind~,
+          location=@gleam.SrcSpan::from_compiler(
+            @gleam.ByteOffset::from_int(start).unwrap(),
+            @gleam.ByteOffset::from_int(end).unwrap(),
+          ).unwrap(),
+        ),
       )
   }
 }
@@ -231,19 +243,18 @@ fn score() -> Array[FileReport] raise {
     let parsed = !result.has_errors()
     let actual = @gleam.encode_parsed(result.parsed())
     let matched = golden_matches(entry.golden, result, actual)
-    let source = @gleam.SourceText::new(text)
+    let source = @gleam.SourceText(text)
     let diagnostic = result.diagnostics
       .get(0)
       .map(d => {
-        let position = source
-          .position_of(d.span.start)
-          .unwrap_or({ line: 0, column: 0, })
+        let position = source.position_of(d.span.start)
+
         {
           code: d.code,
           kind: d.kind,
           message: d.message,
-          line: position.line,
-          column: position.column,
+          line: position.map(p => p.line.to_int()).unwrap_or(0),
+          column: position.map(p => p.column.to_int()).unwrap_or(0),
         }
       })
     let difference = if matched {
@@ -377,7 +388,11 @@ test "first_error_matches compares kind, lexical kind and location" {
     .expect(
       first_error_matches(
         result,
-        Error(kind=d.kind, lexical_kind=None, location={ start: 0, end: 0, }),
+        Error(
+          kind=d.kind,
+          lexical_kind=None,
+          location=@gleam.SrcSpan::from_ints(0, 0).unwrap(),
+        ),
       ),
     )
     .to_be_false()
@@ -404,7 +419,7 @@ test "a PARSE_ERROR golden matches only the oracle's first error" {
     s
     .expect(
       golden_matches(
-        ParseError(d.kind, None, d.span.start, d.span.end),
+        ParseError(d.kind, None, d.span.start.to_int(), d.span.end.to_int()),
         result,
         actual,
       ),
@@ -418,7 +433,12 @@ test "a PARSE_ERROR golden matches only the oracle's first error" {
     s
     .expect(
       golden_matches(
-        ParseError(d.kind, Some("X"), d.span.start, d.span.end),
+        ParseError(
+          d.kind,
+          Some("X"),
+          d.span.start.to_int(),
+          d.span.end.to_int(),
+        ),
         result,
         actual,
       ),

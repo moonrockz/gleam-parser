@@ -23,7 +23,11 @@ test "guards: operators, not, field access, tuple index, module constant, block"
         operator=And,
         left=BinaryOperator(
           operator=Eq,
-          left=TupleIndex(location=tl, index=0, tuple=Var(name="a", ..)),
+          left=TupleIndex(
+            location=tl,
+            index=scalar_26_46,
+            tuple=Var(name="a", ..)
+          ),
           ..
         ),
         right=Not(
@@ -47,6 +51,7 @@ test "guards: operators, not, field access, tuple index, module constant, block"
     ) else {
     fail("guard \{@debug.to_string(g)}")
   }
+  @expect.expect(scalar_26_46.to_uint64()).to_equal(0UL)
   @expect.expect_all(x => {
     x.expect(gl).to_equal(sp(17, 57))
     x.expect(tl).to_equal(sp(17, 19))

@@ -61,7 +61,7 @@ test "fold threads an accumulator through enter and leave" {
 
 ///|
 fn deep_list(n : Int32) -> @syntax.NodeRef {
-  let sp = @span.SrcSpan::new(0, 1)
+  let sp = @span.SrcSpan::from_ints(0, 1).unwrap()
   let mut deep : @ast.Expr = Int(
     location=sp,
     value="1",

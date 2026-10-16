@@ -51,7 +51,10 @@ fn commented(
 ///|
 /// The doc comments before `limit` as `///` lines, each ended by a line
 /// feed, forced broken; `None` when there is none.
-fn Formatter::doc_comments_opt(self : Formatter, limit : Int32) -> @pretty.Doc? {
+fn Formatter::doc_comments_opt(
+  self : Formatter,
+  limit : @span.ByteOffset,
+) -> @pretty.Doc? {
   let comments = self.pop_doc_comments(limit)
   if comments.is_empty() {
     return None
@@ -62,7 +65,10 @@ fn Formatter::doc_comments_opt(self : Formatter, limit : Int32) -> @pretty.Doc? 
 
 ///|
 /// The compiler's `doc_comments`.
-fn Formatter::doc_comments(self : Formatter, limit : Int32) -> @pretty.Doc {
+fn Formatter::doc_comments(
+  self : Formatter,
+  limit : @span.ByteOffset,
+) -> @pretty.Doc {
   self.doc_comments_opt(limit).unwrap_or(@pretty.empty())
 }
 
@@ -71,7 +77,7 @@ fn Formatter::doc_comments(self : Formatter, limit : Int32) -> @pretty.Doc {
 /// doc comments that come before each of them.
 fn Formatter::printed_documented_comments(
   self : Formatter,
-  comments : ArrayView[(Int32, CommentOrLine)],
+  comments : ArrayView[(@span.ByteOffset, CommentOrLine)],
 ) -> @pretty.Doc? {
   if comments.is_empty() {
     return None

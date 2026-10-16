@@ -32,7 +32,7 @@ test "law: children_with_fields gives children in order, each with the step that
         }
         for x in with_fields {
           let (step, child) = x
-          match n.field(step.field).get(step.index) {
+          match n.field(step.field).get(step.index.to_int()) {
             Some(c) if tag(c) == tag(child) => ()
             _ => ok = false
           }

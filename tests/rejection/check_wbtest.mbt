@@ -83,7 +83,16 @@ fn oracle_error(v : Map[String, Json]) -> (String, String?, @gleam.SrcSpan)? {
     Some(String(s)) => Some(s)
     _ => None
   }
-  Some((kind, lexical_kind, { start: start.to_int(), end: end.to_int(), }))
+  Some(
+    (
+      kind,
+      lexical_kind,
+      @gleam.SrcSpan::from_compiler(
+        @gleam.ByteOffset::from_int(start.to_int()).unwrap(),
+        @gleam.ByteOffset::from_int(end.to_int()).unwrap(),
+      ).unwrap(),
+    ),
+  )
 }
 
 ///|

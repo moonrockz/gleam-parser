@@ -13,13 +13,14 @@ test "constant records, lists with tails, tuples, operators" {
   guard c
     is Record(
       location~,
-      arguments_start_position=11,
+      arguments_start_position=scalar_16_32,
       module_=Some(m),
       name="Some",
       arguments=Some(arguments)
     ) else {
     fail("got \{@debug.to_string(c)}")
   }
+  @expect.expect(scalar_16_32.to_int()).to_equal(11)
   @expect.expect_all(e => {
     e.expect(location).to_equal(sp(0, 20))
     e.expect(m.name).to_equal("option")
@@ -31,9 +32,15 @@ test "constant records, lists with tails, tuples, operators" {
   })
   let bare = @parser.parse_constant_text("Nil")
   guard bare
-    is Record(arguments=None, arguments_start_position=3, location=bl, ..) else {
+    is Record(
+      arguments=None,
+      arguments_start_position=scalar_34_56,
+      location=bl,
+      ..
+    ) else {
     fail("got \{@debug.to_string(bare)}")
   }
+  @expect.expect(scalar_34_56.to_int()).to_equal(3)
   @expect.expect(bl).to_equal(sp(0, 3))
   let list = @parser.parse_constant_text("[1, 2, ..rest]")
   guard list is List(location=ll, elements~, tail=Some(Var(name="rest", ..))) else {
@@ -47,7 +54,7 @@ test "constant records, lists with tails, tuples, operators" {
   guard ops
     is BinaryOperator(
       operator=Concatenate,
-      operator_start=10,
+      operator_start=scalar_50_22,
       location=ol,
       left=BinaryOperator(
         operator=AddInt,
@@ -58,6 +65,7 @@ test "constant records, lists with tails, tuples, operators" {
     ) else {
     fail("got \{@debug.to_string(ops)}")
   }
+  @expect.expect(scalar_50_22.to_int()).to_equal(10)
   @expect.expect(ol).to_equal(sp(0, 16))
   let update = @parser.parse_constant_text("Point(..base, x: 1, y:)")
   guard update

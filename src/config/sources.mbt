@@ -81,7 +81,7 @@ fn parse_fuel(units : Int64, source : Source) -> @fuel.Budget raise ConfigError 
   if units > 2147483647L {
     bad(source, "must be at most 2147483647")
   }
-  match @fuel.Budget::new(units.to_int()) {
+  match @fuel.Budget::from_int(units.to_int()) {
     Some(b) => b
     None => bad(source, "must be at least 1")
   }

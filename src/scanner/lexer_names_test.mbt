@@ -128,24 +128,24 @@ test "number errors: trailing underscore, empty radix, digit out of radix, missi
     e.expect(error_kinds("1_000_ x")).to_equal(["NumTrailingUnderscore"])
     e
     .expect(stream("1_000_ x").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(5, 5))
+    .to_equal(@span.SrcSpan::from_ints(5, 5).unwrap())
     e.expect(kinds("1_000_ x")).to_equal([Error, Name("x")])
     e.expect(stream("1_000_ x").tokens[0].lexeme).to_equal("1_000_")
     e.expect(error_kinds("0x")).to_equal(["RadixIntNoValue"])
     e
     .expect(stream("0x").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(1, 1))
+    .to_equal(@span.SrcSpan::from_ints(1, 1).unwrap())
     e.expect(stream("0x").tokens[0].lexeme).to_equal("0x")
     e.expect(error_kinds("0b12")).to_equal(["DigitOutOfRadix"])
     e
     .expect(stream("0b12").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(3, 3))
+    .to_equal(@span.SrcSpan::from_ints(3, 3).unwrap())
     e.expect(stream("0b12").tokens[0].lexeme).to_equal("0b12")
     e.expect(error_kinds("0o18")).to_equal(["DigitOutOfRadix"])
     e.expect(error_kinds("1.0e x")).to_equal(["MissingExponent"])
     e
     .expect(stream("1.0e x").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(0, 4))
+    .to_equal(@span.SrcSpan::from_ints(0, 4).unwrap())
     e.expect(kinds("1.0e x")).to_equal([Error, Name("x")])
     e.expect(error_kinds("0xG")).to_equal(["RadixIntNoValue"])
     // `1__0`: the run stops before `__`, then the `_` is a trailing one.

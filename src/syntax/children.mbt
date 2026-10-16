@@ -375,7 +375,7 @@ pub fn NodeRef::children_with_fields(
   let all : Array[(PathStep, NodeRef)] = []
   for e in self.entries() {
     for i, c in e.1 {
-      all.push(({ field: e.0, index: i, }, c))
+      all.push(({ field: e.0, index: ChildIndex::from_int(i).unwrap(), }, c))
     }
   }
   in_source_order(all, x => x.1)

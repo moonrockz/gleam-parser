@@ -15,6 +15,39 @@ fn kind_name(k : @scanner.TokenKind) -> String {
 }
 
 ///|
+test "law: scanned comments reconstruct through the checked constructor and slice to their content" {
+  @quickcheck.check(
+    (t : @lawkit.GleamText) => {
+      ["//", "///", "////"]
+      .iter()
+      .all(prefix => {
+        let source = @scanner.SourceText(prefix + t.text())
+        let stream = @scanner.tokenize(source)
+        let trivia = match stream.tokens.get(0) {
+          Some(token) => token.trivia_before
+          None => stream.trivia
+        }
+        guard trivia.get(0) is Some(Comment(comment)) else { return false }
+        match
+          @scanner.Comment::from_parts(
+            kind=comment.kind,
+            content=comment.content,
+            span=comment.span,
+          ) {
+          None => false
+          Some(copy) =>
+            copy == comment &&
+            source.slice(copy.content_span()) == Some(copy.content)
+        }
+      })
+    },
+    count=200,
+    max_size=16,
+    seed=2231,
+  )
+}
+
+///|
 /// Edge values: empty text; a lone `\r` at the end; text that is only
 /// trivia; an open string at the end; lone surrogates inside literals.
 test "law: the scan is lossless for any text" {
@@ -34,9 +67,9 @@ test "law: token and trivia spans tile the text on code point boundaries" {
   @quickcheck.check(
     (t : @lawkit.GleamText) => {
       let text = t.text()
-      let source = @scanner.SourceText::new(text)
+      let source = @scanner.SourceText(text)
       let s = @scanner.tokenize(source)
-      let mut at = 0
+      let mut at = @span.ByteOffset::zero()
       let mut ok = true
       let step = (span : @span.SrcSpan) => {
         ok = ok &&
@@ -58,7 +91,7 @@ test "law: token and trivia spans tile the text on code point boundaries" {
           step(tr.span())
         }
       }
-      ok && at == source.byte_length()
+      ok && at == source.end_offset()
     },
     count=400,
     max_size=16,
@@ -97,7 +130,7 @@ test "law: a lexeme is the source text of its span" {
   @quickcheck.check(
     (t : @lawkit.GleamText) => {
       let text = t.text()
-      let source = @scanner.SourceText::new(text)
+      let source = @scanner.SourceText(text)
       let s = @scanner.tokenize(source)
       let mut ok = true
       for tok in s.tokens {
@@ -107,7 +140,9 @@ test "law: a lexeme is the source text of its span" {
             source.utf16_offset_of(tok.span.end),
           ) {
           (Some(a), Some(b)) =>
-            ok = ok && text.unsafe_substring(start=a, end=b) == tok.lexeme
+            ok = ok &&
+              text.unsafe_substring(start=a.to_int(), end=b.to_int()) ==
+              tok.lexeme
           _ => ok = false
         }
       }

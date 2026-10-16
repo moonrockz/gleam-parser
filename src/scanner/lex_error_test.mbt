@@ -1,6 +1,6 @@
 ///|
 fn diag(e : @scanner.LexicalErrorType) -> @diagnostic.Diagnostic {
-  @scanner.lexical_diagnostic(e, @span.SrcSpan::new(3, 4))
+  @scanner.lexical_diagnostic(e, @span.SrcSpan::from_ints(3, 4).unwrap())
 }
 
 ///|
@@ -16,7 +16,7 @@ test "a lexical diagnostic has the compiler's label, kind and text" {
     .to_equal(
       "Hint: Add another backslash before it.\nSee: https://tour.gleam.run/basics/strings",
     )
-    e.expect(d.span).to_equal(@span.SrcSpan::new(3, 4))
+    e.expect(d.span).to_equal(@span.SrcSpan::from_ints(3, 4).unwrap())
     e.expect(d.severity).to_equal(@diagnostic.Severity::Error)
     e.expect(d.labels.length()).to_equal(0)
   })
@@ -180,7 +180,10 @@ test "the remaining messages match the compiler" {
 
 ///|
 test "a lexical diagnostic puts the compiler's extra lines in text and has no extra labels" {
-  let d = @scanner.lexical_diagnostic(BadStringEscape, @span.SrcSpan::new(3, 5))
+  let d = @scanner.lexical_diagnostic(
+    BadStringEscape,
+    @span.SrcSpan::from_ints(3, 5).unwrap(),
+  )
   @expect.expect_all(e => {
     e.expect(d.message).to_equal("I don't understand this escape code")
     e
@@ -190,6 +193,6 @@ test "a lexical diagnostic puts the compiler's extra lines in text and has no ex
     )
     e.expect(d.hint).to_equal(None)
     e.expect(d.labels.length()).to_equal(0)
-    e.expect(d.span).to_equal(@span.SrcSpan::new(3, 5))
+    e.expect(d.span).to_equal(@span.SrcSpan::from_ints(3, 5).unwrap())
   })
 }

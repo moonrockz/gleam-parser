@@ -4,6 +4,20 @@ fn nesting_kinds(r : @parser.ParseResult) -> Array[String] {
 }
 
 ///|
+test "default fuel rejects deep lists in function bodies without overflowing" {
+  let text = "pub fn f() {\n  " +
+    "[".repeat(120) +
+    "1" +
+    "]".repeat(120) +
+    "\n}\n"
+  let result = @parser.parse_text(text)
+  @expect.expect_all(e => {
+    e.expect(nesting_kinds(result)).to_equal(["GL-PARSE-004 TooMuchNesting"])
+    e.expect(result.cst.to_source()).to_equal(text)
+  })
+}
+
+///|
 fn round_trips(r : @parser.ParseResult) -> Bool {
   let parsed = r.parsed()
   let text = @ast.canonical(@ast.encode_parsed(parsed))
@@ -58,7 +72,7 @@ test "law: the deepest accepted nesting round-trips, and one level more is rejec
 
 ///|
 fn with_fuel(units : Int32) -> @config.Config {
-  { ..@config.Config::default(), fuel: @fuel.Budget::new(units).unwrap(), }
+  { ..@config.Config::default(), fuel: @fuel.Budget::from_int(units).unwrap(), }
 }
 
 ///|

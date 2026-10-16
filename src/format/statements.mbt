@@ -4,11 +4,13 @@ fn Formatter::statements(
   self : Formatter,
   statements : ArrayView[@ast.Statement],
 ) -> @pretty.Doc raise FormatError {
-  let mut previous_position = 0
+  let mut previous_position = @span.ByteOffset::zero()
   let count = statements.length()
   let documents = []
   for i, statement in statements {
-    let preceding_newline = self.pop_empty_lines(previous_position + 1)
+    let preceding_newline = self.pop_empty_lines(
+      previous_position.shift(1).unwrap(),
+    )
     if i != 0 && preceding_newline {
       documents.push(two_lines_doc)
     } else if i != 0 {

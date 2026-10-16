@@ -20,7 +20,7 @@ fn steps_of(xs : ArrayView[(Bool, UInt32)]) -> Array[@syntax.PathStep] {
     } else {
       "b"
     },
-    index: x.1.reinterpret_as_int(),
+    index: @syntax.ChildIndex::from_int(x.1.reinterpret_as_int()).unwrap(),
   })
 }
 
@@ -40,13 +40,13 @@ test "law: a child path's parent is the path, and its steps grow by the new step
           } else {
             "b"
           },
-          index: x.1.reinterpret_as_int(),
+          index: @syntax.ChildIndex::from_int(x.1.reinterpret_as_int()).unwrap(),
         }
         let next = path.child(step.field, step.index)
         built.push(step)
         let ok = next.parent() == Some(path) &&
           next.last() == Some(step) &&
-          next.depth() == path.depth() + 1 &&
+          next.depth().to_int() == path.depth().to_int() + 1 &&
           next.steps() == built &&
           next.to_string() == built.map(t => "\{t.field}[\{t.index}]").join(".")
         path = next
@@ -70,7 +70,9 @@ test "law: from_steps builds the path whose steps it gets" {
         built = built.child(step.field, step.index)
       }
       let path = @syntax.NodePath::from_steps(steps)
-      path.steps() == steps && path == built && path.depth() == steps.length()
+      path.steps() == steps &&
+      path == built &&
+      path.depth() == @syntax.NodeDepth::from_int(steps.length()).unwrap()
     },
     count=100,
     max_size=24,
@@ -92,11 +94,13 @@ test "law: append puts the steps of its argument after its own" {
       let pc = @syntax.NodePath::from_steps(c)
       let root = @syntax.NodePath::root()
       pa.append(pb).steps() == [..a, ..b] &&
-      pa.append(pb).depth() == a.length() + b.length() &&
+      pa.append(pb).depth() ==
+      @syntax.NodeDepth::from_int(a.length() + b.length()).unwrap() &&
       pa.append(root) == pa &&
       root.append(pa) == pa &&
       pa.append(pb).append(pc) == pa.append(pb.append(pc)) &&
-      pa.append(root.child("a", 1)) == pa.child("a", 1)
+      pa.append(root.child("a", @syntax.ChildIndex::from_int(1).unwrap())) ==
+      pa.child("a", @syntax.ChildIndex::from_int(1).unwrap())
     },
     count=100,
     max_size=24,

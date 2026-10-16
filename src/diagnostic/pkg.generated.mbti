@@ -25,8 +25,9 @@ pub(all) struct Diagnostic {
   text : String
   hint : String?
 } derive(Eq, @debug.Debug)
+#alias(new, deprecated)
+pub fn Diagnostic::Diagnostic(code~ : String, severity~ : Severity, title~ : String, message~ : String, span~ : @span.SrcSpan, kind? : String, labels? : Array[Label], text? : String, hint? : String?) -> Self
 pub fn Diagnostic::is_error(Self) -> Bool
-pub fn Diagnostic::new(code~ : String, severity~ : Severity, title~ : String, message~ : String, span~ : @span.SrcSpan, kind? : String, labels? : Array[Label], text? : String, hint? : String?) -> Self
 
 pub(all) struct Label {
   span : @span.SrcSpan

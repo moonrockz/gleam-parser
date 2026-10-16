@@ -2,7 +2,7 @@
 /// A comment as the compiler's `Comment`: the byte offset after the
 /// slashes and the text after them.
 priv struct Comment {
-  start : Int32
+  start : @span.ByteOffset
   content : String
 }
 
@@ -23,9 +23,9 @@ priv struct Formatter {
   comments : Array[Comment]
   doc_comments : Array[Comment]
   module_comments : Array[Comment]
-  empty_lines : ArrayView[Int32]
-  new_lines : ArrayView[Int32]
-  trailing_commas : ArrayView[Int32]
+  empty_lines : ArrayView[@span.ByteOffset]
+  new_lines : ArrayView[@span.ByteOffset]
+  trailing_commas : ArrayView[@span.ByteOffset]
   mut comments_at : Int32
   mut doc_comments_at : Int32
   mut empty_lines_at : Int32
@@ -33,7 +33,7 @@ priv struct Formatter {
 }
 
 ///|
-let op_format : @fuel.Operation = @fuel.Operation::new("format")
+let op_format : @fuel.Operation = @fuel.Operation("format")
 
 ///|
 fn comments_of(
@@ -47,7 +47,7 @@ fn comments_of(
 }
 
 ///|
-fn Formatter::new(
+fn Formatter::Formatter(
   extra : @ast.ModuleExtra,
   source : @scanner.SourceText,
   config : @config.Config,
@@ -62,7 +62,7 @@ fn Formatter::new(
     comments_at: 0,
     doc_comments_at: 0,
     empty_lines_at: 0,
-    fuel: { val: @fuel.Fuel::new(budget=config.fuel), },
+    fuel: { val: @fuel.Fuel(budget=config.fuel), },
   }
 }
 
@@ -80,7 +80,7 @@ fn[A] Formatter::nested(
 ///|
 /// The compiler's `any_comments`: a comment not popped yet starts before
 /// `limit`.
-fn Formatter::any_comments(self : Formatter, limit : Int32) -> Bool {
+fn Formatter::any_comments(self : Formatter, limit : @span.ByteOffset) -> Bool {
   self.comments_at < self.comments.length() &&
   self.comments[self.comments_at].start < limit
 }
@@ -90,8 +90,8 @@ fn Formatter::any_comments(self : Formatter, limit : Int32) -> Bool {
 /// in `start..=end`.
 fn Formatter::any_comment_between(
   self : Formatter,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> Bool {
   let mut lo = self.comments_at
   let mut hi = self.comments.length() - 1
@@ -110,7 +110,10 @@ fn Formatter::any_comment_between(
 }
 
 ///|
-fn Formatter::any_empty_lines(self : Formatter, limit : Int32) -> Bool {
+fn Formatter::any_empty_lines(
+  self : Formatter,
+  limit : @span.ByteOffset,
+) -> Bool {
   self.empty_lines_at < self.empty_lines.length() &&
   self.empty_lines[self.empty_lines_at] < limit
 }
@@ -122,9 +125,9 @@ fn Formatter::any_empty_lines(self : Formatter, limit : Int32) -> Bool {
 fn Formatter::comments_before(
   self : Formatter,
   doc : Bool,
-  limit : Int32,
+  limit : @span.ByteOffset,
   retain_empty_lines : Bool,
-) -> Array[(Int32, CommentOrLine)] {
+) -> Array[(@span.ByteOffset, CommentOrLine)] {
   let (comments, at) = if doc {
     (self.doc_comments, self.doc_comments_at)
   } else {
@@ -141,13 +144,14 @@ fn Formatter::comments_before(
     end_empty += 1
   }
   // Coalesce consecutive empty lines into one (position = the first).
-  let lines : Array[Int32] = []
+  let lines : Array[@span.ByteOffset] = []
   if retain_empty_lines {
     let mut i = self.empty_lines_at
     while i < end_empty {
       let start = self.empty_lines[i]
       let mut last = start
-      while i + 1 < end_empty && self.empty_lines[i + 1] == last + 1 {
+      while i + 1 < end_empty &&
+            self.empty_lines[i + 1] == last.shift(1).unwrap() {
         i += 1
         last = self.empty_lines[i]
       }
@@ -156,7 +160,7 @@ fn Formatter::comments_before(
     }
   }
   // Merge by position: a comment goes first when its position is smaller.
-  let popped : Array[(Int32, CommentOrLine)] = []
+  let popped : Array[(@span.ByteOffset, CommentOrLine)] = []
   let mut c = at
   let mut l = 0
   while c < end_comments || l < lines.length() {
@@ -185,15 +189,15 @@ fn Formatter::comments_before(
 ///|
 fn Formatter::pop_comments_with_position(
   self : Formatter,
-  limit : Int32,
-) -> Array[(Int32, CommentOrLine)] {
+  limit : @span.ByteOffset,
+) -> Array[(@span.ByteOffset, CommentOrLine)] {
   self.comments_before(false, limit, true)
 }
 
 ///|
 fn Formatter::pop_comments(
   self : Formatter,
-  limit : Int32,
+  limit : @span.ByteOffset,
 ) -> Array[CommentOrLine] {
   self.pop_comments_with_position(limit).map(p => p.1)
 }
@@ -202,7 +206,7 @@ fn Formatter::pop_comments(
 /// Doc comments before `limit`; the empty lines before it are dropped.
 fn Formatter::pop_doc_comments(
   self : Formatter,
-  limit : Int32,
+  limit : @span.ByteOffset,
 ) -> Array[String] {
   let out = []
   for p in self.comments_before(true, limit, false) {
@@ -215,7 +219,10 @@ fn Formatter::pop_doc_comments(
 
 ///|
 /// Move past the empty lines up to `limit`; whether there was one.
-fn Formatter::pop_empty_lines(self : Formatter, limit : Int32) -> Bool {
+fn Formatter::pop_empty_lines(
+  self : Formatter,
+  limit : @span.ByteOffset,
+) -> Bool {
   let before = self.empty_lines_at
   while self.empty_lines_at < self.empty_lines.length() &&
         self.empty_lines[self.empty_lines_at] <= limit {
@@ -228,8 +235,8 @@ fn Formatter::pop_empty_lines(self : Formatter, limit : Int32) -> Bool {
 /// A line feed strictly between `start` and `end`.
 fn Formatter::spans_multiple_lines(
   self : Formatter,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> Bool {
   let mut lo = 0
   let mut hi = self.new_lines.length() - 1
@@ -251,8 +258,8 @@ fn Formatter::spans_multiple_lines(
 /// A trailing comma in `start..=end`.
 fn Formatter::has_trailing_comma(
   self : Formatter,
-  start : Int32,
-  end : Int32,
+  start : @span.ByteOffset,
+  end : @span.ByteOffset,
 ) -> Bool {
   let mut lo = 0
   let mut hi = self.trailing_commas.length() - 1
@@ -371,7 +378,10 @@ fn Formatter::format_module(
   } else {
     None
   }
-  let comments = printed_comments(self.pop_comments(0x7fffffff)[:], false)
+  let comments = printed_comments(
+    self.pop_comments(@span.ByteOffset::from_int(0x7fffffff).unwrap())[:],
+    false,
+  )
   let module_comments = if self.module_comments.is_empty() {
     None
   } else {

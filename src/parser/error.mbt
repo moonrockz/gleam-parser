@@ -662,7 +662,7 @@ pub fn ParseError::to_diagnostic(self : ParseError) -> @diagnostic.Diagnostic {
     LexError(d) => d
     _ => {
       let details = error.details()
-      @diagnostic.Diagnostic::new(
+      @diagnostic.Diagnostic(
         code=if error is TooMuchNesting(..) {
           "GL-PARSE-004"
         } else {
@@ -693,7 +693,7 @@ pub fn warning_diagnostic(w : @ast.Warning) -> @diagnostic.Diagnostic {
     text : String,
     label : String,
   ) -> @diagnostic.Diagnostic {
-    @diagnostic.Diagnostic::new(
+    @diagnostic.Diagnostic(
       code="GL-PARSE-002",
       kind~,
       severity=Warning,
@@ -752,7 +752,7 @@ pub fn warning_diagnostic(w : @ast.Warning) -> @diagnostic.Diagnostic {
       )
     }
     DetachedDocComment(location~) =>
-      @diagnostic.Diagnostic::new(
+      @diagnostic.Diagnostic(
         code="GL-PARSE-003",
         kind="DetachedDocComment",
         severity=Warning,

@@ -59,7 +59,7 @@ fn Out::reset(self : Out) -> Unit {
 /// width (a tab reaches the next tab stop; everything else is 1) and its
 /// text.
 priv struct CharInfo {
-  byte : Int32
+  byte : @span.ByteOffset
   width : Int32
   text : String
 }
@@ -67,16 +67,16 @@ priv struct CharInfo {
 ///|
 priv struct SingleLabel {
   style : Style
-  start : Int32
-  end : Int32
+  start : @span.ByteOffset
+  end : @span.ByteOffset
   message : String
 }
 
 ///|
 priv enum MultiLabel {
-  Top(Int32)
+  Top(@span.ByteOffset)
   Left
-  Bottom(Int32, String)
+  Bottom(@span.ByteOffset, String)
 }
 
 ///|
@@ -88,9 +88,9 @@ priv struct MultiEntry {
 
 ///|
 priv struct Line {
-  number : Int32
-  start : Int32
-  end : Int32
+  number : @span.LineNumber
+  start : @span.ByteOffset
+  end : @span.ByteOffset
   single : Array[SingleLabel]
   multi : Array[MultiEntry]
   mut must_render : Bool
@@ -100,18 +100,18 @@ priv struct Line {
 let tab_width : Int32 = 4
 
 ///|
-fn sp(a : Int32, b : Int32) -> @span.SrcSpan {
-  @span.SrcSpan::new(a, b)
+fn sp(a : @span.ByteOffset, b : @span.ByteOffset) -> @span.SrcSpan {
+  @span.SrcSpan::from_compiler(a, b).unwrap()
 }
 
 ///|
 /// Byte offsets where lines start: 0 and the byte after each `\n`.
-fn line_starts(source : @scanner.SourceText) -> Array[Int32] {
-  let starts = [0]
+fn line_starts(source : @scanner.SourceText) -> Array[@span.ByteOffset] {
+  let starts = [@span.ByteOffset::zero()]
   let text = source.text()
   for i in 0..<text.length() {
     if text.code_unit_at(i) == '\n'.to_int().to_uint16() {
-      match source.byte_offset_of(i + 1) {
+      match source.byte_offset_of(@span.Utf16Offset::from_int(i + 1).unwrap()) {
         Some(b) => starts.push(b)
         None => ()
       }
@@ -121,7 +121,10 @@ fn line_starts(source : @scanner.SourceText) -> Array[Int32] {
 }
 
 ///|
-fn line_index(starts : Array[Int32], byte : Int32) -> Int32 {
+fn line_index(
+  starts : Array[@span.ByteOffset],
+  byte : @span.ByteOffset,
+) -> Int32 {
   let mut lo = 0
   let mut hi = starts.length() - 1
   while lo < hi {
@@ -154,7 +157,7 @@ fn utf8_len(c : Int32) -> Int32 {
 fn line_chars(text : String) -> Array[CharInfo] {
   let trimmed = text.trim_end(chars="\n\r\u{0}")
   let chars : Array[CharInfo] = []
-  let mut byte = 0
+  let mut byte = @span.ByteOffset::zero()
   let mut column = 0
   for ch in trimmed {
     let code = ch.to_int()
@@ -168,29 +171,35 @@ fn line_chars(text : String) -> Array[CharInfo] {
         ch.to_string()
       },
     })
-    byte += utf8_len(code)
+    byte = byte.shift(utf8_len(code)).unwrap()
     column += width
   }
   chars
 }
 
 ///|
-fn line_byte_length(chars : Array[CharInfo]) -> Int32 {
+fn line_end_offset(chars : Array[CharInfo]) -> @span.ByteOffset {
   match chars.last() {
     Some(c) =>
-      c.byte +
-      utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20))
-    None => 0
+      c.byte
+      .shift(
+        utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20)),
+      )
+      .unwrap()
+    None => @span.ByteOffset::zero()
   }
 }
 
 ///|
-fn leading_whitespace_bytes(chars : Array[CharInfo]) -> Int32 {
-  let mut n = 0
+fn leading_whitespace_end(chars : Array[CharInfo]) -> @span.ByteOffset {
+  let mut n = @span.ByteOffset::zero()
   for c in chars {
     if c.text.trim_start(chars=" \t").length() == 0 {
-      n = c.byte +
-        utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20))
+      n = c.byte
+        .shift(
+          utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20)),
+        )
+        .unwrap()
     } else {
       break
     }
@@ -200,10 +209,10 @@ fn leading_whitespace_bytes(chars : Array[CharInfo]) -> Int32 {
 
 ///|
 fn overlaps(
-  a_start : Int32,
-  a_end : Int32,
-  b_start : Int32,
-  b_end : Int32,
+  a_start : @span.ByteOffset,
+  a_end : @span.ByteOffset,
+  b_start : @span.ByteOffset,
+  b_end : @span.ByteOffset,
 ) -> Bool {
   let start = if a_start > b_start { a_start } else { b_start }
   let end = if a_end < b_end { a_end } else { b_end }
@@ -232,15 +241,9 @@ fn render(
   color : Bool,
 ) -> String {
   let out : Out = { sb: StringBuilder(), color, severity: d.severity, }
-  let byte_length = source.byte_length()
+  let byte_length = source.end_offset()
   fn clamp(s : @span.SrcSpan) -> @span.SrcSpan {
-    let a = if s.start < 0 {
-      0
-    } else if s.start > byte_length {
-      byte_length
-    } else {
-      s.start
-    }
+    let a = if s.start > byte_length { byte_length } else { s.start }
     let b = if s.end < a {
       a
     } else if s.end > byte_length {
@@ -253,7 +256,11 @@ fn render(
 
   // The compiler moves an UnexpectedEof to the text's last byte.
   let primary = if d.kind == "UnexpectedEof" {
-    let e = if byte_length > 0 { byte_length - 1 } else { 0 }
+    let e = if byte_length > @span.ByteOffset::zero() {
+      byte_length.shift(-1).unwrap()
+    } else {
+      @span.ByteOffset::zero()
+    }
     sp(e, e)
   } else {
     clamp(d.span)
@@ -265,7 +272,7 @@ fn render(
     labels.push((Secondary, clamp(l.span), l.text))
   }
   let starts = line_starts(source)
-  fn line_range(i : Int32) -> (Int32, Int32) {
+  fn line_range(i : Int32) -> (@span.ByteOffset, @span.ByteOffset) {
     (
       starts[i],
       if i + 1 < starts.length() {
@@ -283,7 +290,7 @@ fn render(
       None => {
         let (s, e) = line_range(i)
         let l : Line = {
-          number: i + 1,
+          number: @span.LineNumber::from_int(i + 1).unwrap(),
           start: s,
           end: e,
           single: [],
@@ -306,8 +313,13 @@ fn render(
     outer_padding = @cmp.maximum(outer_padding, digits(end_line + 1))
     if start_line == end_line {
       let line = line_at(start_line)
-      let label_start = span.start - line.start
-      let label_end = @cmp.maximum(span.end - line.start, label_start + 1)
+      let label_start = @span.ByteOffset::from_int(
+        span.start.to_int() - line.start.to_int(),
+      ).unwrap()
+      let label_end = @cmp.maximum(
+        @span.ByteOffset::from_int(span.end.to_int() - line.start.to_int()).unwrap(),
+        label_start.shift(1).unwrap(),
+      )
       // Sorted by (start, end); equal ranges keep later labels first.
       let mut index = 0
       while index < line.single.length() &&
@@ -329,7 +341,9 @@ fn render(
       first.multi.push({
         index: label_index,
         style,
-        label: Top(span.start - first.start),
+        label: Top(
+          @span.ByteOffset::from_int(span.start.to_int() - first.start.to_int()).unwrap(),
+        ),
       })
       first.must_render = true
       for i in (start_line + 1)..<end_line {
@@ -344,7 +358,10 @@ fn render(
       last.multi.push({
         index: label_index,
         style,
-        label: Bottom(span.end - last.start, message),
+        label: Bottom(
+          @span.ByteOffset::from_int(span.end.to_int() - last.start.to_int()).unwrap(),
+          message,
+        ),
       })
       last.must_render = true
     }
@@ -392,7 +409,7 @@ fn render(
           // One line between: print it, with its multi-label gutter.
           let (s, e) = line_range(k + 1)
           let between : Line = {
-            number: k + 2,
+            number: @span.LineNumber::from_int(k + 2).unwrap(),
             start: s,
             end: e,
             single: [],
@@ -515,12 +532,12 @@ fn snippet_source(
 ) -> Unit {
   let text = source.slice(sp(line.start, line.end)).unwrap_or("")
   let chars = line_chars(text)
-  let source_len = line_byte_length(chars)
-  let leading = leading_whitespace_bytes(chars)
+  let source_len = line_end_offset(chars)
+  let leading = leading_whitespace_end(chars)
 
   // The line number, border and inner gutter
   out.code("34")
-  out.write(line.number.to_string().pad_start(padding, ' '))
+  out.write(line.number.to_int().to_string().pad_start(padding, ' '))
   out.reset()
   out.write(" ")
   border_left(out)
@@ -548,8 +565,11 @@ fn snippet_source(
   out.write(" ")
   let mut in_primary = false
   for c in chars {
-    let c_end = c.byte +
-      utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20))
+    let c_end = c.byte
+      .shift(
+        utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20)),
+      )
+      .unwrap()
     let is_primary = single.any(l => {
         l.style == Primary && overlaps(l.start, l.end, c.byte, c_end)
       }) ||
@@ -577,8 +597,8 @@ fn snippet_source(
 
   // Single-line labels underneath
   if single.length() > 0 {
-    let mut max_label_start = 0
-    let mut max_label_end = 0
+    let mut max_label_start = @span.ByteOffset::zero()
+    let mut max_label_end = @span.ByteOffset::zero()
     let mut trailing : Int32? = None
     for i, label in single {
       max_label_start = @cmp.maximum(max_label_start, label.start)
@@ -597,7 +617,7 @@ fn snippet_source(
         }
       }
     }
-    fn style_at(byte : Int32, end : Int32) -> Style? {
+    fn style_at(byte : @span.ByteOffset, end : @span.ByteOffset) -> Style? {
       let mut best : Style? = None
       for l in single {
         if overlaps(l.start, l.end, byte, end) {
@@ -620,12 +640,15 @@ fn snippet_source(
     let all_chars = chars.copy()
     all_chars.push({ byte: source_len, width: 1, text: "\u{0}", })
     for c in all_chars {
-      let c_end = c.byte +
-        (if c.text == "\u{0}" {
-          1
-        } else {
-          utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20))
-        })
+      let c_end = c.byte
+        .shift(
+          if c.text == "\u{0}" {
+            1
+          } else {
+            utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20))
+          },
+        )
+        .unwrap()
       let current = style_at(c.byte, c_end)
       if previous != current {
         match current {
@@ -664,13 +687,18 @@ fn snippet_source(
       }
     }
     if hanging.length() > 0 {
-      fn pointers(limit : Int32?) {
+      fn pointers(limit : @span.ByteOffset?) {
         for c in chars {
           if limit is Some(l) && c.byte >= l {
             break
           }
-          let c_end = c.byte +
-            utf8_len(c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20))
+          let c_end = c.byte
+            .shift(
+              utf8_len(
+                c.text.iter().head().map(x => x.to_int()).unwrap_or(0x20),
+              ),
+            )
+            .unwrap()
           let mut style : Style? = None
           for h in hanging {
             if h.start >= c.byte && h.start < c_end {
@@ -721,7 +749,7 @@ fn snippet_source(
 
   // Top and bottom carets of multi-line labels
   for i, entry in multi {
-    let (range, message) : (Int32, String?) = match entry.label {
+    let (range, message) : (@span.ByteOffset, String?) = match entry.label {
       Left => continue
       Top(start) => if start <= leading { continue } else { (start, None) }
       Bottom(end, message) => (end, Some(message))
@@ -764,7 +792,7 @@ fn snippet_source(
     match message {
       None => {
         for c in chars {
-          if c.byte < range + 1 {
+          if c.byte < range.shift(1).unwrap() {
             for _ in 0..<c.width {
               out.write("─")
             }
@@ -812,7 +840,7 @@ fn inner_gutter_column(out : Out, underline : (Style, Bool)?) -> Unit {
 ///   let r = @parser.parse_text(text)
 ///   let out = @report.render_plain(
 ///     r.diagnostics[0],
-///     @scanner.SourceText::new(text),
+///     @scanner.SourceText(text),
 ///     "x.gleam",
 ///   )
 ///   inspect(

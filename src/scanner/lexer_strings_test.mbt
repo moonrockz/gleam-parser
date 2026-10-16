@@ -20,7 +20,7 @@ test "a string may span lines; CRLF in it reads as LF in the value only" {
   @expect.expect_all(e => {
     e.expect(s.tokens[0].kind).to_equal(String("a\nb\nc"))
     e.expect(s.tokens[0].lexeme).to_equal("\"a\r\nb\rc\"")
-    e.expect(s.tokens[0].span).to_equal(@span.SrcSpan::new(0, 8))
+    e.expect(s.tokens[0].span).to_equal(@span.SrcSpan::from_ints(0, 8).unwrap())
     e.expect(s.to_source()).to_equal("\"a\r\nb\rc\"")
   })
 }
@@ -30,7 +30,9 @@ test "a string left open is one error to the end of the text" {
   let s = stream("x = \"abc\ny")
   @expect.expect_all(e => {
     e.expect(error_kinds("x = \"abc\ny")).to_equal(["UnexpectedStringEnd"])
-    e.expect(s.diagnostics[0].span).to_equal(@span.SrcSpan::new(4, 4))
+    e
+    .expect(s.diagnostics[0].span)
+    .to_equal(@span.SrcSpan::from_ints(4, 4).unwrap())
     e.expect(kinds("x = \"abc\ny")).to_equal([Name("x"), Equal, Error])
     e.expect(s.tokens[2].lexeme).to_equal("\"abc\ny")
     e.expect(s.to_source()).to_equal("x = \"abc\ny")
@@ -43,13 +45,13 @@ test "bad escapes" {
     e.expect(error_kinds("\"\\q\" x")).to_equal(["BadStringEscape"])
     e
     .expect(stream("\"\\q\" x").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(1, 2))
+    .to_equal(@span.SrcSpan::from_ints(1, 2).unwrap())
     e.expect(kinds("\"\\q\" x")).to_equal([Error, Name("x")])
     e.expect(stream("\"\\q\" x").tokens[0].lexeme).to_equal("\"\\q\"")
     e.expect(error_kinds("\"\\")).to_equal(["BadStringEscape"])
     e
     .expect(stream("\"\\").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(1, 1))
+    .to_equal(@span.SrcSpan::from_ints(1, 1).unwrap())
     e.expect(stream("\"\\").to_source()).to_equal("\"\\")
   })
 }
@@ -62,13 +64,13 @@ test "unicode escape errors" {
     .to_equal(["InvalidUnicodeEscape.MissingOpeningBrace"])
     e
     .expect(stream("\"\\u1F600\"").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(2, 3))
+    .to_equal(@span.SrcSpan::from_ints(2, 3).unwrap())
     e
     .expect(error_kinds("\"\\u{1G}\""))
     .to_equal(["InvalidUnicodeEscape.ExpectedHexDigitOrCloseBrace"])
     e
     .expect(stream("\"\\u{1G}\"").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(5, 6))
+    .to_equal(@span.SrcSpan::from_ints(5, 6).unwrap())
     e
     .expect(error_kinds("\"\\u{1"))
     .to_equal(["InvalidUnicodeEscape.ExpectedHexDigitOrCloseBrace"])
@@ -77,7 +79,7 @@ test "unicode escape errors" {
     .to_equal(["InvalidUnicodeEscape.InvalidNumberOfHexDigits"])
     e
     .expect(stream("\"\\u{}\"").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(1, 5))
+    .to_equal(@span.SrcSpan::from_ints(1, 5).unwrap())
     e
     .expect(error_kinds("\"\\u{1234567}\""))
     .to_equal(["InvalidUnicodeEscape.InvalidNumberOfHexDigits"])
@@ -89,7 +91,7 @@ test "unicode escape errors" {
     .to_equal(["InvalidUnicodeEscape.InvalidCodepoint"])
     e
     .expect(stream("\"\\u{D800}\"").diagnostics[0].span)
-    .to_equal(@span.SrcSpan::new(1, 9))
+    .to_equal(@span.SrcSpan::from_ints(1, 9).unwrap())
     e.expect(kinds("\"\\u{D800}\" y")).to_equal([Error, Name("y")])
     e.expect(stream("\"\\u{D800}\" y").to_source()).to_equal("\"\\u{D800}\" y")
   })

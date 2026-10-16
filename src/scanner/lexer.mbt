@@ -19,8 +19,8 @@ priv enum Piece {
 }
 
 ///|
-fn Lexer::new(text : String) -> Lexer {
-  { cursor: Cursor::new(text), text, pieces: [], diagnostics: [], }
+fn Lexer::Lexer(text : String) -> Lexer {
+  { cursor: Cursor(text), text, pieces: [], diagnostics: [], }
 }
 
 ///|
@@ -29,8 +29,8 @@ fn Lexer::new(text : String) -> Lexer {
 fn Lexer::emit(
   self : Lexer,
   kind : TokenKind,
-  start_unit : Int32,
-  start : Int32,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
 ) -> Unit {
   self.emit_range(
     kind,
@@ -47,13 +47,18 @@ fn Lexer::emit(
 fn Lexer::emit_range(
   self : Lexer,
   kind : TokenKind,
-  start_unit : Int32,
-  start : Int32,
-  end_unit : Int32,
-  end : Int32,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
+  end_unit : @span.Utf16Offset,
+  end : @span.ByteOffset,
 ) -> Unit {
-  let lexeme = self.text.unsafe_substring(start=start_unit, end=end_unit)
-  self.pieces.push(Tok(kind, lexeme, @span.SrcSpan::new(start, end)))
+  let lexeme = self.text.unsafe_substring(
+    start=start_unit.to_int(),
+    end=end_unit.to_int(),
+  )
+  self.pieces.push(
+    Tok(kind, lexeme, @span.SrcSpan::from_compiler(start, end).unwrap()),
+  )
 }
 
 ///|
@@ -70,14 +75,14 @@ fn Lexer::fail(
   self : Lexer,
   error : LexicalErrorType,
   location : @span.SrcSpan,
-  start_unit : Int32,
-  start : Int32,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
 ) -> Unit {
   self.diagnostics.push(lexical_diagnostic(error, location))
   let target = if location.end > location.start {
     location.end
   } else {
-    location.start + 1
+    location.start.shift(1).unwrap()
   }
   while self.cursor.position() < target && !self.cursor.at_end() {
     self.cursor.advance()
@@ -96,12 +101,12 @@ fn Lexer::fail(
 /// literal with one diagnostic, so no text is dropped.
 fn Lexer::fail_literal_value(
   self : Lexer,
-  start_unit : Int32,
-  start : Int32,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
 ) -> Unit {
-  let location = @span.SrcSpan::new(start, self.cursor.position())
+  let location = @span.SrcSpan::from_compiler(start, self.cursor.position()).unwrap()
   self.diagnostics.push(
-    @diagnostic.Diagnostic::new(
+    @diagnostic.Diagnostic(
       code="GL-SCAN-001",
       kind="LiteralValue",
       severity=Error,
@@ -161,7 +166,9 @@ fn Lexer::consume_normal(self : Lexer) -> Unit {
 /// comments, whitespace, and the characters it rejects.
 fn Lexer::consume_character(self : Lexer, c : Char) -> Unit {
   let (u, p) = (self.cursor.unit(), self.cursor.position())
-  let span = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+  let span = (a : @span.ByteOffset, b : @span.ByteOffset) => {
+    @span.SrcSpan::from_compiler(a, b).unwrap()
+  }
   match c {
     '@' => self.eat_single_char(At)
     '"' => self.lex_string()
@@ -204,11 +211,11 @@ fn Lexer::consume_character(self : Lexer, c : Char) -> Unit {
               EqualEqual,
               start_unit,
               start,
-              start_unit + 2,
-              start + 2,
+              start_unit.shift(2).unwrap(),
+              start.shift(2).unwrap(),
             )
-            start += 2
-            start_unit += 2
+            start = start.shift(2).unwrap()
+            start_unit = start_unit.shift(2).unwrap()
             seen -= 2
           }
           if seen > 0 {
@@ -385,7 +392,7 @@ fn Lexer::consume_character(self : Lexer, c : Char) -> Unit {
       )
     }
     ' ' | '\t' | '\u{0C}' => self.lex_blanks(u, p)
-    '\u{FEFF}' if p == 0 => self.lex_blanks(u, p)
+    '\u{FEFF}' if p == @span.ByteOffset::zero() => self.lex_blanks(u, p)
     '\u{FEFF}' => self.fail(UnrecognizedToken(c), span(p, p), u, p)
     _ =>
       match visually_similar(c) {
@@ -406,7 +413,11 @@ fn Lexer::consume_character(self : Lexer, c : Char) -> Unit {
 /// byte order mark counts only at offset 0, where the compiler consumes it
 /// before lexing (`make_tokenizer`); anywhere else it is an unknown
 /// character.
-fn Lexer::lex_blanks(self : Lexer, u : Int32, p : Int32) -> Unit {
+fn Lexer::lex_blanks(
+  self : Lexer,
+  u : @span.Utf16Offset,
+  p : @span.ByteOffset,
+) -> Unit {
   if self.cursor.peek() == Some('\u{FEFF}') {
     self.cursor.advance()
   }
@@ -416,7 +427,7 @@ fn Lexer::lex_blanks(self : Lexer, u : Int32, p : Int32) -> Unit {
   self.trivia(
     Whitespace(
       self.cursor.slice(u),
-      @span.SrcSpan::new(p, self.cursor.position()),
+      @span.SrcSpan::from_compiler(p, self.cursor.position()).unwrap(),
     ),
   )
 }
@@ -461,9 +472,15 @@ fn visually_similar(c : Char) -> (String, String)? {
 
 ///|
 /// The compiler's `lex_lt`, entered after one `<`. `start` is the token
-/// start; after a run of `<` the leftover single `<` starts at `start + 2k`.
-fn Lexer::lex_lt(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
-  let span = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+/// start; after a run of `<` the leftover single `<` starts at `start.shift(2).unwrap()k`.
+fn Lexer::lex_lt(
+  self : Lexer,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
+) -> Unit {
+  let span = (a : @span.ByteOffset, b : @span.ByteOffset) => {
+    @span.SrcSpan::from_compiler(a, b).unwrap()
+  }
   match self.cursor.peek() {
     Some('>') => {
       self.cursor.advance()
@@ -492,9 +509,15 @@ fn Lexer::lex_lt(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
           let mut s = start
           let mut su = start_unit
           while seen > 1 {
-            self.emit_range(LtLt, su, s, su + 2, s + 2)
-            s += 2
-            su += 2
+            self.emit_range(
+              LtLt,
+              su,
+              s,
+              su.shift(2).unwrap(),
+              s.shift(2).unwrap(),
+            )
+            s = s.shift(2).unwrap()
+            su = su.shift(2).unwrap()
             seen -= 2
           }
           if seen > 0 {
@@ -527,8 +550,14 @@ fn Lexer::lex_lt(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
 
 ///|
 /// The compiler's `lex_gt`, entered after one `>`.
-fn Lexer::lex_gt(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
-  let span = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+fn Lexer::lex_gt(
+  self : Lexer,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
+) -> Unit {
+  let span = (a : @span.ByteOffset, b : @span.ByteOffset) => {
+    @span.SrcSpan::from_compiler(a, b).unwrap()
+  }
   match self.cursor.peek() {
     Some('>') => {
       self.cursor.advance()
@@ -553,9 +582,15 @@ fn Lexer::lex_gt(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
           let mut s = start
           let mut su = start_unit
           while seen > 1 {
-            self.emit_range(GtGt, su, s, su + 2, s + 2)
-            s += 2
-            su += 2
+            self.emit_range(
+              GtGt,
+              su,
+              s,
+              su.shift(2).unwrap(),
+              s.shift(2).unwrap(),
+            )
+            s = s.shift(2).unwrap()
+            su = su.shift(2).unwrap()
             seen -= 2
           }
           if seen > 0 {
@@ -703,7 +738,12 @@ fn Lexer::lex_number(self : Lexer) -> Unit {
   guard ok is Some(kind) else { return }
   if self.cursor.peek() == Some('_') {
     let at = self.cursor.position()
-    self.fail(NumTrailingUnderscore, @span.SrcSpan::new(at, at), u, p)
+    self.fail(
+      NumTrailingUnderscore,
+      @span.SrcSpan::from_compiler(at, at).unwrap(),
+      u,
+      p,
+    )
   } else {
     self.emit(kind, u, p)
   }
@@ -714,20 +754,30 @@ fn Lexer::lex_number(self : Lexer) -> Unit {
 /// error (already reported and covered by an `Error` token).
 fn Lexer::lex_number_radix(
   self : Lexer,
-  start_unit : Int32,
-  start : Int32,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
   radix : Int32,
   negative : Bool,
   prefix : String,
 ) -> TokenKind? {
   let digits = self.radix_run(radix)
   if digits == "" {
-    let at = self.cursor.position() - 1
-    self.fail(RadixIntNoValue, @span.SrcSpan::new(at, at), start_unit, start)
+    let at = self.cursor.position().shift(-1).unwrap()
+    self.fail(
+      RadixIntNoValue,
+      @span.SrcSpan::from_compiler(at, at).unwrap(),
+      start_unit,
+      start,
+    )
     None
   } else if radix < 16 && is_digit_of_radix(self.cursor.peek(), 16) {
     let at = self.cursor.position()
-    self.fail(DigitOutOfRadix, @span.SrcSpan::new(at, at), start_unit, start)
+    self.fail(
+      DigitOutOfRadix,
+      @span.SrcSpan::from_compiler(at, at).unwrap(),
+      start_unit,
+      start,
+    )
     None
   } else {
     let value = (if negative { "-" } else { "" }) + prefix + digits
@@ -745,8 +795,8 @@ fn Lexer::lex_number_radix(
 /// after a `.` (tuple access), so `t.1.2` is two integers.
 fn Lexer::lex_decimal_or_int_number(
   self : Lexer,
-  start_unit : Int32,
-  start : Int32,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
   negative : Bool,
   can_lex_decimal : Bool,
 ) -> TokenKind? {
@@ -763,7 +813,7 @@ fn Lexer::lex_decimal_or_int_number(
       if self.radix_run(10) == "" {
         self.fail(
           MissingExponent,
-          @span.SrcSpan::new(start, self.cursor.position()),
+          @span.SrcSpan::from_compiler(start, self.cursor.position()).unwrap(),
           start_unit,
           start,
         )
@@ -825,7 +875,9 @@ fn Lexer::skip_string_rest(self : Lexer) -> Unit {
 /// quotes with `\r\n` and `\r` as `\n`; escapes stay as written.
 fn Lexer::lex_string(self : Lexer) -> Unit {
   let (u, p) = (self.cursor.unit(), self.cursor.position())
-  let span = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+  let span = (a : @span.ByteOffset, b : @span.ByteOffset) => {
+    @span.SrcSpan::from_compiler(a, b).unwrap()
+  }
   self.cursor.advance() // the opening quote
   let content_unit = self.cursor.unit()
   let fail_in_string = (error : LexicalErrorType, location : @span.SrcSpan) => {
@@ -845,7 +897,10 @@ fn Lexer::lex_string(self : Lexer) -> Unit {
       }
       Some('"') => {
         self.cursor.advance()
-        let raw = self.text.unsafe_substring(start=content_unit, end=char_unit)
+        let raw = self.text.unsafe_substring(
+          start=content_unit.to_int(),
+          end=char_unit.to_int(),
+        )
         let value = if raw.contains("\r") {
           raw.replace(old="\r\n", new="\n").replace(old="\r", new="\n")
         } else {
@@ -870,7 +925,7 @@ fn Lexer::lex_string(self : Lexer) -> Unit {
               let at = self.cursor.position()
               return fail_in_string(
                 InvalidUnicodeEscape(MissingOpeningBrace),
-                span(at - 1, at),
+                span(at.shift(-1).unwrap(), at),
               )
             }
             // All digits inside \u{...}; no early stop at 6 digits, so the
@@ -889,7 +944,7 @@ fn Lexer::lex_string(self : Lexer) -> Unit {
                 let at = self.cursor.position()
                 return fail_in_string(
                   InvalidUnicodeEscape(ExpectedHexDigitOrCloseBrace),
-                  span(at, at + 1),
+                  span(at, at.shift(1).unwrap()),
                 )
               }
               if digits <= 6 {
@@ -900,7 +955,7 @@ fn Lexer::lex_string(self : Lexer) -> Unit {
               let at = self.cursor.position()
               return fail_in_string(
                 InvalidUnicodeEscape(ExpectedHexDigitOrCloseBrace),
-                span(at - 1, at),
+                span(at.shift(-1).unwrap(), at),
               )
             }
             self.cursor.advance()
@@ -918,7 +973,10 @@ fn Lexer::lex_string(self : Lexer) -> Unit {
             }
           }
           Some(_) =>
-            return fail_in_string(BadStringEscape, span(slash, slash + 1))
+            return fail_in_string(
+              BadStringEscape,
+              span(slash, slash.shift(1).unwrap()),
+            )
           None => return fail_in_string(BadStringEscape, span(slash, slash))
         }
       }
@@ -931,7 +989,11 @@ fn Lexer::lex_string(self : Lexer) -> Unit {
 /// The compiler's `lex_comment`, entered after two slashes: a third makes a
 /// doc comment, a fourth a module comment. Content runs to the line break
 /// (`\n`, or the `\r` of `\r\n`), not included.
-fn Lexer::lex_comment(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
+fn Lexer::lex_comment(
+  self : Lexer,
+  start_unit : @span.Utf16Offset,
+  start : @span.ByteOffset,
+) -> Unit {
   let kind = match (self.cursor.peek(), self.cursor.peek1()) {
     (Some('/'), Some('/')) => {
       self.cursor.advance()
@@ -950,13 +1012,10 @@ fn Lexer::lex_comment(self : Lexer, start_unit : Int32, start : Int32) -> Unit {
     self.cursor.advance()
   }
   let content = self.cursor.slice(content_unit)
-  self.trivia(
-    Comment({
-      kind,
-      content,
-      span: @span.SrcSpan::new(start, self.cursor.position()),
-    }),
-  )
+  let span = @span.SrcSpan::from_offsets(start, self.cursor.position()).unwrap()
+  // The lexer consumed the prefix before it read the content.
+  let comment = Comment::from_parts(kind~, content~, span~).unwrap()
+  self.trivia(Comment(comment))
 }
 
 ///|

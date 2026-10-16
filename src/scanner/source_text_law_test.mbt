@@ -54,9 +54,9 @@ fn reference_line_count(text : String) -> Int32 {
 test "law: byte_length and line_count agree with the reference" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
-      let st = @scanner.SourceText::new(u.text())
-      st.byte_length() == reference_byte_length(u.text()) &&
-      st.line_count() == reference_line_count(u.text())
+      let st = @scanner.SourceText(u.text())
+      st.byte_length().to_int() == reference_byte_length(u.text()) &&
+      st.line_count().to_int() == reference_line_count(u.text())
     },
     count=300,
     max_size=24,
@@ -69,11 +69,14 @@ test "law: byte_offset_of and utf16_offset_of are inverse at every boundary" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
       let text = u.text()
-      let st = @scanner.SourceText::new(text)
+      let st = @scanner.SourceText(text)
       let mut ok = true
       for i = 0; i <= text.length(); i = i + 1 {
-        match st.byte_offset_of(i) {
-          Some(b) => ok = ok && st.utf16_offset_of(b) == Some(i)
+        match st.byte_offset_of(@span.Utf16Offset::from_int(i).unwrap()) {
+          Some(b) =>
+            ok = ok &&
+              st.utf16_offset_of(b) ==
+              Some(@span.Utf16Offset::from_int(i).unwrap())
           None => {
             // Only the low unit of a surrogate pair has no boundary.
             let low = i > 0 &&
@@ -99,22 +102,27 @@ test "law: positions are monotonic and columns restart after a line break" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
       let text = u.text()
-      let st = @scanner.SourceText::new(text)
+      let st = @scanner.SourceText(text)
       let mut ok = true
-      let mut previous = @span.Position::new(1, 0)
-      for b = 0; b <= st.byte_length(); b = b + 1 {
-        match st.position_of(b) {
+      let mut previous : @span.Position? = None
+      for b = 0; b <= st.byte_length().to_int(); b = b + 1 {
+        match @span.ByteOffset::from_int(b).bind(x => st.position_of(x)) {
           None => ()
           Some(p) => {
-            let same_line = p.line == previous.line &&
-              p.column == previous.column + 1
-            let next_line = p.line == previous.line + 1 && p.column == 1
-            ok = ok && (same_line || next_line)
-            previous = p
+            if previous is Some(prev) {
+              let same_line = p.line == prev.line &&
+                p.column.to_int() == prev.column.to_int() + 1
+              let next_line = p.line.to_int() == prev.line.to_int() + 1 &&
+                p.column.to_int() == 1
+              ok = ok && (same_line || next_line)
+            } else {
+              ok = ok && p == @span.Position::from_ints(1, 1).unwrap()
+            }
+            previous = Some(p)
           }
         }
       }
-      ok && previous.line == st.line_count()
+      ok && previous.map(p => p.line.to_int()) == Some(st.line_count().to_int())
     },
     count=300,
     max_size=24,
@@ -126,11 +134,11 @@ test "law: positions are monotonic and columns restart after a line break" {
 test "law: no byte offset makes a lookup panic" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
-      let st = @scanner.SourceText::new(u.text())
-      for b = -2; b <= st.byte_length() + 2; b = b + 1 {
-        st.position_of(b) |> ignore
-        st.utf16_offset_of(b) |> ignore
-        st.byte_offset_of(b) |> ignore
+      let st = @scanner.SourceText(u.text())
+      for b = -2; b <= st.byte_length().to_int() + 2; b = b + 1 {
+        @span.ByteOffset::from_int(b).bind(x => st.position_of(x)) |> ignore
+        @span.ByteOffset::from_int(b).bind(x => st.utf16_offset_of(x)) |> ignore
+        @span.Utf16Offset::from_int(b).bind(x => st.byte_offset_of(x)) |> ignore
       }
       true
     },
@@ -151,7 +159,7 @@ fn reference_position(text : String, byte : Int32) -> @span.Position? {
   let mut i = 0
   while true {
     if bytes == byte {
-      return Some(@span.Position::new(line, column))
+      return Some(@span.Position::from_ints(line, column).unwrap())
     }
     if i >= text.length() || bytes > byte {
       return None
@@ -168,7 +176,7 @@ fn reference_position(text : String, byte : Int32) -> @span.Position? {
       if i < text.length() && text.code_unit_at(i).to_int() == '\n'.to_int() {
         // The boundary between `\r` and `\n` is still on the old line.
         if bytes == byte {
-          return Some(@span.Position::new(line, column + 1))
+          return Some(@span.Position::from_ints(line, column + 1).unwrap())
         }
         bytes += 1
         i += 1
@@ -206,10 +214,12 @@ test "law: position_of agrees with a reference count over the source" {
   @quickcheck.check(
     (u : @lawkit.Units) => {
       let text = u.text()
-      let st = @scanner.SourceText::new(text)
+      let st = @scanner.SourceText(text)
       let mut ok = true
-      for b = 0; b <= st.byte_length(); b = b + 1 {
-        ok = ok && st.position_of(b) == reference_position(text, b)
+      for b = 0; b <= st.byte_length().to_int(); b = b + 1 {
+        ok = ok &&
+          @span.ByteOffset::from_int(b).bind(x => st.position_of(x)) ==
+          reference_position(text, b)
       }
       ok
     },

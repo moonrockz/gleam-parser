@@ -132,8 +132,19 @@ test "doc comments attach, detach and are shared as the compiler does" {
   }
   @expect.expect_all(e => {
     e.expect(f.documentation).to_equal(None)
-    e.expect(g.documentation).to_equal(Some({ start: 30, text: " c\n", }))
-    e.expect(h.documentation).to_equal(Some({ start: 61, text: " inside\n", }))
+    e
+    .expect(g.documentation)
+    .to_equal(
+      Some({ start: @span.ByteOffset::from_int(30).unwrap(), text: " c\n", }),
+    )
+    e
+    .expect(h.documentation)
+    .to_equal(
+      Some({
+        start: @span.ByteOffset::from_int(61).unwrap(),
+        text: " inside\n",
+      }),
+    )
     e.expect(kinds(r)).to_equal(["GL-PARSE-003 DetachedDocComment"])
     e.expect(r.diagnostics[0].span).to_equal(sp(3, 5))
     e
@@ -167,7 +178,7 @@ test "attributes and targets" {
     e.expect(f.body_start).to_equal(None)
     // A function without a body ends at its `)`.
     e.expect(f.location).to_equal(sp(98, 108))
-    e.expect(f.end_position).to_equal(108)
+    e.expect(f.end_position).to_equal(@span.ByteOffset::from_int(108).unwrap())
     e.expect(kinds(r)).to_equal(["GL-PARSE-002 DeprecatedTargetShorthand"])
   })
 }
@@ -274,7 +285,9 @@ test "the parse result is the oracle's Parsed shape" {
     e.expect(p.module_).to_equal(r.module_)
     e.expect(p.extra).to_equal(r.extra)
     e.expect(p.warnings).to_equal(r.warnings)
-    e.expect(p.extra.new_lines).to_equal([11][:])
+    e
+    .expect(p.extra.new_lines.iter().map(x => x.to_int()).collect())
+    .to_equal([11])
   })
 }
 
@@ -295,6 +308,6 @@ test "a skipped definition keeps its doc comments; the next definition gets only
     fail("definitions \{@debug.to_string(r.module_.definitions)}")
   }
   @expect.expect(g.documentation).to_equal(
-    Some({ start: 23, text: " doc g\n", }),
+    Some({ start: @span.ByteOffset::from_int(23).unwrap(), text: " doc g\n", }),
   )
 }

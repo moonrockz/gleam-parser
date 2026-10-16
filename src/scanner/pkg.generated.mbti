@@ -22,21 +22,28 @@ pub fn tokenize_text(String) -> TokenStream
 pub fn wrap(String) -> String
 
 // Errors
+pub(all) suberror CommentError {
+  CommentAtEof(@span.SrcSpan)
+  CommentPrefixTooShort(kind~ : CommentKind, span~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
 
 // Types and methods
-pub(all) struct Comment {
+pub struct Comment {
   kind : CommentKind
   content : String
   span : @span.SrcSpan
 } derive(Eq, @debug.Debug)
+pub fn Comment::Comment(kind~ : CommentKind, content~ : String, span~ : @span.SrcSpan) -> Self raise CommentError
 pub fn Comment::content_span(Self) -> @span.SrcSpan
+#alias(new, deprecated)
+pub fn Comment::from_parts(kind~ : CommentKind, content~ : String, span~ : @span.SrcSpan) -> Self?
 
 pub(all) enum CommentKind {
   Regular
   Doc
   Module
 } derive(Eq, Hash, @debug.Debug)
-pub fn CommentKind::prefix_length(Self) -> Int
+pub fn CommentKind::prefix_length(Self) -> @span.ByteLength
 
 pub(all) enum Keyword {
   As
@@ -86,14 +93,16 @@ pub fn LexicalErrorType::label(Self) -> String
 pub struct SourceText {
   // private fields
 }
-pub fn SourceText::byte_length(Self) -> Int
-pub fn SourceText::byte_offset_of(Self, Int) -> Int?
-pub fn SourceText::line_count(Self) -> Int
-pub fn SourceText::new(String) -> Self
-pub fn SourceText::position_of(Self, Int) -> @span.Position?
+#alias(new, deprecated)
+pub fn SourceText::SourceText(String) -> Self
+pub fn SourceText::byte_length(Self) -> @span.ByteLength
+pub fn SourceText::byte_offset_of(Self, @span.Utf16Offset) -> @span.ByteOffset?
+pub fn SourceText::end_offset(Self) -> @span.ByteOffset
+pub fn SourceText::line_count(Self) -> @span.LineCount
+pub fn SourceText::position_of(Self, @span.ByteOffset) -> @span.Position?
 pub fn SourceText::slice(Self, @span.SrcSpan) -> String?
 pub fn SourceText::text(Self) -> String
-pub fn SourceText::utf16_offset_of(Self, Int) -> Int?
+pub fn SourceText::utf16_offset_of(Self, @span.ByteOffset) -> @span.Utf16Offset?
 
 pub(all) struct Token {
   kind : TokenKind

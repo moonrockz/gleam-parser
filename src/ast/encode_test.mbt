@@ -65,7 +65,7 @@ test "enums with payload are objects with kind; payload-free enums are strings" 
         @ast.UnqualifiedImport::{
           location: sp(0, 1),
           name: "x",
-          name_position: 0,
+          name_position: @span.ByteOffset::from_int(0).unwrap(),
           as_name: None,
         },
       ][:],
@@ -81,7 +81,7 @@ test "enums with payload are objects with kind; payload-free enums are strings" 
   let g : @ast.ClauseGuard = BinaryOperator(
     location=sp(0, 5),
     operator=And,
-    operator_start=2,
+    operator_start=@span.ByteOffset::from_int(2).unwrap(),
     left=Var(location=sp(0, 1), name="a"),
     right=Constant(
       Int(location=sp(4, 5), value="1", int_value=BigInt::from_int(1)),
@@ -108,8 +108,8 @@ test "a parsed module encodes module, extra and warnings" {
       module_comments: [sp(4, 10)][:],
       doc_comments: [][:],
       comments: [][:],
-      empty_lines: [11][:],
-      new_lines: [10, 11][:],
+      empty_lines: [11].map(x => @span.ByteOffset::from_int(x).unwrap())[:],
+      new_lines: [10, 11].map(x => @span.ByteOffset::from_int(x).unwrap())[:],
       trailing_commas: [][:],
     },
     warnings: [

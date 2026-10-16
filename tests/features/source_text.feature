@@ -2,6 +2,29 @@ Feature: Source text positions
   gleam-parser keeps spans as UTF-8 byte offsets, as the Gleam compiler does,
   and maps them to 1-based lines and columns that count code points.
 
+  Scenario Outline: Native constructors report invalid coordinates
+    When I construct a native "<kind>" from <first> and <second>
+    Then construction raises "<error>"
+
+    Examples:
+      | kind     | first | second | error                 |
+      | span     | -1    | 2      | invalid byte offset   |
+      | span     | 0     | -1     | invalid byte offset   |
+      | span     | 3     | 2      | reversed span         |
+      | span     | 3     | 0      | reversed span         |
+      | position | 0     | 1      | invalid line number   |
+      | position | 1     | 0      | invalid column number |
+
+  Scenario Outline: Native constructors accept valid coordinates
+    When I construct a native "<kind>" from <first> and <second>
+    Then construction "succeeds"
+
+    Examples:
+      | kind     | first | second |
+      | span     | 0     | 0      |
+      | span     | 1     | 2      |
+      | position | 1     | 1      |
+
   Scenario Outline: Position of a byte offset
     Given the source text '<text>'
     When I look up byte offset <byte>
@@ -19,3 +42,32 @@ Feature: Source text positions
     Given the source text 'é'
     When I look up byte offset 1
     Then there is no position
+
+  Scenario Outline: Domain constructors reject values outside their range
+    When I construct a "<kind>" from <value>
+    Then construction "<result>"
+
+    Examples:
+      | kind          | value | result   |
+      | byte offset   | -1    | fails    |
+      | byte offset   | 0     | succeeds |
+      | UTF-16 offset | -1    | fails    |
+      | UTF-16 offset | 0     | succeeds |
+      | byte length   | -1    | fails    |
+      | byte length   | 0     | succeeds |
+      | line number   | 0     | fails    |
+      | line number   | 1     | succeeds |
+      | column number | 0     | fails    |
+      | column number | 1     | succeeds |
+      | line count    | 0     | fails    |
+      | line count    | 1     | succeeds |
+      | tuple index   | -1    | fails    |
+      | tuple index   | 0     | succeeds |
+      | bit array unit | -1   | fails    |
+      | bit array unit | 0    | succeeds |
+      | bit array unit | 255  | succeeds |
+      | bit array unit | 256  | fails    |
+      | child index   | -1    | fails    |
+      | child index   | 0     | succeeds |
+      | node depth    | -1    | fails    |
+      | node depth    | 0     | succeeds |

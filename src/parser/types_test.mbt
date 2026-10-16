@@ -7,11 +7,12 @@ test "type forms: constructor with arguments, variable, tuple, hole, fn, qualifi
         location,
         name: Unqualified(name="Result", location=nl),
         arguments,
-        start_parentheses: Some(6),
+        start_parentheses: Some(scalar_10_33),
       }
     ) else {
     fail("expected a constructor, got \{@debug.to_string(t)}")
   }
+  @expect.expect(scalar_10_33.to_int()).to_equal(6)
   guard arguments
     is [Var({ location: al, name: "a", }), Tuple({ location: tl, elements, })] else {
     fail("arguments \{@debug.to_string(arguments)}")
@@ -42,7 +43,7 @@ test "type forms: constructor with arguments, variable, tuple, hole, fn, qualifi
             name: Qualified(
               module_="option",
               module_location~,
-              dot_location=19,
+              dot_location=scalar_45_28,
               name=Some(n)
             ),
             location: rl,
@@ -53,6 +54,7 @@ test "type forms: constructor with arguments, variable, tuple, hole, fn, qualifi
     ) else {
     fail("expected fn type, got \{@debug.to_string(f)}")
   }
+  @expect.expect(scalar_45_28.to_int()).to_equal(19)
   @expect.expect_all(e => {
     e.expect(fl).to_equal(sp(0, 28))
     e.expect(fargs.length()).to_equal(2)
@@ -68,10 +70,15 @@ test "a qualified type without a name keeps the dot position" {
   let t = @parser.parse_type_text("mod.")
   guard t
     is Constructor(
-      { name: Qualified(name=None, dot_location=4, ..), location, .. }
+      {
+        name: Qualified(name=None, dot_location=scalar_71_49, ..),
+        location,
+        ..
+      }
     ) else {
     fail("got \{@debug.to_string(t)}")
   }
+  @expect.expect(scalar_71_49.to_int()).to_equal(4)
   @expect.expect(location).to_equal(sp(0, 4))
 }
 

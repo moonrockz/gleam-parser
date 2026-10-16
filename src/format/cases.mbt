@@ -231,7 +231,7 @@ fn Formatter::guard_access_chain(
   while walking {
     match base {
       TupleIndex(tuple~, index~, ..) => {
-        suffixes.push(index.to_string())
+        suffixes.push(index.to_uint64().to_string())
         base = tuple
       }
       FieldAccess(container~, label~, ..) => {

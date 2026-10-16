@@ -20,19 +20,13 @@ fn[A] decoding_error(
 test "bit array units fit the compiler's byte range" {
   @expect.expect_all(e => {
     for unit in [-1, 0, 1, 255, 256] {
-      let value : @ast.Expr = BitArray(
-        location=sp0(),
-        segments=[
-            @ast.BitArraySegment::{
-              location: sp0(),
-              value: var_x(),
-              options: [@ast.Unit(location=sp0(), value=unit)][:],
-            },
-          ][:],
-      )
-      let json = @ast.encode_expr(value)
+      let text =
+        $|{"kind":"bit_array","location":{"start":0,"end":1},"segments":[{"location":{"start":0,"end":1},"value":{"kind":"var","location":{"start":0,"end":1},"name":"x"},"options":[{"kind":"unit","location":{"start":0,"end":1},"value":\{unit}}]}]}
+      let json = parse(text)
       if unit >= 0 && unit <= 255 {
-        e.expect(@ast.decode_expr(json)).to_equal(value)
+        e
+        .expect(@ast.canonical(@ast.encode_expr(@ast.decode_expr(json))))
+        .to_equal(@ast.canonical(json))
       } else {
         let message = if unit < 0 {
           "expected a non-negative integer, found \{unit}"
@@ -70,7 +64,10 @@ test "positions reject negative and out-of-range integers at their JSON path" {
     for start in [0, 2147483647] {
       // An end of zero is the compiler's sentinel for an inner EOF error.
       let value : @ast.Expr = Var(
-        location=@span.SrcSpan::new(start, 0),
+        location=@span.SrcSpan::from_compiler(
+          @span.ByteOffset::from_int(start).unwrap(),
+          @span.ByteOffset::zero(),
+        ).unwrap(),
         name="x",
       )
       e.expect(@ast.decode_expr(@ast.encode_expr(value))).to_equal(value)
@@ -149,7 +146,7 @@ test "float nodes require a complete Gleam float lexeme" {
 
 ///|
 test "decode after encode gives the value back" {
-  let sp = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+  let sp = (a : Int32, b : Int32) => @span.SrcSpan::from_ints(a, b).unwrap()
   let e : @ast.Expr = Call(
     location=sp(0, 10),
     fun=Var(location=sp(0, 3), name="add"),
@@ -175,7 +172,7 @@ test "decode after encode gives the value back" {
           implicit: Some(@ast.ImplicitCallArgOrigin::Pipe),
         },
       ][:],
-    open_parenthesis=3,
+    open_parenthesis=@span.ByteOffset::from_int(3).unwrap(),
   )
   let back = @ast.decode_expr(parse(@ast.canonical(@ast.encode_expr(e))))
   @expect.expect(back).to_equal(e)
@@ -210,6 +207,9 @@ test "errors name the path and the problem" {
     (
       "{\"kind\":\"var\",\"location\":{\"end\":\"x\",\"start\":0},\"name\":\"a\"}",
       "$.location.end: expected a number, found a STRING",
+    ),
+    (
+      "{\"kind\":\"var\",\"location\":{\"end\":2,\"start\":3},\"name\":\"a\"}", "$.location.end: span end precedes start",
     ),
     (
       "{\"int_value\":\"1x\",\"kind\":\"int\",\"location\":{\"end\":1,\"start\":0},\"value\":\"1\"}",
@@ -250,11 +250,15 @@ test "a parsed module decodes with its extra and warnings" {
     #|{"extra":{"comments":[],"doc_comments":[{"end":9,"start":3}],"empty_lines":[],"module_comments":[],"new_lines":[10],"trailing_commas":[]},"module":{"definitions":[{"definition":{"documentation":null,"kind":"module_constant","location":{"end":21,"start":11},"name":"x","name_location":{"end":18,"start":17},"annotation":null,"publicity":{"kind":"public"},"value":{"int_value":"1","kind":"int","location":{"end":21,"start":20},"value":"1"},"deprecation":{"kind":"not_deprecated"}},"target":null}]},"warnings":[{"kind":"detached_doc_comment","location":{"end":9,"start":3}}]}
   let p = @ast.decode_parsed(parse(text))
   @expect.expect_all(e => {
-    e.expect(p.extra.doc_comments).to_equal([@span.SrcSpan::new(3, 9)])
+    e
+    .expect(p.extra.doc_comments)
+    .to_equal([@span.SrcSpan::from_ints(3, 9).unwrap()])
     e
     .expect(p.warnings)
     .to_equal([
-      @ast.Warning::DetachedDocComment(location=@span.SrcSpan::new(3, 9)),
+      @ast.Warning::DetachedDocComment(
+        location=@span.SrcSpan::from_ints(3, 9).unwrap(),
+      ),
     ])
     e.expect(p.module_.definitions.length()).to_equal(1)
     guard p.module_.definitions[0].definition is ModuleConstant(c) else {
@@ -318,11 +322,11 @@ test "law: negative positions and indexes always fail decoding" {
 
 ///|
 test "tuple and guard indexes are 64-bit like the compiler's u64" {
-  let sp = (a : Int32, b : Int32) => @span.SrcSpan::new(a, b)
+  let sp = (a : Int32, b : Int32) => @span.SrcSpan::from_ints(a, b).unwrap()
   for index in [4294967296UL, 18446744073709551615UL, 0UL] {
     let e : @ast.Expr = TupleIndex(
       location=sp(0, 5),
-      index~,
+      index=@ast.TupleIndex(index),
       tuple=Var(location=sp(0, 1), name="t"),
     )
     let text = @ast.canonical(@ast.encode_expr(e))
@@ -332,7 +336,7 @@ test "tuple and guard indexes are 64-bit like the compiler's u64" {
     })
     let g : @ast.ClauseGuard = TupleIndex(
       location=sp(0, 5),
-      index~,
+      index=@ast.TupleIndex(index),
       tuple=Var(location=sp(0, 1), name="t"),
     )
     @expect.expect(
@@ -342,7 +346,7 @@ test "tuple and guard indexes are 64-bit like the compiler's u64" {
     ).to_equal(g)
     let f : @ast.ClauseGuard = FieldAccess(
       label_location=sp(2, 3),
-      index=Some(index),
+      index=Some(@ast.TupleIndex(index)),
       label="a",
       container=Var(location=sp(0, 1), name="t"),
     )
@@ -356,7 +360,7 @@ test "tuple and guard indexes are 64-bit like the compiler's u64" {
 
 ///|
 fn chain(n : Int32) -> @ast.Expr {
-  let sp = @span.SrcSpan::new(0, 1)
+  let sp = @span.SrcSpan::from_ints(0, 1).unwrap()
   let mut e : @ast.Expr = Int(
     location=sp,
     value="1",
@@ -366,7 +370,7 @@ fn chain(n : Int32) -> @ast.Expr {
     e = BinOp(
       location=sp,
       operator=AddInt,
-      operator_start=0,
+      operator_start=@span.ByteOffset::from_int(0).unwrap(),
       left=e,
       right=Int(location=sp, value="1", int_value=BigInt::from_int(1)),
     )
@@ -377,7 +381,7 @@ fn chain(n : Int32) -> @ast.Expr {
 ///|
 /// A list nested `n` deep: `[[[...1...]]]`.
 fn nested_list(n : Int32) -> @ast.Expr {
-  let sp = @span.SrcSpan::new(0, 1)
+  let sp = @span.SrcSpan::from_ints(0, 1).unwrap()
   let mut e : @ast.Expr = Int(
     location=sp,
     value="1",
@@ -455,7 +459,7 @@ test "an error 2000 levels deep renders its path" {
 
 ///|
 fn sp0() -> @span.SrcSpan {
-  @span.SrcSpan::new(0, 1)
+  @span.SrcSpan::from_ints(0, 1).unwrap()
 }
 
 ///|
@@ -491,7 +495,14 @@ test "every expression child edge round-trips 2000 deep through the Json value o
     ("panic message", e => Panic(location=sp, message=Some(e))),
     (
       "echo expression",
-      e => Echo(location=sp, keyword_end=0, expression=Some(e), message=None),
+      e => {
+        Echo(
+          location=sp,
+          keyword_end=@span.ByteOffset::from_int(0).unwrap(),
+          expression=Some(e),
+          message=None,
+        )
+      },
     ),
     (
       "call argument",
@@ -504,7 +515,7 @@ test "every expression child edge round-trips 2000 deep through the Json value o
                 { label: None, location: sp, value: e, implicit: None, } :
                 @ast.CallArg[@ast.Expr]),
             ][:],
-          open_parenthesis=0,
+          open_parenthesis=@span.ByteOffset::from_int(0).unwrap(),
         )
       },
     ),
@@ -513,7 +524,7 @@ test "every expression child edge round-trips 2000 deep through the Json value o
       e => {
         RecordUpdate(
           location=sp,
-          spread_start=0,
+          spread_start=@span.ByteOffset::from_int(0).unwrap(),
           constructor_=var_x(),
           record=(
             { base: var_x(), location: sp, } :
@@ -531,7 +542,7 @@ test "every expression child edge round-trips 2000 deep through the Json value o
       e => {
         RecordUpdate(
           location=sp,
-          spread_start=0,
+          spread_start=@span.ByteOffset::from_int(0).unwrap(),
           constructor_=var_x(),
           record=(
             { base: e, location: sp, } : @ast.RecordBeingUpdated[@ast.Expr]),
@@ -597,7 +608,7 @@ test "every expression child edge round-trips 2000 deep through the Json value o
         Fn(
           location=sp,
           kind=Anonymous(head=sp),
-          end_of_head_byte_index=0,
+          end_of_head_byte_index=@span.ByteOffset::from_int(0).unwrap(),
           arguments=[][:],
           body=[@ast.Expression(e)][:],
           return_annotation=None,
@@ -628,7 +639,11 @@ test "every expression child edge round-trips 2000 deep through the Json value o
             location: sp,
             value: var_x(),
             pattern: @ast.Pattern::Discard(name="_", location=sp),
-            kind: Assert(location=sp, assert_keyword_start=0, message=Some(e)),
+            kind: Assert(
+              location=sp,
+              assert_keyword_start=@span.ByteOffset::from_int(0).unwrap(),
+              message=Some(e),
+            ),
             annotation: None,
           }),
         )
@@ -664,7 +679,10 @@ test "every expression child edge round-trips 2000 deep through the Json value o
       "field access",
       e => FieldAccess(location=sp, label_location=sp, label="f", container=e),
     ),
-    ("tuple index", e => TupleIndex(location=sp, index=0, tuple=e)),
+    (
+      "tuple index",
+      e => TupleIndex(location=sp, index=@ast.TupleIndex(0), tuple=e),
+    ),
     ("negate bool", e => NegateBool(location=sp, value=e)),
     ("list tail", e => List(location=sp, elements=[][:], tail=Some(e))),
   ]
@@ -751,7 +769,7 @@ test "every other node kind round-trips 2000 deep through the Json value on ever
     c => {
       Record(
         location=sp,
-        arguments_start_position=0,
+        arguments_start_position=@span.ByteOffset::from_int(0).unwrap(),
         module_=None,
         name="R",
         arguments=Some(

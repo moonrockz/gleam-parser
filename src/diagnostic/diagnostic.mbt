@@ -39,20 +39,23 @@ pub(all) struct Diagnostic {
 } derive(Eq, Debug)
 
 ///|
+/// Create a diagnostic with no extra labels, body text or hint by default.
+///
 /// ```mbt check
 /// test {
-///   let d = @diagnostic.Diagnostic::new(
+///   let d = @diagnostic.Diagnostic(
 ///     code="GL-SCAN-001",
 ///     severity=Error,
 ///     title="Syntax error",
 ///     message="I don't know what this character means",
-///     span=@span.SrcSpan::new(2, 3),
+///     span=@span.SrcSpan::from_ints(2, 3).unwrap(),
 ///   )
 ///   debug_inspect(d.is_error(), content="true")
 ///   debug_inspect(d.labels.length(), content="0")
 /// }
 /// ```
-pub fn Diagnostic::new(
+#alias(new, deprecated="Use `Diagnostic(...)` instead")
+pub fn Diagnostic::Diagnostic(
   code~ : String,
   severity~ : Severity,
   title~ : String,
