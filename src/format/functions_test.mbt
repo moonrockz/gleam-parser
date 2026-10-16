@@ -43,9 +43,9 @@ test "a long external signature breaks its arguments and keeps the return type" 
 }
 
 ///|
-test "a function with a body prints the placeholder body until PR 2" {
+test "a function with a body formats the body" {
   inspect(
     @format.format("pub fn f() {\n  1\n}\n"),
-    content="pub fn f() {\n  todo\n}\n",
+    content="pub fn f() {\n  1\n}\n",
   )
 }

@@ -30,8 +30,8 @@ Done:
   `ModuleCst::to_source()` is the text byte for byte, also with errors.
 - **Formatter** (`format`, `format_parsed`): `gleam format`'s text (80
   columns), from a port of the compiler's formatter on `moonrockz/pretty`;
-  comments and empty lines are kept. Function bodies land in the next
-  release; the parity scoreboard is in `tests/format`.
+  comments and empty lines are kept; the parity scoreboard is in
+  `tests/format`.
 
   ```moonbit
   inspect(@gleam.format("const  x  =  1\n"), content="const x = 1\n")
