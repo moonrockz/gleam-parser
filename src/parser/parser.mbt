@@ -154,7 +154,13 @@ fn Parser::load(self : Parser) -> @scanner.Token? {
   if t.kind is Error {
     None
   } else {
-    Some(t)
+    Some(
+      match t.kind {
+        Keyword(k) if !self.config.dialect.reserves(k) =>
+          { ..t, kind: Name(k.text()), }
+        _ => t
+      },
+    )
   }
 }
 
@@ -245,7 +251,14 @@ fn Parser::at_definition_start(self : Parser, i : Int32) -> Bool {
   guard i >= 0 && i < self.tokens.length() else { return false }
   let t = self.tokens[i]
   let starts = match t.kind {
-    Keyword(Import | Const | Pub | Fn | Type | Opaque) | At => true
+    Keyword(k) => {
+      let starts_definition = match k {
+        Import | Const | Pub | Fn | Type | Opaque => true
+        _ => false
+      }
+      starts_definition && self.config.dialect.reserves(k)
+    }
+    At => true
     _ => false
   }
   guard starts else { return false }

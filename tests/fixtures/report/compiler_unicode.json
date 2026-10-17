@@ -1,0 +1,66 @@
+{
+  "unicode_fullwidth_at_sign": {
+    "source": "＠deprecated(\"old\")\npub fn main() { Nil }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:1\n  │\n1 │ ＠deprecated(\"old\")\n  │ ^^ Unexpected character\n\nThis looks like ascii at sign, but it is actually the unicode fullwidth\ncommercial at.\n"
+  },
+  "unicode_fullwidth_caret": {
+    "source": "pub fn main() { 0b1 ＾ 0b1 }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:21\n  │\n1 │ pub fn main() { 0b1 ＾ 0b1 }\n  │                     ^^ Unexpected character\n\nThis looks like ascii caret, but it is actually the unicode fullwidth\ncircumflex accent.\n"
+  },
+  "unicode_fullwidth_colon": {
+    "source": "pub fn wibble(x： Int) { x }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:16\n  │\n1 │ pub fn wibble(x： Int) { x }\n  │                ^^ Unexpected character\n\nThis looks like ascii colon, but it is actually the unicode fullwidth\ncolon.\n"
+  },
+  "unicode_fullwidth_comma": {
+    "source": "pub fn main() { #(1， 2) }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:20\n  │\n1 │ pub fn main() { #(1， 2) }\n  │                    ^^ Unexpected character\n\nThis looks like ascii comma, but it is actually the unicode fullwidth\ncomma.\n"
+  },
+  "unicode_fullwidth_exclamation_mark": {
+    "source": "pub fn main() { ！= True }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:17\n  │\n1 │ pub fn main() { ！= True }\n  │                 ^^ I can't figure out what to do with this character\n\nHint: Is it a typo?\n"
+  },
+  "unicode_fullwidth_full_stop": {
+    "source": "pub fn main() { io．println(\"hi\") }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:19\n  │\n1 │ pub fn main() { io．println(\"hi\") }\n  │                   ^^ Unexpected character\n\nThis looks like ascii dot, but it is actually the unicode fullwidth full\nstop.\n"
+  },
+  "unicode_fullwidth_greater_than_sign": {
+    "source": "pub fn main() { 1 ＞ 2 }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:19\n  │\n1 │ pub fn main() { 1 ＞ 2 }\n  │                   ^^ Unexpected character\n\nThis looks like ascii greater-than sign, but it is actually the unicode\nfullwidth greater-than sign.\n"
+  },
+  "unicode_fullwidth_left_parenthesis": {
+    "source": "pub fn main（) { Nil }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:12\n  │\n1 │ pub fn main（) { Nil }\n  │            ^^ Unexpected character\n\nThis looks like ascii left parenthesis, but it is actually the unicode\nfullwidth left parenthesis.\n"
+  },
+  "unicode_fullwidth_left_square_bracket": {
+    "source": "pub fn main() { ［1, 2] }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:17\n  │\n1 │ pub fn main() { ［1, 2] }\n  │                 ^^ Unexpected character\n\nThis looks like ascii left square bracket, but it is actually the unicode\nfullwidth left square bracket.\n"
+  },
+  "unicode_fullwidth_less_than_sign": {
+    "source": "pub fn main() { 1 ＜ 2 }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:19\n  │\n1 │ pub fn main() { 1 ＜ 2 }\n  │                   ^^ Unexpected character\n\nThis looks like ascii less-than sign, but it is actually the unicode\nfullwidth less-than sign.\n"
+  },
+  "unicode_fullwidth_right_parenthesis": {
+    "source": "pub fn main(） { Nil }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:13\n  │\n1 │ pub fn main(） { Nil }\n  │             ^^ Unexpected character\n\nThis looks like ascii right parenthesis, but it is actually the unicode\nfullwidth right parenthesis.\n"
+  },
+  "unicode_fullwidth_right_square_bracket": {
+    "source": "pub fn main() { [1, 2］ }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:22\n  │\n1 │ pub fn main() { [1, 2］ }\n  │                      ^^ Unexpected character\n\nThis looks like ascii right square bracket, but it is actually the unicode\nfullwidth right square bracket.\n"
+  },
+  "unicode_fullwidth_vertical_line": {
+    "source": "pub fn main() { True ｜｜ False }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:22\n  │\n1 │ pub fn main() { True ｜｜ False }\n  │                      ^^ Unexpected character\n\nThis looks like ascii pipe, but it is actually the unicode fullwidth\nvertical line.\n"
+  },
+  "unicode_ideographic_comma": {
+    "source": "pub fn main() { #(1、 2) }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:20\n  │\n1 │ pub fn main() { #(1、 2) }\n  │                    ^^ Unexpected character\n\nThis looks like ascii comma, but it is actually the unicode ideographic\ncomma.\n"
+  },
+  "unicode_ideographic_full_stop": {
+    "source": "pub fn main() { io。println(\"hi\") }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:19\n  │\n1 │ pub fn main() { io。println(\"hi\") }\n  │                   ^^ Unexpected character\n\nThis looks like ascii dot, but it is actually the unicode ideographic full\nstop.\n"
+  },
+  "unicode_zero_width_space": {
+    "source": "pub fn main() { let​x = 1\n  x }",
+    "report": "error: Syntax error\n  ┌─ /src/parse/error.gleam:1:20\n  │\n1 │ pub fn main() { let​x = 1\n  │                     Unexpected character\n\nThis looks like ascii space, but it is actually the unicode zero-width\nspace.\n"
+  }
+}

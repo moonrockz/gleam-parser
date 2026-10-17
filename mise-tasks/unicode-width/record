@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+#MISE description="Record the pinned compiler's character widths (needs oracle:build)"
+exec moon run -q --target wasm scripts/unicode_width.mbtx -- tools/gleam-ast-oracle/target/release/gleam-ast-oracle src/report/unicode_width_data.mbt

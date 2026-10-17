@@ -22,6 +22,58 @@ fn plain(d : @diagnostic.Diagnostic, text : String, path : String) -> String {
 }
 
 ///|
+test "locus columns count complete code points before an interior byte" {
+  let text = "abé𝄞z"
+  @expect.expect_all(e => {
+    for
+      (byte, column) in [(2, 3), (3, 3), (4, 4), (5, 4), (6, 4), (7, 4), (8, 5)] {
+      let diagnostic = @diagnostic.Diagnostic(
+        code="test",
+        severity=Error,
+        title="Interior byte",
+        message="here",
+        span=@span.SrcSpan::from_ints(byte, byte + 1).unwrap(),
+      )
+      e
+      .expect(
+        plain(diagnostic, text, "x.gleam").has_prefix(
+          "error: Interior byte\n  ┌─ x.gleam:1:\{column}\n",
+        ),
+      )
+      .to_be_true()
+    }
+  })
+}
+
+///|
+test "wide and zero-width characters align the underline and message" {
+  @expect.expect_all(e => {
+    for
+      (text, start, spaces) in [
+        ("界x", 3, 2),
+        ("a\u{301}x", 3, 1),
+        ("𝄞x", 4, 1),
+        ("😀x", 4, 2),
+      ] {
+      let diagnostic = @diagnostic.Diagnostic(
+        code="test",
+        severity=Error,
+        title="Unicode width",
+        message="here",
+        span=@span.SrcSpan::from_ints(start, start + 1).unwrap(),
+      )
+      e
+      .expect(
+        plain(diagnostic, text, "x.gleam").contains(
+          "  │ " + String::make(spaces, ' ') + "^ here\n",
+        ),
+      )
+      .to_be_true()
+    }
+  })
+}
+
+///|
 test "a primary label with a hint (const_string_concat_naked_right)" {
   let text = "\nconst no_cute_bee = \"cute\" <>\n"
   inspect(

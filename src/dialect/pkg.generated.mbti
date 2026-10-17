@@ -3,6 +3,7 @@ package "moonrockz/gleam-parser/dialect"
 
 import {
   "moonbitlang/core/debug",
+  "moonrockz/gleam-parser/scanner",
 }
 
 // Values
@@ -12,7 +13,7 @@ import {
 // Types and methods
 pub(all) struct Dialect {
   name : String
-  keywords : ArrayView[String]
+  keywords : ArrayView[@scanner.Keyword]
   attributes : ArrayView[String]
   targets : ArrayView[String]
   deprecations : ArrayView[Rule]
@@ -22,6 +23,7 @@ pub fn Dialect::gleam_1_19() -> Self
 pub fn Dialect::known_versions() -> Array[String]
 pub fn Dialect::knows_attribute(Self, String) -> Bool
 pub fn Dialect::knows_target(Self, String) -> Bool
+pub fn Dialect::reserves(Self, @scanner.Keyword) -> Bool
 pub fn Dialect::version(Self) -> String
 pub fn Dialect::warns(Self, Rule) -> Bool
 
