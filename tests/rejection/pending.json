@@ -1,6 +1,1 @@
-[
-  {
-    "fixture": "nesting/too_deep.gleam",
-    "check": "verdict"
-  }
-]
+[]

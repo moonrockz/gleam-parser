@@ -58,8 +58,8 @@ test "pa: canonical JSON of a parse" {
 ```
 
 A `Config` names what the parser accepts (its `Dialect`) and how deep it
-reads (its fuel `Budget`). `Config::default()` is Gleam 1.19 with 100 units
-of fuel. A dialect without a deprecation rule gives no warning for it:
+reads (its `NestingLimit`). `Config::default()` is Gleam 1.19 with unlimited
+nesting. A dialect without a deprecation rule gives no warning for it:
 
 ```mbt check
 ///|

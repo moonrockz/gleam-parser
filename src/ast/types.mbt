@@ -235,7 +235,7 @@ pub(all) enum TypeAst {
   Var(TypeAstVar)
   Tuple(TypeAstTuple)
   Hole(TypeAstHole)
-} derive(Eq, Debug)
+}
 
 ///|
 pub(all) struct TypeAstConstructor {
@@ -400,7 +400,7 @@ pub(all) enum Expr {
   )
   NegateBool(location~ : @span.SrcSpan, value~ : Expr)
   NegateInt(location~ : @span.SrcSpan, value~ : Expr)
-} derive(Eq, Debug)
+}
 
 ///|
 pub(all) enum FunctionLiteralKind {
@@ -582,7 +582,7 @@ pub(all) enum ClauseGuard {
     container~ : ClauseGuard
   )
   Constant(Constant)
-} derive(Eq, Debug)
+}
 
 ///|
 /// `Pattern` without `Invalid` (analysis only).
@@ -620,7 +620,7 @@ pub(all) enum Pattern {
     left_side_string~ : String,
     right_side_assignment~ : AssignName
   )
-} derive(Eq, Debug)
+}
 
 ///|
 pub(all) struct TailPattern {
@@ -646,7 +646,7 @@ pub(all) enum BitArraySize {
     right~ : BitArraySize
   )
   Block(location~ : @span.SrcSpan, inner~ : BitArraySize)
-} derive(Eq, Debug)
+}
 
 ///|
 pub(all) enum IntOperator {
@@ -773,7 +773,7 @@ pub(all) enum Constant {
     right~ : Constant
   )
   Todo(location~ : @span.SrcSpan, message~ : Constant?)
-} derive(Eq, Debug)
+}
 
 ///|
 /// `parse::extra::ModuleExtra`: byte positions of the trivia the formatter

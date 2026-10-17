@@ -25,9 +25,20 @@ pub fn Expr::location(self : Expr) -> @span.SrcSpan {
     | NegateBool(location~, ..)
     | NegateInt(location~, ..) => location
     Pipeline(expressions~) => {
-      let first = expressions[0].location()
-      let last = expressions[expressions.length() - 1].location()
-      @span.SrcSpan::from_compiler(first.start, last.end).unwrap()
+      let first = for expr = expressions[0] {
+        match expr {
+          Pipeline(expressions~) => continue expressions[0]
+          other => break other.location().start
+        }
+      }
+      let last = for expr = expressions[expressions.length() - 1] {
+        match expr {
+          Pipeline(expressions~) =>
+            continue expressions[expressions.length() - 1]
+          other => break other.location().end
+        }
+      }
+      @span.SrcSpan::from_compiler(first, last).unwrap()
     }
   }
 }
@@ -39,8 +50,15 @@ pub fn Expr::location(self : Expr) -> @span.SrcSpan {
 /// `Pattern::location` does in the compiler.
 pub fn Pattern::location(self : Pattern) -> @span.SrcSpan {
   match self {
-    Assign(location~, pattern~, ..) =>
-      @span.SrcSpan::from_compiler(pattern.location().start, location.end).unwrap()
+    Assign(location~, pattern~, ..) => {
+      let start = for current = pattern {
+        match current {
+          Assign(pattern~, ..) => continue pattern
+          other => break other.location().start
+        }
+      }
+      @span.SrcSpan::from_compiler(start, location.end).unwrap()
+    }
     Int(location~, ..)
     | Float(location~, ..)
     | String(location~, ..)
@@ -107,11 +125,15 @@ pub fn ClauseGuard::location(self : ClauseGuard) -> @span.SrcSpan {
     | Not(location~, ..)
     | Var(location~, ..)
     | TupleIndex(location~, ..) => location
-    FieldAccess(label_location~, container~, ..) =>
-      @span.SrcSpan::from_compiler(
-        container.location().start,
-        label_location.end,
-      ).unwrap()
+    FieldAccess(label_location~, container~, ..) => {
+      let start = for current = container {
+        match current {
+          FieldAccess(container~, ..) => continue container
+          other => break other.location().start
+        }
+      }
+      @span.SrcSpan::from_compiler(start, label_location.end).unwrap()
+    }
     Constant(c) => c.location()
   }
 }

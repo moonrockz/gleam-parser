@@ -1,13 +1,13 @@
 ///|
 /// A custom type or a type alias, with `type` (and `pub`, `opaque`)
 /// consumed.
-fn Parser::parse_custom_type(
+async fn Parser::parse_custom_type(
   self : Parser,
   start : @span.ByteOffset,
   public : Bool,
   opaque_ : Bool,
   attributes : Attributes,
-) -> @ast.Definition? raise ParseError {
+) -> @ast.Definition? raise ParseError + nocancel {
   let documentation = self.take_documentation(start)
   let (name_start, name, parameters, end, name_end) = self.expect_type_name()
   let name_location = sp(name_start, name_end)
@@ -81,9 +81,9 @@ fn Parser::parse_custom_type(
 ///|
 /// One variant: attributes (only `@deprecated` is allowed), an upper-case
 /// name and optional `(fields)`.
-fn Parser::parse_record_constructor(
+async fn Parser::parse_record_constructor(
   self : Parser,
-) -> @ast.RecordConstructor? raise ParseError {
+) -> @ast.RecordConstructor? raise ParseError + nocancel {
   let attributes = Attributes()
   let attr_loc = self.parse_attributes(attributes)
   if attr_loc is Some(attr_span) {
@@ -122,14 +122,14 @@ fn Parser::parse_record_constructor(
 /// A lower-case name where a variant was expected: `ExpectedRecordConstructor`
 /// when the type looks like a record (fields, then `}`), otherwise
 /// `IncorrectUpName`.
-fn Parser::invalid_record_constructor_error(
+async fn Parser::invalid_record_constructor_error(
   self : Parser,
   type_name : String,
   public : Bool,
   opaque_ : Bool,
   name_start : @span.ByteOffset,
   name_end : @span.ByteOffset,
-) -> ParseError {
+) -> ParseError noraise + nocancel {
   let fields = try
     self.series_of(p => p.parse_record_constructor_field(), Some(Comma))
   catch {
@@ -165,9 +165,9 @@ fn Parser::invalid_record_constructor_error(
 
 ///|
 /// `(field, label: Type, …)` of a variant; `end` is 0 with no parentheses.
-fn Parser::parse_record_constructor_arguments(
+async fn Parser::parse_record_constructor_arguments(
   self : Parser,
-) -> (Array[@ast.RecordConstructorArg], @span.ByteOffset) raise ParseError {
+) -> (Array[@ast.RecordConstructorArg], @span.ByteOffset) raise ParseError + nocancel {
   if self.maybe_one(LeftParen) is Some(_) {
     let arguments = self.series_of(
       p => p.parse_record_constructor_field(),
@@ -185,9 +185,9 @@ fn Parser::parse_record_constructor_arguments(
 
 ///|
 /// `label: Type` or `Type`, with the doc comment before it.
-fn Parser::parse_record_constructor_field(
+async fn Parser::parse_record_constructor_field(
   self : Parser,
-) -> @ast.RecordConstructorArg? raise ParseError {
+) -> @ast.RecordConstructorArg? raise ParseError + nocancel {
   match (self.token0, self.token1) {
     (
       Some({ kind: Name(name), span, .. }),
@@ -229,7 +229,7 @@ fn Parser::parse_record_constructor_field(
 ///|
 /// `Name` or `Name(a, b)`: start, name, parameters, end after `)` (or the
 /// name), and the name's end.
-fn Parser::expect_type_name(
+async fn Parser::expect_type_name(
   self : Parser,
 ) -> (
   @span.ByteOffset,
@@ -237,7 +237,7 @@ fn Parser::expect_type_name(
   Array[@ast.SpannedString],
   @span.ByteOffset,
   @span.ByteOffset,
-) raise ParseError {
+) raise ParseError + nocancel {
   let (start, upname, end) = self.expect_upname()
   match self.maybe_one(LeftParen) {
     Some((par_s, _)) => {

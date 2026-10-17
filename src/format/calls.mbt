@@ -1,12 +1,12 @@
 ///|
 /// The compiler's `call`. A chain of calls (`a()()()`) is walked in a loop
 /// from the innermost function out, with the compiler's pop order.
-fn Formatter::call(
+async fn Formatter::call(
   self : Formatter,
   function : @ast.Expr,
   arguments : ArrayView[@ast.CallArg[@ast.Expr]],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let frames = [(arguments, location)]
   let mut fun = function
   while fun is Call(fun=f2, arguments=a2, location=l2, ..) {
@@ -34,11 +34,11 @@ fn Formatter::call(
 
 ///|
 /// The compiler's `call_arg`.
-fn Formatter::call_arg(
+async fn Formatter::call_arg(
   self : Formatter,
   argument : @ast.CallArg[@ast.Expr],
   arity : Int32,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.format_call_arg(argument, e => e.location(), e => {
     self.comma_separated_item(e, arity)
   })
@@ -46,11 +46,11 @@ fn Formatter::call_arg(
 
 ///|
 /// The compiler's `comma_separated_item`.
-fn Formatter::comma_separated_item(
+async fn Formatter::comma_separated_item(
   self : Formatter,
   expression : @ast.Expr,
   siblings : Int32,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match expression {
     BinOp(operator~, left~, right~, ..) if siblings > 1 => {
       let comments = self.pop_comments(start_byte_index(expression))
@@ -66,10 +66,10 @@ fn Formatter::comma_separated_item(
 
 ///|
 /// The compiler's `record_update_arg`.
-fn Formatter::record_update_arg(
+async fn Formatter::record_update_arg(
   self : Formatter,
   argument : @ast.RecordUpdateArg[@ast.Expr],
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(argument.location.start)
   if argument.value.location() == argument.location {
     commented(t(argument.label) + t(":"), comments[:])
@@ -99,13 +99,13 @@ fn UpdatePiece::location(self : UpdatePiece) -> @span.SrcSpan {
 
 ///|
 /// The compiler's `record_update`.
-fn Formatter::record_update(
+async fn Formatter::record_update(
   self : Formatter,
   constructor_ : @ast.Expr,
   record : @ast.RecordBeingUpdated[@ast.Expr],
   arguments : ArrayView[@ast.RecordUpdateArg[@ast.Expr]],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let constructor_doc = self.expr(constructor_)
   let pieces : Array[UpdatePiece] = [Record(record)]
   for a in arguments {
@@ -141,13 +141,13 @@ fn Formatter::record_update(
 /// the formatter spends no fuel and no stack per link. The pops keep the
 /// compiler's order: the leftmost operand, then, for each link from the
 /// innermost out, the comments before the right operand and the operand.
-fn Formatter::bin_op(
+async fn Formatter::bin_op(
   self : Formatter,
   name : @ast.BinOp,
   left : @ast.Expr,
   right : @ast.Expr,
   nest_steps : Bool,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let ops = [name]
   let rights = [right]
   let mut leaf = left
@@ -180,12 +180,12 @@ fn Formatter::bin_op(
 
 ///|
 /// The compiler's `bin_op_side`.
-fn Formatter::bin_op_side(
+async fn Formatter::bin_op_side(
   self : Formatter,
   operator : @ast.BinOp,
   side : @ast.Expr,
   nest_steps : Bool,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let side_doc = match side {
     String(value~, ..) => bin_op_string(value)
     BinOp(operator~, left~, right~, ..) =>
@@ -205,11 +205,11 @@ fn Formatter::bin_op_side(
 
 ///|
 /// The compiler's `pipeline`.
-fn Formatter::pipeline(
+async fn Formatter::pipeline(
   self : Formatter,
   expressions : ArrayView[@ast.Expr],
   nest_pipe : Bool,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let first = expressions[0]
   let first_precedence = expr_bin_op_precedence(first)
   let first_doc = group(self.expr(first))
@@ -249,11 +249,11 @@ fn Formatter::pipeline(
 
 ///|
 /// The compiler's `expression_on_right_hand_side_of_pipe`.
-fn Formatter::expression_on_right_hand_side_of_pipe(
+async fn Formatter::expression_on_right_hand_side_of_pipe(
   self : Formatter,
   nest_pipe : Bool,
   expression : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let doc = match expression {
     Fn(kind=Capture(..), body~, ..) =>
       self.fn_capture(body, RightHandSideOfPipe)

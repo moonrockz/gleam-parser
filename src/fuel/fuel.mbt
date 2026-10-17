@@ -38,9 +38,8 @@ pub fn Budget::units(self : Budget) -> Int32 {
 }
 
 ///|
-/// The default budget, 100 units: measured safe on wasm, the smallest
-/// stack (it overflows at about 140 nested lists). Raise it only on
-/// native or js.
+/// The finite budget used by `Fuel()` when no budget is supplied: 100 units.
+/// Parser and formatter configurations default to `Unlimited` instead.
 pub let default_budget : Budget = { value: 100, }
 
 ///|

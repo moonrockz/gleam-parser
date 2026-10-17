@@ -3,13 +3,13 @@
 /// shape serves patterns, constants and expressions, so the value parser,
 /// the argument parser (for `size(...)`), the `Int` builder and the
 /// location reader are parameters.
-fn[A] Parser::parse_bit_array_segment(
+async fn[A] Parser::parse_bit_array_segment(
   self : Parser,
-  value_parser : (Parser) -> A? raise ParseError,
-  arg_parser : (Parser) -> A raise ParseError,
+  value_parser : async (Parser) -> A? raise ParseError + nocancel,
+  arg_parser : async (Parser) -> A raise ParseError + nocancel,
   to_int_segment : (String, BigInt, @span.ByteOffset, @span.ByteOffset) -> A,
   location_of : (A) -> @span.SrcSpan,
-) -> @ast.BitArraySegment[A]? raise ParseError {
+) -> @ast.BitArraySegment[A]? raise ParseError + nocancel {
   match value_parser(self) {
     Some(value) => {
       let options : Array[@ast.BitArrayOption[A]] = if self.maybe_one(Colon)
@@ -63,11 +63,11 @@ fn[A] bit_array_option_location(
 ///|
 /// One option: `utf8`, `size(x)`, `unit(2)` or a bare int (`size` in short
 /// form).
-fn[A] Parser::parse_bit_array_option(
+async fn[A] Parser::parse_bit_array_option(
   self : Parser,
-  arg_parser : (Parser) -> A raise ParseError,
+  arg_parser : async (Parser) -> A raise ParseError + nocancel,
   to_int_segment : (String, BigInt, @span.ByteOffset, @span.ByteOffset) -> A,
-) -> @ast.BitArrayOption[A]? raise ParseError {
+) -> @ast.BitArrayOption[A]? raise ParseError + nocancel {
   match self.token0 {
     Some({ kind: Name(name), span, .. }) => {
       self.advance()
@@ -154,18 +154,18 @@ fn[A] str_to_bit_array_option(
 }
 
 ///|
-fn Parser::expect_bit_array_pattern_segment_argument(
+async fn Parser::expect_bit_array_pattern_segment_argument(
   self : Parser,
-) -> @ast.Pattern raise ParseError {
+) -> @ast.Pattern raise ParseError + nocancel {
   BitArraySize(self.expect_bit_array_size())
 }
 
 ///|
 /// A size expression in a bit array pattern: ints, names, `{ }` blocks and
 /// the integer operators, by precedence.
-fn Parser::expect_bit_array_size(
+async fn Parser::expect_bit_array_size(
   self : Parser,
-) -> @ast.BitArraySize raise ParseError {
+) -> @ast.BitArraySize raise ParseError + nocancel {
   let opstack : Array[OpEntry] = []
   let estack : Array[@ast.BitArraySize] = [self.parse_bit_array_size_unit()]
   while true {
@@ -189,9 +189,9 @@ fn Parser::expect_bit_array_size(
 }
 
 ///|
-fn Parser::parse_bit_array_size_unit(
+async fn Parser::parse_bit_array_size_unit(
   self : Parser,
-) -> @ast.BitArraySize raise ParseError {
+) -> @ast.BitArraySize raise ParseError + nocancel {
   self.nested(op_bit_array_size, () => {
     match self.token0 {
       Some({ kind: Name(name), span, .. }) => {

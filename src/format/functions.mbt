@@ -10,10 +10,10 @@ fn argument_names(names : @ast.ArgNames) -> @pretty.Doc {
 
 ///|
 /// The compiler's `fn_arg`.
-fn Formatter::fn_arg(
+async fn Formatter::fn_arg(
   self : Formatter,
   argument : @ast.Arg,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(argument.location.start)
   let doc = match argument.annotation {
     None => argument_names(argument.names)
@@ -25,10 +25,10 @@ fn Formatter::fn_arg(
 
 ///|
 /// The compiler's `statement_fn`.
-fn Formatter::statement_fn(
+async fn Formatter::statement_fn(
   self : Formatter,
   function : @ast.Function,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let attrs = attributes(
     function.deprecation,
     function.publicity,

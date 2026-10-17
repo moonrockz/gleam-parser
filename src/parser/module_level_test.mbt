@@ -266,7 +266,10 @@ test "a definition nested past the limit is reported and dropped; the rest parse
   let opens = String::make(200, '[')
   let closes = String::make(200, ']')
   let text = "fn deep() {\n  \{opens}1\{closes}\n}\n\nfn ok() {\n  1\n}\n"
-  let r = @parser.parse_text(text)
+  let r = @parser.parse_text(text, config={
+    ..@config.Config::default(),
+    fuel: Limited(@fuel.Budget(100)),
+  })
   @expect.expect_all(e => {
     e.expect(kinds(r)).to_equal(["GL-PARSE-004 TooMuchNesting"])
     e.expect(r.module_.definitions.length()).to_equal(1)

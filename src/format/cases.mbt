@@ -16,12 +16,12 @@ fn guard_precedence(g : @ast.ClauseGuard) -> Int32 {
 
 ///|
 /// The compiler's `case`.
-fn Formatter::case_(
+async fn Formatter::case_(
   self : Formatter,
   subjects : ArrayView[@ast.Expr],
   clauses : ArrayView[@ast.Clause],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let subject_docs = []
   for subject in subjects {
     subject_docs.push(group(self.expr(subject)))
@@ -49,11 +49,11 @@ fn Formatter::case_(
 
 ///|
 /// The compiler's `clause`.
-fn Formatter::clause(
+async fn Formatter::clause(
   self : Formatter,
   clause : @ast.Clause,
   index : Int32,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let space_before = self.pop_empty_lines(clause.location.start)
   let comments = self.pop_comments(clause.location.start)
   let clause_doc = match clause.guard_ {
@@ -90,10 +90,10 @@ fn Formatter::clause(
 
 ///|
 /// The compiler's `alternative_patterns`.
-fn Formatter::alternative_patterns(
+async fn Formatter::alternative_patterns(
   self : Formatter,
   clause : @ast.Clause,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let has_guard = clause.guard_ is Some(_)
   let has_multiple_subjects = clause.pattern.length() > 1
   let alternatives_separator = if has_guard && !has_multiple_subjects {
@@ -130,12 +130,12 @@ fn Formatter::alternative_patterns(
 /// loop: the comments before each left side are popped top-down first (the
 /// compiler pops them on the way down), then the leaf, then each right side
 /// from the innermost link out.
-fn Formatter::clause_guard_bin_op(
+async fn Formatter::clause_guard_bin_op(
   self : Formatter,
   name : @ast.BinOp,
   left : @ast.ClauseGuard,
   right : @ast.ClauseGuard,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let ops = [name]
   let rights = [right]
   let lefts = [left]
@@ -185,12 +185,12 @@ fn Formatter::clause_guard_bin_op(
 
 ///|
 /// The compiler's `clause_guard_bin_op_side`.
-fn Formatter::clause_guard_bin_op_side(
+async fn Formatter::clause_guard_bin_op_side(
   self : Formatter,
   name : @ast.BinOp,
   side : @ast.ClauseGuard,
   side_precedence : Int32,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let side_doc = self.clause_guard(side)
   match guard_bin_op_name(side) {
     Some(side_name) if can_be_grouped_with(side_name, name) =>
@@ -201,10 +201,10 @@ fn Formatter::clause_guard_bin_op_side(
 
 ///|
 /// The compiler's `clause_guard`. One unit of fuel per nesting level.
-fn Formatter::clause_guard(
+async fn Formatter::clause_guard(
   self : Formatter,
   guard_ : @ast.ClauseGuard,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.nested(op_format, () => {
     match guard_ {
       BinaryOperator(operator~, left~, right~, ..) =>
@@ -221,10 +221,10 @@ fn Formatter::clause_guard(
 ///|
 /// The compiler's `TupleIndex` and `FieldAccess` guard arms, for a whole
 /// chain in a loop: the parser accepts a chain of any length.
-fn Formatter::guard_access_chain(
+async fn Formatter::guard_access_chain(
   self : Formatter,
   guard_ : @ast.ClauseGuard,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let suffixes : Array[String] = []
   let mut base = guard_
   let mut walking = true

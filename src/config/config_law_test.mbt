@@ -12,12 +12,12 @@ fn pick_dialect(i : Int32) -> @dialect.Dialect? {
 }
 
 ///|
-fn pick_fuel(i : Int32) -> @fuel.Budget? {
+fn pick_fuel(i : Int32) -> @fuel.NestingLimit? {
   match i % 4 {
     0 => None
-    1 => @fuel.Budget::from_int(1)
-    2 => @fuel.Budget::from_int(7)
-    _ => Some(@fuel.default_budget)
+    1 => @fuel.Budget::from_int(1).map(b => Limited(b))
+    2 => @fuel.Budget::from_int(7).map(b => Limited(b))
+    _ => Some(Unlimited)
   }
 }
 
@@ -95,8 +95,10 @@ fn to_toml(p : @config.Partial) -> String {
   if p.dialect is Some(d) {
     sb.write_string("gleam = \"\{d.version()}\"\n")
   }
-  if p.fuel is Some(b) {
-    sb.write_string("fuel = \{b.units()}\n")
+  match p.fuel {
+    Some(Limited(b)) => sb.write_string("fuel = \{b.units()}\n")
+    Some(Unlimited) => sb.write_string("fuel = \"unlimited\"\n")
+    None => ()
   }
   sb.to_string()
 }

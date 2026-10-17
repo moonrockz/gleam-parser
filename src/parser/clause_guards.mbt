@@ -1,9 +1,9 @@
 ///|
 /// `if <guard>` after a clause's patterns; `None` without `if`. An empty
 /// guard (`if ->`) is the deprecated empty guard.
-fn Parser::parse_case_clause_guard(
+async fn Parser::parse_case_clause_guard(
   self : Parser,
-) -> @ast.ClauseGuard? raise ParseError {
+) -> @ast.ClauseGuard? raise ParseError + nocancel {
   guard self.maybe_one(Keyword(If)) is Some((start, end)) else { return None }
   let result = self.parse_clause_guard_inner()
   if result is None {
@@ -13,9 +13,9 @@ fn Parser::parse_case_clause_guard(
 }
 
 ///|
-fn Parser::parse_clause_guard_inner(
+async fn Parser::parse_clause_guard_inner(
   self : Parser,
-) -> @ast.ClauseGuard? raise ParseError {
+) -> @ast.ClauseGuard? raise ParseError + nocancel {
   let opstack : Array[OpEntry] = []
   let estack : Array[@ast.ClauseGuard] = []
   let mut last_op_start = @span.ByteOffset::zero()
@@ -51,10 +51,10 @@ fn Parser::parse_clause_guard_inner(
 /// After a name in a guard: a `(` means a function call, which guards do
 /// not allow (`CallInClauseGuard` over the call when it parses, otherwise
 /// `UnexpectedToken` at the `(` with the multi-line hint).
-fn Parser::parse_function_call_in_clause_guard(
+async fn Parser::parse_function_call_in_clause_guard(
   self : Parser,
   start : @span.ByteOffset,
-) -> Unit raise ParseError {
+) -> Unit raise ParseError + nocancel {
   if self.maybe_one(LeftParen) is Some((l_paren_start, l_paren_end)) {
     let closed = try {
       let _ = self.parse_fn_arguments()
@@ -83,16 +83,16 @@ fn Parser::parse_function_call_in_clause_guard(
 ///|
 /// One guard unit: `!unit`, a name with field accesses and tuple indexes,
 /// a `{ }` block, or a constant.
-fn Parser::parse_case_clause_guard_unit(
+async fn Parser::parse_case_clause_guard_unit(
   self : Parser,
-) -> @ast.ClauseGuard? raise ParseError {
+) -> @ast.ClauseGuard? raise ParseError + nocancel {
   self.nested(op_clause_guard, () => self.parse_case_clause_guard_unit_inner())
 }
 
 ///|
-fn Parser::parse_case_clause_guard_unit_inner(
+async fn Parser::parse_case_clause_guard_unit_inner(
   self : Parser,
-) -> @ast.ClauseGuard? raise ParseError {
+) -> @ast.ClauseGuard? raise ParseError + nocancel {
   match self.token0 {
     Some({ kind: Bang, span, .. }) => {
       self.advance()
@@ -158,10 +158,10 @@ fn Parser::parse_case_clause_guard_unit_inner(
 
 ///|
 /// `{ guard }` with `{` consumed; an empty block is `EmptyGuardBlock`.
-fn Parser::parse_case_clause_guard_block(
+async fn Parser::parse_case_clause_guard_block(
   self : Parser,
   start : @span.ByteOffset,
-) -> @ast.ClauseGuard raise ParseError {
+) -> @ast.ClauseGuard raise ParseError + nocancel {
   match self.parse_clause_guard_inner() {
     Some(body) => {
       let (_, end) = self.expect_one(RightBrace)
@@ -179,11 +179,11 @@ fn Parser::parse_case_clause_guard_block(
 
 ///|
 /// `module.Constructor(...)` in a guard: a constant record.
-fn Parser::parse_record_in_clause_guard(
+async fn Parser::parse_record_in_clause_guard(
   self : Parser,
   module_ : String,
   module_location : @span.SrcSpan,
-) -> @ast.ClauseGuard? raise ParseError {
+) -> @ast.ClauseGuard? raise ParseError + nocancel {
   guard self.token0 is Some({ kind: Dot, .. }) &&
     self.token1 is Some({ kind: UpName(_), .. }) else {
     return None

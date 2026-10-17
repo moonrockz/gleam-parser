@@ -59,7 +59,9 @@ pub fn format_parsed(
   }
   let source = @scanner.SourceText(result.cst.to_source())
   let formatter = Formatter(result.extra, source, config)
-  pretty_print(formatter.format_module(result.module_))
+  pretty_print(
+    formatter.runner.run(() => formatter.format_module(result.module_)),
+  )
 }
 
 ///|

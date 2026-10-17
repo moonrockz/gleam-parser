@@ -24,7 +24,7 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   diagnostic (`kind` = the `LexicalErrorType` variant) plus one `Error`
   token from the token start to the end of the error, at least one
   character, or to the closing quote inside a string; scanning continues.
-- **Parser** — a recursive-descent port of the compiler's `parse.rs`
+- **Parser** — a stack-safe port of the compiler's recursive-descent `parse.rs`
   (`src/parser`), one file per concern, over the compiler's two-token
   lookahead. A scanner `Error` token is a hole in the stream, as a lexical
   error is in the compiler. Recovery per definition: a syntax error is
@@ -50,9 +50,9 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   attributes, targets and deprecation rules the parser accepts.
   `keywords` holds scanner `Keyword` values. The parser treats omitted
   keywords as names, including during recovery; the CST keeps scanner tokens.
-- **Fuel and Config** — `src/fuel`: an immutable recursion budget
-  (`Budget`, at least 1; `default_budget` 100 units, sized for wasm), one
-  unit per nested entry, `FuelExhausted` names the operations.
+- **Fuel and Config** — `src/fuel`: `NestingLimit::Unlimited` (the default)
+  or `Limited(Budget)` (at least 1), with immutable `Fuel` for a finite
+  caller policy. One unit per nested entry; `FuelExhausted` names the operations.
   `src/config`: `Config { dialect, fuel }` from defaults,
   `gleam-parser.toml` (`[parser]`: `gleam`, `fuel`), `GLEAM_PARSER_GLEAM`
   and `GLEAM_PARSER_FUEL` and the caller, merged with `with_fallback` (set
@@ -93,8 +93,8 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   config?)` and `format_parsed(result, config?)` give `gleam format`'s
   text; `FormatError` is `ParseFailed` (the error diagnostics) or
   `OutOfFuel` (`expr`, `pattern`, `type_ast`, `const_expr`, `clause_guard`
-  and `bit_array_size` spend one unit per nesting level; `statement` spends
-  none, and a flat chain (a left-nested operator chain, a field-access or
+  and `bit_array_size` spend one unit per nesting level only with a finite
+  caller budget; `statement` spends none, and a flat chain (a left-nested operator chain, a field-access or
   tuple-index chain, a call chain) is walked in a loop with no fuel and no
   stack per link, so the formatter accepts what the parser accepts). A private
   `Formatter` keeps the comment arrays of `ModuleExtra` with forward
@@ -146,17 +146,16 @@ and ratchet as "Gleam Parity" and "Format Parity" say (`mise run formatter:cases
   comment between a doc comment and the definition detaches it (warning
   `GL-PARSE-003`); a doc comment inside a body is taken by the next
   definition; a trailing doc comment with no definition is ignored.
-- Fuel keeps every target stack-safe, `GL-PARSE-004` (`TooMuchNesting`,
-  message `Recursion limit exceeded`): the parser spends one unit of
-  `Config.fuel` per nested entry of an expression, pattern, type,
-  constant, clause guard or bit-array size (`Parser::nested`), and reports
-  the budget and the operations on the stack when it runs out. The default
-  budget is 100 units (wasm overflows at about 140 nested lists); raise it
-  only on native or js. The JSON codec does not recurse
-  (`src/ast/step.mbt`), so an AST the parser accepts always encodes,
-  decodes and canonicalises; the laws in `src/parser/nesting_law_test.mbt`
-  check the limit against the codec. The compiler has no such limit (known
-  difference).
+- Parser and formatter recursion runs through `src/work`, a local synchronous
+  executor for compiler-generated continuations. Every recursive grammar family
+  suspends before descending and on return, including errors (`nested`). Public
+  entry points remain synchronous. `Config.fuel` defaults to `Unlimited`;
+  `Limited(Budget)` is an optional caller policy. Exhaustion reports
+  `GL-PARSE-004` (`TooMuchNesting`) with the budget and open operations.
+  AST encoding, decoding and canonicalisation use the trampoline in
+  `src/ast/step.mbt`. Recursive AST equality and debug representation use
+  the continuation executor too. Deep tests cover every grammar family at
+  10,000 levels, mixed nesting, recovery and syntax indexing on every target.
 - Snippet parsers for tests and tools: `parse_expression_text`,
   `parse_statements_text`, `parse_pattern_text`, `parse_type_text`,
   `parse_constant_text` (the compiler's test interfaces; they raise
@@ -180,7 +179,8 @@ moonrockz/gleam-parser
 │   ├── ast/              # Compiler-mirror AST; canonical JSON encode/decode (step trampoline, no depth limit)
 │   ├── cst/              # ModuleCst, DefinitionCst (tokens per definition); trivia_extra
 │   ├── dialect/          # Dialect::gleam_1_19(): attributes, targets, deprecation rules
-│   ├── fuel/             # Budget, Operation, Spent, Fuel (immutable), FuelExhausted
+│   ├── work/             # Synchronous executor for compiler continuations
+│   ├── fuel/             # NestingLimit, Budget, Operation, Spent, Fuel, FuelExhausted
 │   ├── config/           # Config, Partial, Source, ConfigError, Environment; from_toml, from_env, load
 │   ├── parser/           # Port of parse.rs: definitions, expressions, patterns, types, constants, guards, bit arrays; recovery; fuel
 │   ├── report/           # render_plain, render_terminal (codespan layout), encode_diagnostics
@@ -259,8 +259,12 @@ step when you add a code.
   node encoder or decoder takes a continuation and returns a step, `run`
   loops, so no AST depth overflows the stack on any target and there is no
   depth limit. Keep the four rules of `step.mbt` when you add a node. The
-  derived `Eq` and `Debug` of the AST still recurse. `@json.parse` has its
-  own nesting limit (`max_nesting_depth`) and recursion.
+  recursive AST roots implement `Eq` and `Debug` through `src/work`.
+  Keep `src/ast/equality.mbt` and `src/ast/debug.mbt` in step with fields in
+  `types.mbt`; equality includes `float_value`, which JSON omits.
+  Core debug rendering has a display depth limit. `@json.parse` has its
+  own nesting limit (`max_nesting_depth`) and recursion; this is separate
+  from decoding an already-built `Json` value.
 - To change the schema: change `src/ast/encode.mbt`, `src/ast/decode.mbt`,
   `tools/gleam-ast-oracle/src/encode.rs`, `docs/ast-json.md` and
   `src/syntax/children.mbt` (`entries`, `kind_table`) together, then
@@ -624,8 +628,8 @@ error, against the compiler (the oracle).
   match yet. The list only shrinks: the check fails on a mismatch that is not
   listed and on a listed pair that now matches (remove it).
   `GLEAM_REJECTION_MODE=write-pending` rewrites the list; use it only when
-  adding fixtures. The one expected entry is `nesting/too_deep.gleam`
-  (`verdict`): the compiler has no nesting limit.
+  adding fixtures. The pending list is empty. The deep-nesting fixture now
+  agrees with the compiler's acceptance.
 
 ## Format Parity
 
@@ -671,8 +675,8 @@ gleam-parser checks `format` against `gleam format` 1.19.2.
   comment once on `Commented` (a comment before every definition,
   statement, clause, variant and closing brace) and on `HardCommented` (a
   comment before every `)`, `]`, `|>`, `->`, `|`, `as` and `..`), never a
-  crash on `GleamText`, the deepest
-  nesting and the longest flat chains on every target. The cookbook article
+  crash on `GleamText`, deep
+  nesting and long flat chains on every target. The cookbook article
   is `docs/cookbook/format.mbt.md`.
 
 ## Tooling

@@ -18,7 +18,7 @@ priv enum CommentOrLine {
 /// The compiler's `Formatter`: the comment arrays of `ModuleExtra` with a
 /// cursor each (the compiler pops slices; a cursor only moves forward),
 /// the new-line and trailing-comma positions (searched, never popped) and
-/// the fuel of the current nesting level.
+/// the optional caller budget and a local continuation executor.
 priv struct Formatter {
   comments : Array[Comment]
   doc_comments : Array[Comment]
@@ -29,7 +29,8 @@ priv struct Formatter {
   mut comments_at : Int32
   mut doc_comments_at : Int32
   mut empty_lines_at : Int32
-  fuel : Ref[@fuel.Fuel]
+  runner : @work.Runner
+  fuel : Ref[@fuel.Fuel?]
 }
 
 ///|
@@ -62,19 +63,29 @@ fn Formatter::Formatter(
     comments_at: 0,
     doc_comments_at: 0,
     empty_lines_at: 0,
-    fuel: { val: @fuel.Fuel(budget=config.fuel), },
+    runner: @work.Runner(),
+    fuel: { val: config.fuel.budget().map(b => @fuel.Fuel(budget=b)), },
   }
 }
 
 ///|
-/// Run `body` one nesting level deeper: one unit of fuel for `op`.
-fn[A] Formatter::nested(
+/// Schedule descent and return, including errors, through the local executor.
+/// With a finite caller budget, spend one unit for this nesting level.
+async fn[A] Formatter::nested(
   self : Formatter,
   op : @fuel.Operation,
-  body : () -> A raise FormatError,
-) -> A raise FormatError {
-  let inner = self.fuel.val.spend(op) catch { e => raise OutOfFuel(e) }
-  self.fuel.protect(inner, body)
+  body : async () -> A raise FormatError + nocancel,
+) -> A raise FormatError + nocancel {
+  self.runner.pause()
+  defer self.runner.pause()
+  let outer = self.fuel.val
+  defer {
+    self.fuel.val = outer
+  }
+  self.fuel.val = outer.map(fuel => fuel.spend(op)) catch {
+    e => raise OutOfFuel(e)
+  }
+  body()
 }
 
 ///|
@@ -279,10 +290,10 @@ fn Formatter::has_trailing_comma(
 
 ///|
 /// The compiler's `targeted_definition`.
-fn Formatter::targeted_definition(
+async fn Formatter::targeted_definition(
   self : Formatter,
   definition : @ast.TargetedDefinition,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let start = definition.definition.location().start
   let comments = self.pop_comments_with_position(start)
   let comments = self.printed_documented_comments(comments[:])
@@ -301,20 +312,20 @@ fn Formatter::targeted_definition(
 
 ///|
 /// The compiler's `documented_definition`.
-fn Formatter::documented_definition(
+async fn Formatter::documented_definition(
   self : Formatter,
   definition : @ast.Definition,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.doc_comments(definition.location().start)
   group(comments + group(self.definition(definition)))
 }
 
 ///|
 /// The compiler's `definition`.
-fn Formatter::definition(
+async fn Formatter::definition(
   self : Formatter,
   definition : @ast.Definition,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match definition {
     Function(f) => self.statement_fn(f)
     TypeAlias(a) => self.type_alias(a)
@@ -326,10 +337,10 @@ fn Formatter::definition(
 
 ///|
 /// The compiler's `module` (`module` is a reserved word).
-fn Formatter::format_module(
+async fn Formatter::format_module(
   self : Formatter,
   module_ : @ast.Module,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let documents : Array[@pretty.Doc] = []
   let mut previous_was_a_definition = false
   // Consecutive imports form one chunk (`chunk_by(is_import)`).

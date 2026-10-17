@@ -1,6 +1,6 @@
 ///|
-fn budget(n : Int32) -> @fuel.Budget {
-  @fuel.Budget::from_int(n).unwrap()
+fn budget(n : Int32) -> @fuel.NestingLimit {
+  Limited(@fuel.Budget::from_int(n).unwrap())
 }
 
 ///|
@@ -21,11 +21,11 @@ fn error_of(
 }
 
 ///|
-test "the default config is gleam 1.19 with the default budget" {
+test "the default config is gleam 1.19 with unlimited nesting" {
   let c = @config.Config::default()
   @expect.expect_all(e => {
     e.expect(c.dialect).to_equal(@dialect.Dialect::gleam_1_19())
-    e.expect(c.fuel).to_equal(@fuel.default_budget)
+    e.expect(c.fuel).to_equal(Unlimited)
   })
 }
 
@@ -50,7 +50,7 @@ test "with_fallback: set fields win, unset fields come from the fallback" {
     .expect(@config.Config::default().to_partial())
     .to_equal({
       dialect: Some(@dialect.Dialect::gleam_1_19()),
-      fuel: Some(@fuel.default_budget),
+      fuel: Some(Unlimited),
     })
     e.expect(@config.Partial::empty()).to_equal({ dialect: None, fuel: None, })
   })

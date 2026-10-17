@@ -5,25 +5,28 @@
 // the file system or the environment.
 
 ///|
-/// The parser's configuration.
+/// The dialect and optional nesting policy for parsing and formatting.
+/// `fuel: Unlimited` accepts any depth that fits in available memory.
+/// Use `Limited(Budget(...))` to impose a caller-selected depth limit.
 ///
 /// ```mbt check
 /// test {
 ///   let c = @config.Config::default()
-///   inspect(c.fuel.units(), content="100")
+///   debug_inspect(c.fuel, content="Unlimited")
 ///   inspect(c.dialect.name, content="gleam-1.19")
 /// }
 /// ```
 pub(all) struct Config {
   dialect : @dialect.Dialect
-  fuel : @fuel.Budget
+  fuel : @fuel.NestingLimit
 } derive(Eq, Debug)
 
 ///|
 /// A layer of configuration: each field set or unset.
+/// `Some(Unlimited)` clears a fallback's limit; `None` inherits it.
 pub(all) struct Partial {
   dialect : @dialect.Dialect?
-  fuel : @fuel.Budget?
+  fuel : @fuel.NestingLimit?
 } derive(Eq, Debug)
 
 ///|
@@ -50,9 +53,9 @@ pub(all) suberror ConfigError {
 } derive(Eq, Debug)
 
 ///|
-/// `Dialect::gleam_1_19()` and `@fuel.default_budget`.
+/// `Dialect::gleam_1_19()` with unlimited nesting.
 pub fn Config::default() -> Config {
-  { dialect: @dialect.Dialect::gleam_1_19(), fuel: @fuel.default_budget, }
+  { dialect: @dialect.Dialect::gleam_1_19(), fuel: Unlimited, }
 }
 
 ///|
@@ -80,14 +83,14 @@ pub fn Partial::empty() -> Partial {
 /// test {
 ///   let file : @config.Partial = {
 ///     dialect: None,
-///     fuel: @fuel.Budget::from_int(500),
+///     fuel: @fuel.Budget::from_int(500).map(b => Limited(b)),
 ///   }
 ///   let env : @config.Partial = {
 ///     dialect: None,
-///     fuel: @fuel.Budget::from_int(2000),
+///     fuel: @fuel.Budget::from_int(2000).map(b => Limited(b)),
 ///   }
 ///   let c = env.with_fallback(file).to_config(@config.Config::default())
-///   inspect(c.fuel.units(), content="2000")
+///   debug_inspect(c.fuel.budget().map(b => b.units()), content="Some(2000)")
 /// }
 /// ```
 pub fn Partial::with_fallback(self : Partial, fallback : Partial) -> Partial {

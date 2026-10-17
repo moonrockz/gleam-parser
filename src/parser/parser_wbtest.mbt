@@ -2,7 +2,7 @@
 fn parser_of(text : String, budget~ : Int32 = 100) -> Parser {
   Parser(@scanner.tokenize_text(text), {
     ..@config.Config::default(),
-    fuel: @fuel.Budget::from_int(budget).unwrap(),
+    fuel: Limited(@fuel.Budget::from_int(budget).unwrap()),
   })
 }
 
@@ -38,7 +38,9 @@ test "the cursor loads two tokens and an Error token is a hole" {
 ///|
 test "series_of records a trailing comma and rejects an extra one" {
   let p = parser_of("a, b, )")
-  let names = p.series_of(q => q.maybe_name().map(n => n.1), Some(Comma))
+  let names = p.runner.run(() => {
+    p.series_of(q => q.maybe_name().map(n => n.1), Some(Comma))
+  })
   @expect.expect_all(e => {
     e.expect(names).to_equal(["a", "b"])
     e
@@ -57,7 +59,9 @@ test "series_of records a trailing comma and rejects an extra one" {
   })
   let extra = parser_of("a,, b")
   let r = attempt(() => {
-    extra.series_of(q => q.maybe_name().map(n => n.1), Some(Comma))
+    extra.runner.run(() => {
+      extra.series_of(q => q.maybe_name().map(n => n.1), Some(Comma))
+    })
   })
   guard r is Err(ParseError(error=ExtraSeparator, location~)) else {
     fail("expected ExtraSeparator, got \{@debug.to_string(r)}")
@@ -113,13 +117,15 @@ test "expect helpers give the compiler's errors" {
 test "nesting past the budget is TooMuchNesting at the current token, naming the operations" {
   let p = parser_of("x", budget=2)
   let r : Result[Unit, ParseError] = attempt(() => {
-    p.nested(op_expression, () => {
+    p.runner.run(() => {
       p.nested(op_expression, () => {
-        p.nested(op_pattern, () => {
-          raise ParseError(
-            error=ExpectedExpr,
-            location=@span.SrcSpan::from_ints(9, 9).unwrap(),
-          )
+        p.nested(op_expression, () => {
+          p.nested(op_pattern, () => {
+            raise ParseError(
+              error=ExpectedExpr,
+              location=@span.SrcSpan::from_ints(9, 9).unwrap(),
+            )
+          })
         })
       })
     })
@@ -135,7 +141,7 @@ test "nesting past the budget is TooMuchNesting at the current token, naming the
     .to_equal([{ operation: @fuel.Operation("expression"), levels: 2, }])
     e.expect(location).to_equal(@span.SrcSpan::from_ints(0, 1).unwrap())
     // the fuel is back at the full budget after the error
-    e.expect(p.fuel.val.left()).to_equal(2)
+    e.expect(p.fuel.val.unwrap().left()).to_equal(2)
   })
 }
 

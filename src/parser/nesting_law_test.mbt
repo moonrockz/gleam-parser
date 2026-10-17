@@ -4,13 +4,13 @@ fn nesting_kinds(r : @parser.ParseResult) -> Array[String] {
 }
 
 ///|
-test "default fuel rejects deep lists in function bodies without overflowing" {
+test "an explicit budget rejects deep lists in function bodies without overflowing" {
   let text = "pub fn f() {\n  " +
     "[".repeat(120) +
     "1" +
     "]".repeat(120) +
     "\n}\n"
-  let result = @parser.parse_text(text)
+  let result = @parser.parse_text(text, config=with_fuel(100))
   @expect.expect_all(e => {
     e.expect(nesting_kinds(result)).to_equal(["GL-PARSE-004 TooMuchNesting"])
     e.expect(result.cst.to_source()).to_equal(text)
@@ -36,7 +36,7 @@ test "law: every construct nested 20 deep parses and round-trips; 200 deep is on
       e.expect((c, nesting_kinds(shallow))).to_equal((c, []))
       e.expect((c, round_trips(shallow))).to_equal((c, true))
       let deep_text = @lawkit.nested(c, 200)
-      let deep = @parser.parse_text(deep_text)
+      let deep = @parser.parse_text(deep_text, config=with_fuel(100))
       e
       .expect((c, nesting_kinds(deep)))
       .to_equal((c, ["GL-PARSE-004 TooMuchNesting"]))
@@ -52,17 +52,23 @@ test "law: the deepest accepted nesting round-trips, and one level more is rejec
     for c in @lawkit.Construct::all() {
       let mut depth = 1
       while depth < 400 {
-        if @parser.parse_text(@lawkit.nested(c, depth)).has_errors() {
+        if @parser.parse_text(@lawkit.nested(c, depth), config=with_fuel(100)).has_errors() {
           break
         }
         depth += 1
       }
       // The limit is reached well before 400 levels for every construct.
       e.expect((c, depth < 400)).to_equal((c, true))
-      let last_ok = @parser.parse_text(@lawkit.nested(c, depth - 1))
+      let last_ok = @parser.parse_text(
+        @lawkit.nested(c, depth - 1),
+        config=with_fuel(100),
+      )
       e.expect((c, nesting_kinds(last_ok))).to_equal((c, []))
       e.expect((c, round_trips(last_ok))).to_equal((c, true))
-      let rejected = @parser.parse_text(@lawkit.nested(c, depth))
+      let rejected = @parser.parse_text(
+        @lawkit.nested(c, depth),
+        config=with_fuel(100),
+      )
       e
       .expect((c, nesting_kinds(rejected)))
       .to_equal((c, ["GL-PARSE-004 TooMuchNesting"]))
@@ -72,17 +78,20 @@ test "law: the deepest accepted nesting round-trips, and one level more is rejec
 
 ///|
 fn with_fuel(units : Int32) -> @config.Config {
-  { ..@config.Config::default(), fuel: @fuel.Budget::from_int(units).unwrap(), }
+  {
+    ..@config.Config::default(),
+    fuel: Limited(@fuel.Budget::from_int(units).unwrap()),
+  }
 }
 
 ///|
 test "law: fuel n accepts depth n and rejects depth n + 1 for every construct" {
   @expect.expect_all(e => {
     for c in @lawkit.Construct::all() {
-      // The depth the default budget accepts last.
+      // The depth an explicit budget of 100 accepts last.
       let mut depth = 1
       while depth < 400 {
-        if @parser.parse_text(@lawkit.nested(c, depth)).has_errors() {
+        if @parser.parse_text(@lawkit.nested(c, depth), config=with_fuel(100)).has_errors() {
           break
         }
         depth += 1
@@ -147,7 +156,7 @@ test "the nesting error names the budget and the operations, outermost first" {
     .expect(d.hint)
     .to_equal(
       Some(
-        "Split the code into smaller functions or constants, or give the parser a Config with more fuel on a target with a large stack (native, js).",
+        "Increase the configured budget, or use Config with fuel: Unlimited to remove the nesting limit.",
       ),
     )
   })
@@ -161,7 +170,10 @@ test "the nesting error names the budget and the operations, outermost first" {
 test "law: every small budget accepts exactly its depth of nested lists" {
   let mut last_ok = 0
   while last_ok < 400 &&
-        !@parser.parse_text(@lawkit.nested(List, last_ok + 1)).has_errors() {
+        !@parser.parse_text(
+          @lawkit.nested(List, last_ok + 1),
+          config=with_fuel(100),
+        ).has_errors() {
     last_ok += 1
   }
   let k = @fuel.default_budget.units() - last_ok

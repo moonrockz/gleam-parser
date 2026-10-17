@@ -5,14 +5,14 @@ fn is_discard(p : @ast.Pattern) -> Bool {
 
 ///|
 /// The compiler's `pattern_constructor`.
-fn Formatter::pattern_constructor(
+async fn Formatter::pattern_constructor(
   self : Formatter,
   name : String,
   arguments : ArrayView[@ast.CallArg[@ast.Pattern]],
   module_ : @ast.SpannedString?,
   spread : @span.SrcSpan?,
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let is_breakable = (p : @ast.Pattern) => {
     match p {
       Tuple(..) | List(..) | BitArray(..) => true
@@ -47,10 +47,10 @@ fn Formatter::pattern_constructor(
 
 ///|
 /// The compiler's `pattern`. One unit of fuel per nesting level.
-fn Formatter::pattern(
+async fn Formatter::pattern(
   self : Formatter,
   pattern : @ast.Pattern,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.nested(op_format, () => {
     let comments = self.pop_comments(pattern.location().start)
     let doc = match pattern {
@@ -105,10 +105,10 @@ fn Formatter::pattern(
 
 ///|
 /// The compiler's `bit_array_size`.
-fn Formatter::bit_array_size(
+async fn Formatter::bit_array_size(
   self : Formatter,
   size : @ast.BitArraySize,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.nested(op_format, () => {
     match size {
       Int(value~, ..) => int(value)
@@ -144,11 +144,11 @@ fn Formatter::bit_array_size(
 
 ///|
 /// The compiler's `list_pattern`.
-fn Formatter::list_pattern(
+async fn Formatter::list_pattern(
   self : Formatter,
   elements : ArrayView[@ast.Pattern],
   tail : @ast.TailPattern?,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   if elements.is_empty() {
     return match tail {
       Some(tl) => self.pattern(tl.pattern)
@@ -178,9 +178,9 @@ fn Formatter::list_pattern(
 
 ///|
 /// The compiler's `pattern_call_arg`.
-fn Formatter::pattern_call_arg(
+async fn Formatter::pattern_call_arg(
   self : Formatter,
   argument : @ast.CallArg[@ast.Pattern],
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.format_call_arg(argument, p => p.location(), p => self.pattern(p))
 }

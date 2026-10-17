@@ -121,12 +121,12 @@ fn[A] Formatter::has_items_on_the_same_line(
 
 ///|
 /// The compiler's `format_call_arg`.
-fn[A] Formatter::format_call_arg(
+async fn[A] Formatter::format_call_arg(
   self : Formatter,
   argument : @ast.CallArg[A],
   value_location : (A) -> @span.SrcSpan,
-  format_value : (A) -> @pretty.Doc raise FormatError,
-) -> @pretty.Doc raise FormatError {
+  format_value : async (A) -> @pretty.Doc raise FormatError + nocancel,
+) -> @pretty.Doc raise FormatError + nocancel {
   let shorthand = argument.implicit is None &&
     argument.location == value_location(argument.value)
   match (shorthand, argument.label) {
@@ -145,15 +145,15 @@ fn[A] Formatter::format_call_arg(
 
 ///|
 /// The compiler's `append_inlinable_wrapped_arguments`.
-fn[A] Formatter::append_inlinable_wrapped_arguments(
+async fn[A] Formatter::append_inlinable_wrapped_arguments(
   self : Formatter,
   doc : @pretty.Doc,
   values : Array[A],
   location : @span.SrcSpan,
   location_of : (A) -> @span.SrcSpan,
   is_breakable_argument : (A) -> Bool,
-  to_doc : (A) -> @pretty.Doc raise FormatError,
-) -> @pretty.Doc raise FormatError {
+  to_doc : async (A) -> @pretty.Doc raise FormatError + nocancel,
+) -> @pretty.Doc raise FormatError + nocancel {
   match values.last() {
     Some(last) if is_breakable_argument(last) &&
       !self.any_comments(location_of(last).start) &&
@@ -182,20 +182,20 @@ fn[A] Formatter::append_inlinable_wrapped_arguments(
 
 ///|
 /// The compiler's `constant_call_arg`.
-fn Formatter::constant_call_arg(
+async fn Formatter::constant_call_arg(
   self : Formatter,
   argument : @ast.CallArg[@ast.Constant],
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.format_call_arg(argument, c => c.location(), c => self.const_expr(c))
 }
 
 ///|
 /// The compiler's `comma_separated_constant_item`.
-fn Formatter::comma_separated_constant_item(
+async fn Formatter::comma_separated_constant_item(
   self : Formatter,
   constant : @ast.Constant,
   siblings : Int32,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match constant {
     BinaryOperator(operator~, left~, right~, ..) if siblings > 1 => {
       let comments = self.pop_comments(constant.location().start)
@@ -210,11 +210,11 @@ fn Formatter::comma_separated_constant_item(
 
 ///|
 /// The compiler's `append_as_message_constant`.
-fn Formatter::append_as_message_constant(
+async fn Formatter::append_as_message_constant(
   self : Formatter,
   doc : @pretty.Doc,
   message : @ast.Constant?,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   guard message is Some(message) else { return doc }
   let comments = self.pop_comments(message.location().start)
   let doc = match printed_comments(comments[:], false) {
@@ -230,13 +230,13 @@ fn Formatter::append_as_message_constant(
 ///|
 /// The compiler's `constant_binary_operator`, with the left spine walked
 /// in a loop (see `bin_op`).
-fn Formatter::constant_binary_operator(
+async fn Formatter::constant_binary_operator(
   self : Formatter,
   name : @ast.BinOp,
   left : @ast.Constant,
   right : @ast.Constant,
   nest_steps : Bool,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let ops = [name]
   let rights = [right]
   let mut leaf = left
@@ -272,12 +272,12 @@ fn Formatter::constant_binary_operator(
 
 ///|
 /// The compiler's `constant_binary_operator_side`.
-fn Formatter::constant_binary_operator_side(
+async fn Formatter::constant_binary_operator_side(
   self : Formatter,
   operator : @ast.BinOp,
   side : @ast.Constant,
   nest_steps : Bool,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let side_doc = match side {
     String(value~, ..) => bin_op_string(value)
     BinaryOperator(operator~, left~, right~, ..) =>
@@ -297,10 +297,10 @@ fn Formatter::constant_binary_operator_side(
 
 ///|
 /// The compiler's `constant_record_update_argument`.
-fn Formatter::constant_record_update_argument(
+async fn Formatter::constant_record_update_argument(
   self : Formatter,
   argument : @ast.RecordUpdateArg[@ast.Constant],
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(argument.location.start)
   if argument.location == argument.value.location() {
     commented(t(argument.label) + t(":"), comments[:])
@@ -333,14 +333,14 @@ fn ConstUpdatePiece::location(self : ConstUpdatePiece) -> @span.SrcSpan {
 
 ///|
 /// The compiler's `const_record_update`.
-fn Formatter::const_record_update(
+async fn Formatter::const_record_update(
   self : Formatter,
   module_ : @ast.SpannedString?,
   name : String,
   record : @ast.RecordBeingUpdated[@ast.Constant],
   arguments : ArrayView[@ast.RecordUpdateArg[@ast.Constant]],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let constructor_doc = match module_ {
     Some(m) => t(m.name) + t(".") + t(name)
     None => t(name)
@@ -374,12 +374,12 @@ fn Formatter::const_record_update(
 
 ///|
 /// The compiler's `const_list`.
-fn Formatter::const_list(
+async fn Formatter::const_list(
   self : Formatter,
   elements : ArrayView[@ast.Constant],
   location : @span.SrcSpan,
   tail : @ast.Constant?,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   if elements.is_empty() {
     let comments = self.pop_comments(location.end)
     return match printed_comments(comments[:], false) {
@@ -440,11 +440,11 @@ fn Formatter::const_list(
 
 ///|
 /// The compiler's `const_tuple`.
-fn Formatter::const_tuple(
+async fn Formatter::const_tuple(
   self : Formatter,
   elements : ArrayView[@ast.Constant],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   if elements.is_empty() {
     let comments = self.pop_comments(location.end)
     return match printed_comments(comments[:], false) {
@@ -468,10 +468,10 @@ fn Formatter::const_tuple(
 
 ///|
 /// The compiler's `const_expr`. One unit of fuel per nesting level.
-fn Formatter::const_expr(
+async fn Formatter::const_expr(
   self : Formatter,
   value : @ast.Constant,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.nested(op_format, () => {
     let comments = self.pop_comments(value.location().start)
     let document = match value {
@@ -528,10 +528,10 @@ fn Formatter::const_expr(
 
 ///|
 /// The constant arm of the compiler's `definition`.
-fn Formatter::module_constant(
+async fn Formatter::module_constant(
   self : Formatter,
   c : @ast.ModuleConstant,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let attrs = attributes(c.deprecation, c.publicity, None, None)
   // The compiler counts `const ` as 5 columns (its CONST_SPACE_DOCUMENT
   // declares 5), so the space has no width here.

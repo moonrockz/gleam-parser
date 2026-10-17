@@ -44,7 +44,7 @@ Done:
 
 - **Dialect** (`Dialect::gleam_1_19()`): what the parser accepts.
 - **Config** (`Config::default()`, `Config::load()`): the dialect and the
-  fuel budget (the recursion limit, 100 units by default), from a
+  optional nesting limit (`Unlimited` by default), from a
   `gleam-parser.toml` file, `GLEAM_PARSER_*` variables and the caller,
   merged with `with_fallback`.
 - **Syntax tree** (`NodeRef`, `Tree`, `NodePath`): a read-only node model

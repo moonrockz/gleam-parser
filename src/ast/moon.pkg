@@ -1,4 +1,6 @@
 import {
+  "moonrockz/gleam-parser/work",
+  "moonbitlang/core/debug",
   "moonbitlang/core/builtin",
   "moonbitlang/core/list",
   "moonrockz/gleam-parser/span",

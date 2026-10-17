@@ -206,6 +206,8 @@ pub using @cst {type ModuleCst}
 
 pub using @ast {type ModuleExtra}
 
+pub using @fuel {type NestingLimit}
+
 pub using @syntax {type NodeDepth}
 
 pub using @syntax {type NodePath}

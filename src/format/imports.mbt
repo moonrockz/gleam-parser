@@ -2,10 +2,10 @@
 /// The compiler's `imports`: consecutive imports form groups, split at an
 /// empty line or a comment; each group is sorted; groups are kept apart
 /// by an empty line.
-fn Formatter::imports(
+async fn Formatter::imports(
   self : Formatter,
   imports : Array[@ast.TargetedDefinition],
-) -> Array[@pretty.Doc] raise FormatError {
+) -> Array[@pretty.Doc] raise FormatError + nocancel {
   let groups : Array[@pretty.Doc] = []
   let current : Array[@ast.TargetedDefinition] = []
   let mut delimiter = @pretty.empty()
@@ -40,10 +40,10 @@ fn Formatter::imports(
 
 ///|
 /// The compiler's `sorted_import_group`.
-fn Formatter::sorted_import_group(
+async fn Formatter::sorted_import_group(
   self : Formatter,
   imports : Array[@ast.TargetedDefinition],
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let sorted = stable_sort_by(imports, (a, b) => {
     match (a.definition, b.definition) {
       (Import(x), Import(y)) => lexicographic(x.module_, y.module_)

@@ -9,15 +9,17 @@ priv enum UnitContext {
 ///|
 /// `unit (op unit)*`, reduced by precedence; `None` when `token0` does not
 /// start an expression.
-fn Parser::parse_expression(self : Parser) -> @ast.Expr? raise ParseError {
+async fn Parser::parse_expression(
+  self : Parser,
+) -> @ast.Expr? raise ParseError + nocancel {
   self.parse_expression_inner(false)
 }
 
 ///|
-fn Parser::parse_expression_inner(
+async fn Parser::parse_expression_inner(
   self : Parser,
   is_let_binding : Bool,
-) -> @ast.Expr? raise ParseError {
+) -> @ast.Expr? raise ParseError + nocancel {
   let opstack : Array[OpEntry] = []
   let estack : Array[@ast.Expr] = []
   let mut last_op_start = @span.ByteOffset::zero()
@@ -72,18 +74,18 @@ fn Parser::post_process_expression_unit(
 /// One expression unit: a literal, a name, `todo`, `panic`, `echo`, a tuple,
 /// list, bit array, `fn`, block, `case`, `!x` or `-x`, with any field
 /// accesses, tuple indexes, calls and record updates that follow it.
-fn Parser::parse_expression_unit(
+async fn Parser::parse_expression_unit(
   self : Parser,
   context : UnitContext,
-) -> @ast.Expr? raise ParseError {
+) -> @ast.Expr? raise ParseError + nocancel {
   self.nested(op_expression, () => self.parse_expression_unit_inner(context))
 }
 
 ///|
-fn Parser::parse_expression_unit_inner(
+async fn Parser::parse_expression_unit_inner(
   self : Parser,
   context : UnitContext,
-) -> @ast.Expr? raise ParseError {
+) -> @ast.Expr? raise ParseError + nocancel {
   let mut expr : @ast.Expr = match self.token0 {
     Some({ kind: String(value), span, .. }) => {
       self.advance()
@@ -380,10 +382,10 @@ fn Parser::parse_expression_unit_inner(
 ///|
 /// `[` elements `]` with an optional `..tail` and the compiler's errors for
 /// malformed lists. `start` is the `[` position.
-fn Parser::parse_list(
+async fn Parser::parse_list(
   self : Parser,
   start : @span.ByteOffset,
-) -> @ast.Expr raise ParseError {
+) -> @ast.Expr raise ParseError + nocancel {
   let (elements, elements_end_with_comma) = self.series_of_has_trailing_separator(
     p => p.parse_expression(),
     Some(Comma),
@@ -495,7 +497,9 @@ fn add_anonymous_fn_hint(e : ParseError) -> ParseError {
 
 ///|
 /// `as <unit>` after `todo`, `panic`, `echo`, `assert`.
-fn Parser::maybe_parse_as_message(self : Parser) -> @ast.Expr? raise ParseError {
+async fn Parser::maybe_parse_as_message(
+  self : Parser,
+) -> @ast.Expr? raise ParseError + nocancel {
   if self.maybe_one(Keyword(As)) is Some(_) {
     Some(self.expect_expression_unit(Other))
   } else {
@@ -505,9 +509,9 @@ fn Parser::maybe_parse_as_message(self : Parser) -> @ast.Expr? raise ParseError 
 
 ///|
 /// `a: expr` or `a:` (shorthand) in a record update.
-fn Parser::parse_record_update_argument(
+async fn Parser::parse_record_update_argument(
   self : Parser,
-) -> @ast.RecordUpdateArg[@ast.Expr]? raise ParseError {
+) -> @ast.RecordUpdateArg[@ast.Expr]? raise ParseError + nocancel {
   match self.maybe_name() {
     Some((start, label, _)) => {
       let (_, end) = self.expect_one(Colon)
@@ -528,7 +532,9 @@ fn Parser::parse_record_update_argument(
 
 ///|
 /// `pattern (, pattern)* (| patterns)* (if guard)? -> expr`.
-fn Parser::parse_case_clause(self : Parser) -> @ast.Clause? raise ParseError {
+async fn Parser::parse_case_clause(
+  self : Parser,
+) -> @ast.Clause? raise ParseError + nocancel {
   let patterns = self.parse_patterns()
   guard patterns.length() > 0 else { return None }
   let lead = patterns[0]
@@ -565,7 +571,9 @@ fn Parser::parse_case_clause(self : Parser) -> @ast.Clause? raise ParseError {
 }
 
 ///|
-fn Parser::expect_expression(self : Parser) -> @ast.Expr raise ParseError {
+async fn Parser::expect_expression(
+  self : Parser,
+) -> @ast.Expr raise ParseError + nocancel {
   match self.parse_expression() {
     Some(e) => e
     None => self.next_token_unexpected(["An expression"])
@@ -573,10 +581,10 @@ fn Parser::expect_expression(self : Parser) -> @ast.Expr raise ParseError {
 }
 
 ///|
-fn Parser::expect_expression_unit(
+async fn Parser::expect_expression_unit(
   self : Parser,
   context : UnitContext,
-) -> @ast.Expr raise ParseError {
+) -> @ast.Expr raise ParseError + nocancel {
   match self.parse_expression_unit(context) {
     Some(e) => e
     None => self.next_token_unexpected(["An expression"])

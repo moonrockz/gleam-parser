@@ -1,8 +1,9 @@
 # Configure the parser
 
-A `Config` holds what the parser accepts (its `Dialect`) and how deep it
-reads (its fuel `Budget`). Every parse entry point takes `config?`;
-without it, `Config::default()` applies: Gleam 1.19 and 100 units of fuel.
+A `Config` holds the parser dialect and its `NestingLimit`. Every parse
+entry point takes `config?`. The default accepts Gleam 1.19 with unlimited
+nesting. Parsing and formatting use heap continuations on every target;
+syntax depth does not consume the machine stack.
 
 `Dialect.keywords` contains `Keyword` values. The parser treats an omitted
 keyword as an ordinary name. The scanner still classifies the compiler's
@@ -29,7 +30,7 @@ For migration, replace strings in a custom `keywords` list with `Keyword`
 cases. For example, replace `"echo"` with `Keyword::Echo`. The default
 dialect still reserves all 22 compiler keywords.
 
-Fuel counts nested levels of syntax: each nested expression, pattern,
+An optional finite budget counts nested levels of syntax: each nested expression, pattern,
 type, constant, guard or bit-array size spends one unit while it is open
 and gives it back when it closes. When the budget is spent the parser
 reports `GL-PARSE-004` (`Recursion limit exceeded`) and names the
@@ -41,7 +42,7 @@ test "cf: a small budget names what nests" {
   let deep = "fn f() {\n  [[[[[1]]]]]\n}\n"
   let r = @gleam.parse_text(deep, config={
     ..@gleam.Config::default(),
-    fuel: @gleam.Budget::from_int(3).unwrap(),
+    fuel: Limited(@gleam.Budget(3)),
   })
   @expect.expect_all(e => {
     e.expect(r.diagnostics.map(d => d.code)).to_equal(["GL-PARSE-004"])
@@ -57,16 +58,16 @@ test "cf: a small budget names what nests" {
 }
 ```
 
-The default of 100 is sized for wasm, the smallest stack. On native or js
-a larger budget is safe; a `Budget` is at least 1:
+A finite budget must be at least 1. The same budget works on every target.
+Use `Unlimited` to remove the limit:
 
 ```mbt check
 ///|
-test "cf: a larger budget on a large stack" {
+test "cf: unlimited nesting is the default" {
   let deep = "fn f() {\n  [[[[[1]]]]]\n}\n"
   let r = @gleam.parse_text(deep, config={
     ..@gleam.Config::default(),
-    fuel: @gleam.Budget::from_int(500).unwrap(),
+    fuel: Unlimited,
   })
   @expect.expect_all(e => {
     e.expect(r.has_errors()).to_be_false()
@@ -75,11 +76,17 @@ test "cf: a larger budget on a large stack" {
 }
 ```
 
+For migration, replace `fuel: budget` with `fuel: Limited(budget)` in a
+`Config`, and `fuel: Some(budget)` with `fuel: Some(Limited(budget))` in a
+`Partial`. Use `limit.budget()` to read its optional finite budget.
+
 A configuration is built in layers. `Config::from_toml` reads the
 `[parser]` table of a `gleam-parser.toml` text, `Config::from_env` reads
 `GLEAM_PARSER_GLEAM` and `GLEAM_PARSER_FUEL`, and `with_fallback` merges
 layers: a set field wins over the layer below it. A bad value is a
 `ConfigError` that names its source; nothing falls back silently.
+Set `fuel = "unlimited"` in TOML or `GLEAM_PARSER_FUEL=unlimited` to clear
+a lower layer's limit. `Some(Unlimited)` does the same in a caller layer.
 
 ```mbt check
 ///|
@@ -92,7 +99,7 @@ test "cf: layers with fallback" {
   )
   let config = env.with_fallback(file).to_config(@gleam.Config::default())
   @expect.expect_all(e => {
-    e.expect(config.fuel.units()).to_equal(2000)
+    e.expect(config.fuel.budget().map(b => b.units())).to_equal(Some(2000))
     e.expect(config.dialect.name).to_equal("gleam-1.19")
   })
   let bad = try {

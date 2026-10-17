@@ -45,10 +45,10 @@ fn Formatter::bit_array(
 
 ///|
 /// The compiler's `bit_array_segment`.
-fn[V] bit_array_segment(
+async fn[V] bit_array_segment(
   segment : @ast.BitArraySegment[V],
-  to_doc : (V) -> @pretty.Doc raise FormatError,
-) -> @pretty.Doc raise FormatError {
+  to_doc : async (V) -> @pretty.Doc raise FormatError + nocancel,
+) -> @pretty.Doc raise FormatError + nocancel {
   if segment.options.is_empty() {
     return to_doc(segment.value)
   }
@@ -61,10 +61,10 @@ fn[V] bit_array_segment(
 
 ///|
 /// The compiler's `segment_option`.
-fn[V] segment_option(
+async fn[V] segment_option(
   option : @ast.BitArrayOption[V],
-  to_doc : (V) -> @pretty.Doc raise FormatError,
-) -> @pretty.Doc raise FormatError {
+  to_doc : async (V) -> @pretty.Doc raise FormatError + nocancel,
+) -> @pretty.Doc raise FormatError + nocancel {
   match option {
     Bytes(..) => t("bytes")
     Bits(..) => t("bits")

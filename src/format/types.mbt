@@ -1,11 +1,11 @@
 ///|
 /// The compiler's `type_ast_constructor`.
-fn Formatter::type_ast_constructor(
+async fn Formatter::type_ast_constructor(
   self : Formatter,
   name : @ast.TypeAstConstructorName,
   arguments : ArrayView[@ast.TypeAst],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let head = match name {
     Unqualified(name~, ..) => t(name)
     Qualified(module_~, name~, ..) =>
@@ -25,10 +25,10 @@ fn Formatter::type_ast_constructor(
 
 ///|
 /// The compiler's `type_ast`. One unit of fuel per nesting level.
-fn Formatter::type_ast(
+async fn Formatter::type_ast(
   self : Formatter,
   type_ : @ast.TypeAst,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.nested(op_format, () => {
     let comments = self.pop_comments(type_.location().start)
     let doc = match type_ {
@@ -48,11 +48,11 @@ fn Formatter::type_ast(
 
 ///|
 /// The compiler's `type_arguments`.
-fn Formatter::type_arguments(
+async fn Formatter::type_arguments(
   self : Formatter,
   arguments : ArrayView[@ast.TypeAst],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let docs = []
   for a in arguments {
     docs.push(self.type_ast(a))
@@ -62,10 +62,10 @@ fn Formatter::type_arguments(
 
 ///|
 /// The compiler's `type_alias`.
-fn Formatter::type_alias(
+async fn Formatter::type_alias(
   self : Formatter,
   alias_ : @ast.TypeAlias,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let attrs = attributes(alias_.deprecation, alias_.publicity, None, None)
   let head = attrs + pub_(alias_.publicity) + t("type ") + t(alias_.alias_)
   let head = if alias_.parameters.is_empty() {

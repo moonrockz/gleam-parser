@@ -644,7 +644,7 @@ pub fn ParseErrorType::details(self : ParseErrorType) -> ParseErrorDetails {
       details(
         "The fuel budget of \{budget.units()} ran out while nesting \{stack}. gleam-parser spends one unit of fuel per nested level of syntax; the Gleam compiler has no such limit.",
         "Recursion limit exceeded",
-        hint="Split the code into smaller functions or constants, or give the parser a Config with more fuel on a target with a large stack (native, js).",
+        hint="Increase the configured budget, or use Config with fuel: Unlimited to remove the nesting limit.",
       )
     }
   }

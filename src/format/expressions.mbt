@@ -1,9 +1,11 @@
 ///|
 /// The compiler's `UntypedExpr::start_byte_index`.
 fn start_byte_index(e : @ast.Expr) -> @span.ByteOffset {
-  match e {
-    Pipeline(expressions~) => start_byte_index(expressions[0])
-    _ => e.location().start
+  for current = e {
+    match current {
+      Pipeline(expressions~) => continue expressions[0]
+      _ => break current.location().start
+    }
   }
 }
 
@@ -26,12 +28,13 @@ fn expr_bin_op_name(e : @ast.Expr) -> @ast.BinOp? {
 
 ///|
 fn expr_can_have_multiple_per_line(e : @ast.Expr) -> Bool {
-  match e {
-    Int(..) | Float(..) | String(..) | Var(..) => true
-    NegateBool(value~, ..) | NegateInt(value~, ..) =>
-      expr_can_have_multiple_per_line(value)
-    FieldAccess(container~, ..) => expr_can_have_multiple_per_line(container)
-    _ => false
+  for current = e {
+    match current {
+      Int(..) | Float(..) | String(..) | Var(..) => break true
+      NegateBool(value~, ..) | NegateInt(value~, ..) => continue value
+      FieldAccess(container~, ..) => continue container
+      _ => break false
+    }
   }
 }
 
@@ -90,10 +93,10 @@ priv enum FnCapturePosition {
 
 ///|
 /// The compiler's `expr`. One unit of fuel per nesting level.
-fn Formatter::expr(
+async fn Formatter::expr(
   self : Formatter,
   expression : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   self.nested(op_format, () => {
     let comments = self.pop_comments(start_byte_index(expression))
     let document = match expression {
@@ -165,10 +168,10 @@ fn Formatter::expr(
 /// (`a.b.0.c`) in a loop: the parser accepts a chain of any length. The
 /// compiler's `tuple_index` drops the braces of `{t.1}.0`; that inner
 /// expression is the base of the chain.
-fn Formatter::access_chain(
+async fn Formatter::access_chain(
   self : Formatter,
   expression : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let suffixes : Array[String] = []
   let mut base = expression
   let mut walking = true
@@ -202,10 +205,10 @@ fn Formatter::access_chain(
 
 ///|
 /// The compiler's `negate_bool`.
-fn Formatter::negate_bool(
+async fn Formatter::negate_bool(
   self : Formatter,
   e : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match e {
     NegateBool(value~, ..) => self.expr(value)
     BinOp(..) => t("!") + wrap_block(self.expr(e))
@@ -215,10 +218,10 @@ fn Formatter::negate_bool(
 
 ///|
 /// The compiler's `negate_int`.
-fn Formatter::negate_int(
+async fn Formatter::negate_int(
   self : Formatter,
   e : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match e {
     NegateInt(value~, ..) => self.expr(value)
     Int(value~, ..) if value.has_prefix("-") =>
@@ -230,12 +233,12 @@ fn Formatter::negate_int(
 
 ///|
 /// The compiler's `append_as_message_expression`.
-fn Formatter::append_as_message_expression(
+async fn Formatter::append_as_message_expression(
   self : Formatter,
   doc : @pretty.Doc,
   preceding_as : PrecedingAs,
   message : @ast.Expr?,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   guard message is Some(message) else { return doc }
   let comments = self.pop_comments(message.location().start)
   let comments = printed_comments(comments[:], false)
@@ -261,11 +264,11 @@ fn Formatter::append_as_message_expression(
 
 ///|
 /// The compiler's `echo`.
-fn Formatter::echo(
+async fn Formatter::echo(
   self : Formatter,
   expression : @ast.Expr?,
   message : @ast.Expr?,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   guard expression is Some(expression) else {
     return self.append_as_message_expression(t("echo"), Keyword, message)
   }
@@ -280,14 +283,14 @@ fn Formatter::echo(
 
 ///|
 /// The compiler's `expr_fn`.
-fn Formatter::expr_fn(
+async fn Formatter::expr_fn(
   self : Formatter,
   arguments : ArrayView[@ast.Arg],
   return_annotation : @ast.TypeAst?,
   body : ArrayView[@ast.Statement],
   location : @span.SrcSpan,
   end_of_head_byte_index : @span.ByteOffset,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let docs = []
   for a in arguments {
     docs.push(self.fn_arg(a))
@@ -313,11 +316,11 @@ fn Formatter::expr_fn(
 ///|
 /// The compiler's `fn_capture`: `f(_)` is `f`; on the right of a pipe a
 /// first unlabelled hole is dropped.
-fn Formatter::fn_capture(
+async fn Formatter::fn_capture(
   self : Formatter,
   call : ArrayView[@ast.Statement],
   position : FnCapturePosition,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   // The parser builds a capture as one call statement.
   guard call.length() == 1 &&
     call[0] is Expression(Call(fun~, arguments~, location~, ..)) else {

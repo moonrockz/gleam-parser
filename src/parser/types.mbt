@@ -1,10 +1,10 @@
 ///|
 /// `start_tok` then a type (`: T`, `-> T`); `ExpectedType` at `start_tok`
 /// when the type is missing; `None` without `start_tok`.
-fn Parser::parse_type_annotation(
+async fn Parser::parse_type_annotation(
   self : Parser,
   start_tok : @scanner.TokenKind,
-) -> @ast.TypeAst? raise ParseError {
+) -> @ast.TypeAst? raise ParseError + nocancel {
   match self.maybe_one(start_tok) {
     Some((start, end)) =>
       match self.parse_type() {
@@ -18,12 +18,16 @@ fn Parser::parse_type_annotation(
 ///|
 /// A type annotation without its `:`; `None` when `token0` does not start
 /// one.
-fn Parser::parse_type(self : Parser) -> @ast.TypeAst? raise ParseError {
+async fn Parser::parse_type(
+  self : Parser,
+) -> @ast.TypeAst? raise ParseError + nocancel {
   self.nested(op_type, () => self.parse_type_inner())
 }
 
 ///|
-fn Parser::parse_type_inner(self : Parser) -> @ast.TypeAst? raise ParseError {
+async fn Parser::parse_type_inner(
+  self : Parser,
+) -> @ast.TypeAst? raise ParseError + nocancel {
   match self.token0 {
     // Type hole
     Some({ kind: DiscardName(name), span, .. }) => {
@@ -104,12 +108,12 @@ fn Parser::parse_type_inner(self : Parser) -> @ast.TypeAst? raise ParseError {
 
 ///|
 /// The `( ... )` of a type name, or the angle-bracket error.
-fn Parser::parse_type_name_finish(
+async fn Parser::parse_type_name_finish(
   self : Parser,
   start : @span.ByteOffset,
   end : @span.ByteOffset,
   name : @ast.TypeAstConstructorName,
-) -> @ast.TypeAst? raise ParseError {
+) -> @ast.TypeAst? raise ParseError + nocancel {
   match self.maybe_one(LeftParen) {
     Some((left_paren_start, left_paren_end)) => {
       // `wibble.(a, b)`: the `(` is unexpected, a type name was expected.
@@ -162,6 +166,8 @@ fn Parser::parse_type_name_finish(
 
 ///|
 /// Comma-separated types, for tuples, constructors and functions.
-fn Parser::parse_types(self : Parser) -> Array[@ast.TypeAst] raise ParseError {
+async fn Parser::parse_types(
+  self : Parser,
+) -> Array[@ast.TypeAst] raise ParseError + nocancel {
   self.series_of(p => p.parse_type(), Some(Comma))
 }
