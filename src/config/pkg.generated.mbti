@@ -17,7 +17,7 @@ pub(all) suberror ConfigError {
 // Types and methods
 pub(all) struct Config {
   dialect : @dialect.Dialect
-  fuel : @fuel.Budget
+  fuel : @fuel.NestingLimit
 } derive(Eq, @debug.Debug)
 pub fn Config::default() -> Self
 pub fn Config::from_env(Environment) -> Partial raise ConfigError
@@ -33,7 +33,7 @@ pub fn Environment::system() -> Self
 
 pub(all) struct Partial {
   dialect : @dialect.Dialect?
-  fuel : @fuel.Budget?
+  fuel : @fuel.NestingLimit?
 } derive(Eq, @debug.Debug)
 pub fn Partial::empty() -> Self
 pub fn Partial::to_config(Self, Config) -> Config

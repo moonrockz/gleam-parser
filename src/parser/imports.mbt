@@ -152,12 +152,12 @@ fn Parser::parse_unqualified_imports(
 
 ///|
 /// `const name (: T)? = value`, with `const` (and `pub`) consumed.
-fn Parser::parse_module_const(
+async fn Parser::parse_module_const(
   self : Parser,
   start : @span.ByteOffset,
   public : Bool,
   attributes : Attributes,
-) -> @ast.Definition? raise ParseError {
+) -> @ast.Definition? raise ParseError + nocancel {
   let (name_start, name, name_end) = self.expect_name(Constant)
   let documentation = self.take_documentation(name_start)
   let annotation = self.parse_type_annotation(Colon)

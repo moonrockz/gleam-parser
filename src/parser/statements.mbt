@@ -1,10 +1,10 @@
 ///|
 /// `use a, b <- call`, with `use` consumed.
-fn Parser::parse_use(
+async fn Parser::parse_use(
   self : Parser,
   start : @span.ByteOffset,
   end : @span.ByteOffset,
-) -> @ast.Statement raise ParseError {
+) -> @ast.Statement raise ParseError + nocancel {
   let assignments : Array[@ast.UseAssignment] = if self.token0
     is Some({ kind: LArrow, .. }) {
     []
@@ -31,9 +31,9 @@ fn Parser::parse_use(
 }
 
 ///|
-fn Parser::parse_use_assignment(
+async fn Parser::parse_use_assignment(
   self : Parser,
-) -> @ast.UseAssignment? raise ParseError {
+) -> @ast.UseAssignment? raise ParseError + nocancel {
   let start = match self.token0 {
     Some(t) => t.span.start
     None => @span.ByteOffset::zero()
@@ -53,10 +53,10 @@ fn Parser::parse_use_assignment(
 ///|
 /// `let` (`assert`)? pattern (`: T`)? `=` expr (`as` unit)?, with `let`
 /// consumed.
-fn Parser::parse_assignment(
+async fn Parser::parse_assignment(
   self : Parser,
   start : @span.ByteOffset,
-) -> @ast.Statement raise ParseError {
+) -> @ast.Statement raise ParseError + nocancel {
   let mut kind : @ast.AssignmentKind = match self.token0 {
     Some({ kind: Keyword(Assert), span, .. }) => {
       self.advance()
@@ -99,10 +99,10 @@ fn Parser::parse_assignment(
 
 ///|
 /// `assert expr (as unit)?`, with `assert` consumed.
-fn Parser::parse_assert(
+async fn Parser::parse_assert(
   self : Parser,
   start : @span.ByteOffset,
-) -> @ast.Statement raise ParseError {
+) -> @ast.Statement raise ParseError + nocancel {
   let value = self.expect_expression()
   let mut end = value.location().end
   let message = if self.maybe_one(Keyword(As)) is Some(_) {
@@ -118,9 +118,9 @@ fn Parser::parse_assert(
 ///|
 /// One or more statements; `None` when there is none. Also the end of the
 /// last one.
-fn Parser::parse_statement_sequence(
+async fn Parser::parse_statement_sequence(
   self : Parser,
-) -> (Array[@ast.Statement], @span.ByteOffset)? raise ParseError {
+) -> (Array[@ast.Statement], @span.ByteOffset)? raise ParseError + nocancel {
   let statements : Array[@ast.Statement] = []
   let mut end = @span.ByteOffset::zero()
   while self.parse_statement() is Some(statement) {
@@ -135,7 +135,9 @@ fn Parser::parse_statement_sequence(
 }
 
 ///|
-fn Parser::parse_statement(self : Parser) -> @ast.Statement? raise ParseError {
+async fn Parser::parse_statement(
+  self : Parser,
+) -> @ast.Statement? raise ParseError + nocancel {
   match self.token0 {
     Some({ kind: Keyword(Use), span, .. }) => {
       self.advance()
@@ -171,10 +173,10 @@ fn Parser::parse_statement_errors(self : Parser) -> Unit raise ParseError {
 
 ///|
 /// `{ statements }` with `{` consumed; an empty block is a `Todo`.
-fn Parser::parse_block(
+async fn Parser::parse_block(
   self : Parser,
   start : @span.ByteOffset,
-) -> @ast.Expr raise ParseError {
+) -> @ast.Expr raise ParseError + nocancel {
   let body = self.parse_statement_sequence()
   let (_, end) = self.expect_one(RightBrace)
   let location = sp(start, end)

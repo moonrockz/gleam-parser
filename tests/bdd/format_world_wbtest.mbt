@@ -2,18 +2,27 @@
 /// Scenario state for `tests/features/format.feature`.
 struct FormatWorld {
   mut source : String
+  mut config : @gleam.Config
   mut result : Result[String, @gleam.FormatError]?
   mut from_parsed : Result[String, @gleam.FormatError]?
 }
 
 ///|
 fn FormatWorld::new() -> FormatWorld {
-  { source: "", result: None, from_parsed: None, }
+  {
+    source: "",
+    config: @gleam.Config::default(),
+    result: None,
+    from_parsed: None,
+  }
 }
 
 ///|
-fn format_result(text : String) -> Result[String, @gleam.FormatError] {
-  Ok(@gleam.format(text)) catch {
+fn format_result(
+  text : String,
+  config : @gleam.Config,
+) -> Result[String, @gleam.FormatError] {
+  Ok(@gleam.format(text, config~)) catch {
     e => Err(e)
   }
 }
@@ -34,7 +43,17 @@ impl @moonspec.World for FormatWorld with fn configure(self, setup) {
     },
   )
   setup.when0("I format it", fn() {
-    self.result = Some(format_result(self.source))
+    self.result = Some(format_result(self.source, self.config))
+  })
+  setup.given1("a nesting budget of {int}", fn(n : Int32) raise {
+    self.config = { ..self.config, fuel: Limited(@gleam.Budget(n)), }
+  })
+  setup.then0("the formatted text parses and formats to itself", fn() raise {
+    guard self.result is Some(Ok(text)) else { fail("formatting failed") }
+    @expect.expect_all(s => {
+      s.expect(@gleam.parse_text(text).has_errors()).to_be_false()
+      s.expect(@gleam.format(text)).to_equal(text)
+    })
   })
   setup.then1("parsing gives {int} warning diagnostic and no error", fn(
     n : Int32,
@@ -46,9 +65,14 @@ impl @moonspec.World for FormatWorld with fn configure(self, setup) {
     })
   })
   setup.when0("I format it and its parse result", fn() {
-    self.result = Some(format_result(self.source))
+    self.result = Some(format_result(self.source, self.config))
     self.from_parsed = Some(
-      Ok(@gleam.format_parsed(@gleam.parse_text(self.source))) catch {
+      Ok(
+        @gleam.format_parsed(
+          @gleam.parse_text(self.source, config=self.config),
+          config=self.config,
+        ),
+      ) catch {
         e => Err(e)
       },
     )

@@ -229,10 +229,10 @@ pub using @parser {
 pub using @dialect {type Dialect, type Rule}
 
 ///|
-/// Fuel: the recursion budget (`Budget`, at least 1; `default_budget` is
-/// 100 units), the operation names an exhausted budget reports (`Spent`),
-/// and the error `FuelExhausted`.
+/// Optional nesting policy: `NestingLimit::Unlimited` or `Limited(Budget)`.
+/// A finite `Budget` is at least 1. `FuelExhausted` reports its operations.
 pub using @fuel {
+  type NestingLimit,
   type Budget,
   type InvalidBudget,
   type Operation,
@@ -254,7 +254,8 @@ pub using @config {
 }
 
 ///|
-/// The default fuel budget, 100 units (see `@fuel.default_budget`).
+/// The default for a standalone `Fuel()`, 100 units.
+/// `Config::default()` uses `NestingLimit::Unlimited`.
 pub let default_budget : Budget = @fuel.default_budget
 
 ///|

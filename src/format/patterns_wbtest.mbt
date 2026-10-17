@@ -11,7 +11,8 @@ fn bare() -> Formatter {
 ///|
 fn pattern_text(text : String) -> String raise {
   let p = @parser.parse_pattern_text(text)
-  pretty_print(bare().pattern(p))
+  let f = bare()
+  pretty_print(f.runner.run(() => f.pattern(p)))
 }
 
 ///|

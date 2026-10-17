@@ -44,3 +44,27 @@ test "an assign pattern's location runs from its inner pattern to the name" {
   let assign : @ast.Pattern = Assign(name="y", location=sp(5, 6), pattern=inner)
   @expect.expect(assign.location()).to_equal(sp(0, 6))
 }
+
+///|
+test "deep pipeline, assignment and guard locations follow their edges without recursion" {
+  let leaf_span = @span.SrcSpan(0, 1)
+  let outer_span = @span.SrcSpan(1, 2)
+  let mut expr : @ast.Expr = Var(location=leaf_span, name="x")
+  let mut pattern : @ast.Pattern = Variable(location=leaf_span, name="x")
+  let mut guard_ : @ast.ClauseGuard = Var(location=leaf_span, name="x")
+  for _ in 0..<10000 {
+    expr = Pipeline(expressions=[expr][:])
+    pattern = Assign(name="y", location=outer_span, pattern~)
+    guard_ = FieldAccess(
+      label_location=outer_span,
+      index=None,
+      label="y",
+      container=guard_,
+    )
+  }
+  @expect.expect_all(s => {
+    s.expect(expr.location()).to_equal(leaf_span)
+    s.expect(pattern.location()).to_equal(@span.SrcSpan(0, 2))
+    s.expect(guard_.location()).to_equal(@span.SrcSpan(0, 2))
+  })
+}

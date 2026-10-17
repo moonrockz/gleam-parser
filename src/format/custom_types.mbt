@@ -1,9 +1,9 @@
 ///|
 /// The compiler's `record_constructor`.
-fn Formatter::record_constructor(
+async fn Formatter::record_constructor(
   self : Formatter,
   constructor_ : @ast.RecordConstructor,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(constructor_.location.start)
   let doc_comments = self.doc_comments(constructor_.location.start)
   let attrs = attributes(constructor_.deprecation, Private, None, None)
@@ -41,10 +41,10 @@ fn Formatter::record_constructor(
 
 ///|
 /// The compiler's `custom_type`.
-fn Formatter::custom_type(
+async fn Formatter::custom_type(
   self : Formatter,
   type_ : @ast.CustomType,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let _ = self.pop_empty_lines(type_.location.end)
   let attrs = attributes(
     type_.deprecation,

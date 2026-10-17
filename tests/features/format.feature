@@ -33,7 +33,13 @@ Feature: Formatting Gleam source
     When I format it
     Then the formatted text is "// a\nconst x = 1\n\n// b\n\n/// d\nconst y = 2\n// e\n"
 
-  Scenario: A module deeper than the fuel budget fails to parse before it formats
+  Scenario: Default formatting has no nesting cap
+    Given the Gleam source of a function whose body is 512 nested lists
+    When I format it
+    Then the formatted text parses and formats to itself
+
+  Scenario: An explicit nesting limit rejects deeper input
     Given the Gleam source of a function whose body is 150 nested lists
+    And a nesting budget of 100
     When I format it
     Then formatting fails with 1 error diagnostics

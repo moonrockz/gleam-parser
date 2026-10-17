@@ -28,7 +28,10 @@ impl @moonspec.World for ConfigWorld with fn configure(self, setup) {
     }
   })
   setup.given1("the caller sets the fuel to {int}", fn(n : Int32) {
-    self.caller = { ..self.caller, fuel: @gleam.Budget::from_int(n), }
+    self.caller = {
+      ..self.caller,
+      fuel: @gleam.Budget::from_int(n).map(b => Limited(b)),
+    }
   })
   setup.when("I resolve the configuration", fn(_ctx) {
     self.result = Some(
@@ -57,7 +60,11 @@ impl @moonspec.World for ConfigWorld with fn configure(self, setup) {
         _ => fail("no configuration")
       }
     }
-    @expect.expect(c.fuel.units()).to_equal(n)
+    @expect.expect(c.fuel.budget().map(b => b.units())).to_equal(Some(n))
+  })
+  setup.then0("nesting is unlimited", fn() raise {
+    guard self.result is Some(Ok(c)) else { fail("no configuration") }
+    @expect.expect(c.fuel).to_equal(Unlimited)
   })
   setup.then1("the dialect is {string}", fn(name : String) raise {
     guard self.result is Some(Ok(c)) else { fail("no configuration") }

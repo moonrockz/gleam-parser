@@ -44,3 +44,11 @@ A field with one child uses index zero.
 
 **Node depth**: The number of parent edges from a traversal's start node.
 The start node has depth zero.
+
+## Nesting policy
+
+**Nesting limit**: A caller policy that is either unlimited or has a finite
+budget. It does not depend on the target's machine stack size.
+
+**Nesting budget**: A positive maximum number of syntax operations that can
+be open at the same time. An operation returns its unit when it closes.

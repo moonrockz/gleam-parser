@@ -79,7 +79,7 @@ pub fn parse_type_text(
 ) -> @ast.TypeAst raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser(stream, config.unwrap_or(@config.Config::default()))
-  let result = attempt_parse(() => p.parse_type())
+  let result = attempt_parse(() => p.runner.run(() => p.parse_type()))
   p.finish_snippet(stream, result, ExpectedType)
 }
 
@@ -91,7 +91,7 @@ pub fn parse_pattern_text(
 ) -> @ast.Pattern raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser(stream, config.unwrap_or(@config.Config::default()))
-  let result = attempt_parse(() => p.parse_pattern())
+  let result = attempt_parse(() => p.runner.run(() => p.parse_pattern()))
   p.finish_snippet(stream, result, ExpectedPattern)
 }
 
@@ -104,7 +104,7 @@ pub fn parse_constant_text(
 ) -> @ast.Constant raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser(stream, config.unwrap_or(@config.Config::default()))
-  let result = attempt_parse(() => p.parse_const_value())
+  let result = attempt_parse(() => p.runner.run(() => p.parse_const_value()))
   p.finish_snippet(stream, result, ExpectedExpr)
 }
 
@@ -129,7 +129,7 @@ pub fn parse_expression_text(
 ) -> @ast.Expr raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser(stream, config.unwrap_or(@config.Config::default()))
-  let result = attempt_parse(() => p.parse_expression())
+  let result = attempt_parse(() => p.runner.run(() => p.parse_expression()))
   p.finish_snippet(stream, result, ExpectedExpr)
 }
 
@@ -142,6 +142,8 @@ pub fn parse_statements_text(
 ) -> ArrayView[@ast.Statement] raise ParseError {
   let stream = @scanner.tokenize_text(text)
   let p = Parser(stream, config.unwrap_or(@config.Config::default()))
-  let result = attempt_parse(() => p.parse_statement_sequence().map(r => r.0[:]))
+  let result = attempt_parse(() => {
+    p.runner.run(() => p.parse_statement_sequence().map(r => r.0[:]))
+  })
   p.finish_snippet(stream, result, ExpectedExpr)
 }

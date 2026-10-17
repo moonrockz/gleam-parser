@@ -1,6 +1,8 @@
 ///|
 /// A constant value: units joined by binary operators (no pipes).
-fn Parser::parse_const_value(self : Parser) -> @ast.Constant? raise ParseError {
+async fn Parser::parse_const_value(
+  self : Parser,
+) -> @ast.Constant? raise ParseError + nocancel {
   let opstack : Array[OpEntry] = []
   let estack : Array[@ast.Constant] = []
   let mut last_op_start = @span.ByteOffset::zero()
@@ -43,16 +45,16 @@ fn Parser::parse_const_value(self : Parser) -> @ast.Constant? raise ParseError {
 }
 
 ///|
-fn Parser::parse_const_value_unit(
+async fn Parser::parse_const_value_unit(
   self : Parser,
-) -> @ast.Constant? raise ParseError {
+) -> @ast.Constant? raise ParseError + nocancel {
   self.nested(op_constant, () => self.parse_const_value_unit_inner())
 }
 
 ///|
-fn Parser::parse_const_value_unit_inner(
+async fn Parser::parse_const_value_unit_inner(
   self : Parser,
-) -> @ast.Constant? raise ParseError {
+) -> @ast.Constant? raise ParseError + nocancel {
   match self.token0 {
     Some({ kind: Keyword(Todo), span, .. }) => {
       self.advance()
@@ -236,9 +238,9 @@ fn Parser::parse_const_value_unit_inner(
 ///|
 /// `as <constant unit>` after `todo`; `MissingConstantAsMessage` at `as`
 /// when nothing follows.
-fn Parser::maybe_parse_constant_as_message(
+async fn Parser::maybe_parse_constant_as_message(
   self : Parser,
-) -> @ast.Constant? raise ParseError {
+) -> @ast.Constant? raise ParseError + nocancel {
   match self.maybe_one(Keyword(As)) {
     Some((as_start, as_end)) =>
       match self.parse_const_value_unit() {
@@ -252,13 +254,13 @@ fn Parser::maybe_parse_constant_as_message(
 ///|
 /// The `( .. )` of a constant record: a record update, record arguments,
 /// or a bare constructor.
-fn Parser::parse_const_record_finish(
+async fn Parser::parse_const_record_finish(
   self : Parser,
   start : @span.ByteOffset,
   module_ : @ast.SpannedString?,
   name : String,
   end : @span.ByteOffset,
-) -> @ast.Constant? raise ParseError {
+) -> @ast.Constant? raise ParseError + nocancel {
   match self.maybe_one(LeftParen) {
     Some((par_s, _)) =>
       if self.maybe_one(DotDot) is Some((dot_dot_start, _)) {
@@ -350,9 +352,9 @@ fn Parser::parse_const_record_finish(
 
 ///|
 /// `name: const`, `const` or `name:` (label shorthand).
-fn Parser::parse_const_record_argument(
+async fn Parser::parse_const_record_argument(
   self : Parser,
-) -> @ast.CallArg[@ast.Constant]? raise ParseError {
+) -> @ast.CallArg[@ast.Constant]? raise ParseError + nocancel {
   let label : (@span.ByteOffset, String, @span.ByteOffset)? = match
     (self.token0, self.token1) {
     (
@@ -400,9 +402,9 @@ fn Parser::parse_const_record_argument(
 ///|
 /// `name: const` or `name` (shorthand) in a constant record update; a
 /// label is required.
-fn Parser::parse_const_record_update_argument(
+async fn Parser::parse_const_record_update_argument(
   self : Parser,
-) -> @ast.RecordUpdateArg[@ast.Constant]? raise ParseError {
+) -> @ast.RecordUpdateArg[@ast.Constant]? raise ParseError + nocancel {
   let (start, label, label_end) = match (self.token0, self.token1) {
     (
       Some({ kind: Name(name), span, .. }),

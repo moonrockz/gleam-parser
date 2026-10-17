@@ -18,13 +18,13 @@ priv enum ParserArg {
 ///|
 /// A function head and body, after `fn` (and `pub`). `is_anon` for a
 /// function literal: no name, no labels. Returns `Definition::Function`.
-fn Parser::parse_function(
+async fn Parser::parse_function(
   self : Parser,
   start : @span.ByteOffset,
   public : Bool,
   is_anon : Bool,
   attributes : Attributes,
-) -> @ast.Definition? raise ParseError {
+) -> @ast.Definition? raise ParseError + nocancel {
   let documentation = if is_anon {
     None
   } else {
@@ -121,10 +121,10 @@ fn publicity(
 
 ///|
 /// One parameter: `_`, `a`, `label a`, `label _`, each with `: Type`.
-fn Parser::parse_fn_param(
+async fn Parser::parse_fn_param(
   self : Parser,
   is_anon : Bool,
-) -> @ast.Arg? raise ParseError {
+) -> @ast.Arg? raise ParseError + nocancel {
   let (start, names, end0) : (@span.ByteOffset, @ast.ArgNames, @span.ByteOffset) = match
     (self.token0, self.token1) {
     // labelled discard
@@ -191,15 +191,17 @@ fn Parser::parse_fn_param(
 
 ///|
 /// Call arguments without the parentheses.
-fn Parser::parse_fn_arguments(
+async fn Parser::parse_fn_arguments(
   self : Parser,
-) -> Array[ParserArg] raise ParseError {
+) -> Array[ParserArg] raise ParseError + nocancel {
   self.series_of(p => p.parse_fn_argument(), Some(Comma))
 }
 
 ///|
 /// One call argument: `_`, `expr`, `a: _`, `a: expr`, `a:`.
-fn Parser::parse_fn_argument(self : Parser) -> ParserArg? raise ParseError {
+async fn Parser::parse_fn_argument(
+  self : Parser,
+) -> ParserArg? raise ParseError + nocancel {
   let label : (@span.ByteOffset, String, @span.ByteOffset)? = match
     (self.token0, self.token1) {
     (

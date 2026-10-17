@@ -1,39 +1,43 @@
 ///|
-/// The deepest module the parser accepts for `construct` (the parser's
-/// limit is the fuel budget).
-fn deepest(construct : @lawkit.Construct) -> Int32 {
-  let mut depth = 1
-  while !@parser.parse_text(@lawkit.nested(construct, depth + 1)).has_errors() {
-    depth += 1
+test "every nesting construct formats beyond the former default limit" {
+  for construct in @lawkit.Construct::all() {
+    let text = @lawkit.nested(construct, 512)
+    let formatted = @format.format(text)
+    @expect.expect(@parser.parse_text(formatted).has_errors()).to_be_false()
+    @expect.expect(@format.format(formatted)).to_equal(formatted)
   }
-  depth
 }
 
 ///|
-test "the deepest module the parser accepts formats on every target, for every construct" {
-  @expect.expect_all(s => {
-    for construct in @lawkit.Construct::all() {
-      let depth = deepest(construct)
-      let text = @lawkit.nested(construct, depth)
-      let formatted = try {
-        @format.format(text) |> ignore
-        "formatted"
-      } catch {
-        ParseFailed(_) => "ParseFailed"
-        OutOfFuel(_) => "OutOfFuel"
-      }
-      s.expect((construct, formatted)).to_equal((construct, "formatted"))
-      // One level deeper, the parser stops first: ParseFailed, not OutOfFuel.
-      let deeper = try {
-        @format.format(@lawkit.nested(construct, depth + 1)) |> ignore
-        "formatted"
-      } catch {
-        ParseFailed(_) => "ParseFailed"
-        OutOfFuel(_) => "OutOfFuel"
-      }
-      s.expect((construct, deeper)).to_equal((construct, "ParseFailed"))
-    }
-  })
+test "deep guards and bit array sizes format without a nesting cap" {
+  let texts = [
+    "fn f(x) { case x { _ if " + "!".repeat(2000) + "x -> 1 } }",
+    "fn f(x) { case x { <<a:size(" +
+    "{".repeat(512) +
+    "1" +
+    "}".repeat(512) +
+    ")>> -> a } }",
+    "fn f(x) { [" + "!".repeat(10000) + "x] }",
+    "type T = " + "fn() -> ".repeat(512) + "Int",
+  ]
+  for text in texts {
+    let formatted = @format.format(text)
+    @expect.expect_all(s => {
+      s.expect(@parser.parse_text(formatted).has_errors()).to_be_false()
+      s.expect(@format.format(formatted)).to_equal(formatted)
+    })
+  }
+}
+
+///|
+test "a finite budget larger than the old stack limit works on every target" {
+  let config : @config.Config = {
+    ..@config.Config::default(),
+    fuel: Limited(@fuel.Budget(3000)),
+  }
+  let text = "fn f(x) { " + "!".repeat(2000) + "x }"
+  let formatted = @format.format(text, config~)
+  @expect.expect(@parser.parse_text(formatted, config~).has_errors()).to_be_false()
 }
 
 ///|
@@ -42,7 +46,7 @@ test "a smaller fuel budget stops the formatter with OutOfFuel when the parser g
   let r = @parser.parse_text(@lawkit.nested(List, 20))
   let small : @config.Config = {
     ..@config.Config::default(),
-    fuel: @fuel.Budget::from_int(3).unwrap(),
+    fuel: Limited(@fuel.Budget::from_int(3).unwrap()),
   }
   let out = try {
     @format.format_parsed(r, config=small) |> ignore

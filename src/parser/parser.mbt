@@ -79,10 +79,10 @@ priv struct Parser {
   /// The byte end of the farthest token loaded, `Error` tokens included:
   /// how far the compiler's lexer would have read.
   mut farthest : @span.ByteOffset
-  /// The fuel of the current scope; `nested` swaps a spent value in for
-  /// the body and `Ref::protect` puts the outer one back, on return and on
-  /// error alike.
-  fuel : Ref[@fuel.Fuel]
+  /// The executor for compiler-generated grammar continuations.
+  runner : @work.Runner
+  /// An optional caller budget. `nested` restores it on return and error.
+  fuel : Ref[@fuel.Fuel?]
   warnings : Array[@ast.Warning]
   trailing_commas : Array[@span.ByteOffset]
   /// Every doc comment (`///`) in order: its content span and content.
@@ -127,7 +127,8 @@ fn Parser::Parser(
     token0: None,
     token1: None,
     farthest: @span.ByteOffset::zero(),
-    fuel: { val: @fuel.Fuel(budget=config.fuel), },
+    runner: @work.Runner(),
+    fuel: { val: config.fuel.budget().map(b => @fuel.Fuel(budget=b)), },
     warnings: [],
     trailing_commas: [],
     doc_comments,
@@ -206,19 +207,25 @@ fn Parser::here(self : Parser) -> @span.SrcSpan {
 }
 
 ///|
-/// Run `body` one nesting level deeper: one unit of fuel for `op`. When
-/// the budget is spent, `TooMuchNesting` at the current token. The outer
-/// fuel is back when `body` returns or raises.
-fn[A] Parser::nested(
+/// Schedule both descent and return, including error unwinding. This breaks
+/// the machine stack on every recursive grammar path. With a finite caller
+/// budget, spend one unit and restore it when the body returns or raises.
+async fn[A] Parser::nested(
   self : Parser,
   op : @fuel.Operation,
-  body : () -> A raise ParseError,
-) -> A raise ParseError {
-  let inner = self.fuel.val.spend(op) catch {
+  body : async () -> A raise ParseError + nocancel,
+) -> A raise ParseError + nocancel {
+  self.runner.pause()
+  defer self.runner.pause()
+  let outer = self.fuel.val
+  defer {
+    self.fuel.val = outer
+  }
+  self.fuel.val = outer.map(fuel => fuel.spend(op)) catch {
     @fuel.FuelExhausted(budget~, spent~) =>
       parse_error(TooMuchNesting(budget~, spent~), self.here())
   }
-  self.fuel.protect(inner, body)
+  body()
 }
 
 ///|
@@ -312,11 +319,11 @@ fn Parser::expect_one_following_series(
 
 ///|
 /// Repeat `parser`, with `sep` between items when given.
-fn[A] Parser::series_of(
+async fn[A] Parser::series_of(
   self : Parser,
-  parser : (Parser) -> A? raise ParseError,
+  parser : async (Parser) -> A? raise ParseError + nocancel,
   sep : @scanner.TokenKind?,
-) -> Array[A] raise ParseError {
+) -> Array[A] raise ParseError + nocancel {
   self.series_of_has_trailing_separator(parser, sep).0
 }
 
@@ -324,11 +331,11 @@ fn[A] Parser::series_of(
 /// `series_of`, and whether the series ended with a separator. A trailing
 /// comma's end goes to `trailing_commas`. Two separators in a row are an
 /// `ExtraSeparator` error.
-fn[A] Parser::series_of_has_trailing_separator(
+async fn[A] Parser::series_of_has_trailing_separator(
   self : Parser,
-  parser : (Parser) -> A? raise ParseError,
+  parser : async (Parser) -> A? raise ParseError + nocancel,
   sep : @scanner.TokenKind?,
-) -> (Array[A], Bool) raise ParseError {
+) -> (Array[A], Bool) raise ParseError + nocancel {
   let results : Array[A] = []
   let mut final_separator : (@span.ByteOffset, @span.ByteOffset)? = None
   while parser(self) is Some(result) {

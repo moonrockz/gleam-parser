@@ -1,9 +1,9 @@
 ///|
 /// The compiler's `statements`.
-fn Formatter::statements(
+async fn Formatter::statements(
   self : Formatter,
   statements : ArrayView[@ast.Statement],
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let mut previous_position = @span.ByteOffset::zero()
   let count = statements.length()
   let documents = []
@@ -34,10 +34,10 @@ fn Formatter::statements(
 /// The compiler's `statement`. It spends no fuel of its own: the expression
 /// inside it does, so the formatter's depth per nesting level equals the
 /// parser's (a block is one level, not two).
-fn Formatter::statement(
+async fn Formatter::statement(
   self : Formatter,
   statement : @ast.Statement,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match statement {
     Expression(e) => self.expr(e)
     Assignment(a) => self.assignment(a)
@@ -48,10 +48,10 @@ fn Formatter::statement(
 
 ///|
 /// The compiler's `assignment`.
-fn Formatter::assignment(
+async fn Formatter::assignment(
   self : Formatter,
   assignment : @ast.Assignment,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(assignment.location.start)
   let _ = self.pop_empty_lines(assignment.pattern.location().end)
   let (keyword, message) = match assignment.kind {
@@ -75,10 +75,10 @@ fn Formatter::assignment(
 
 ///|
 /// The compiler's `case_clause_value`: the value after `->` or `=`.
-fn Formatter::case_clause_value(
+async fn Formatter::case_clause_value(
   self : Formatter,
   expression : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let doc = match expression {
     Fn(..) | List(..) | Tuple(..) | BitArray(..) => {
       let expression_comments = self.pop_comments(expression.location().start)
@@ -98,10 +98,10 @@ fn Formatter::case_clause_value(
 
 ///|
 /// The compiler's `assigned_value`.
-fn Formatter::assigned_value(
+async fn Formatter::assigned_value(
   self : Formatter,
   expression : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match expression {
     Case(..) => group(t(" ") + self.expr(expression))
     _ => self.case_clause_value(expression)
@@ -110,10 +110,10 @@ fn Formatter::assigned_value(
 
 ///|
 /// The compiler's `use_`.
-fn Formatter::use_(
+async fn Formatter::use_(
   self : Formatter,
   use_ : @ast.Use,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(use_.location.start)
   let call = group(
     if is_call(use_.call) {
@@ -145,10 +145,10 @@ fn Formatter::use_(
 
 ///|
 /// The compiler's `assert`.
-fn Formatter::assert_(
+async fn Formatter::assert_(
   self : Formatter,
   assert_ : @ast.Assert,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(assert_.location.start)
   let expression = if is_binop_expr(assert_.value) || is_pipeline(assert_.value) {
     nest(self.expr(assert_.value))
@@ -165,12 +165,12 @@ fn Formatter::assert_(
 
 ///|
 /// The compiler's `block`.
-fn Formatter::block(
+async fn Formatter::block(
   self : Formatter,
   location : @span.SrcSpan,
   statements : ArrayView[@ast.Statement],
   force_breaks : Bool,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   let statements_doc = nest(breakable_space + self.statements(statements))
   let trailing = printed_comments(self.pop_comments(location.end)[:], false)
   let block_doc = match trailing {

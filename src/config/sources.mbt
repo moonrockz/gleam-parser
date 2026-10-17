@@ -112,14 +112,19 @@ fn article(type_name : String) -> String {
 
 ///|
 /// The `[parser]` table of a `gleam-parser.toml` text: `gleam = "1.19"`,
-/// `fuel = 100`. Every key is optional. A syntax error, an unknown table
+/// `fuel = 100` or `fuel = "unlimited"`. Every key is optional.
+/// An omitted fuel key inherits the fallback. The default is unlimited.
+/// A syntax error, an unknown table
 /// or key, a value of the wrong type, a `fuel` below 1 or an unknown Gleam
 /// version is a `ConfigError` that names its source.
 ///
 /// ```mbt check
 /// test {
 ///   let p = @config.Config::from_toml("[parser]\nfuel = 550\n")
-///   debug_inspect(p.fuel.map(b => b.units()), content="Some(550)")
+///   debug_inspect(
+///     p.fuel.bind(limit => limit.budget()).map(b => b.units()),
+///     content="Some(550)",
+///   )
 ///   inspect(p.dialect is None, content="true")
 /// }
 /// ```
@@ -161,8 +166,13 @@ pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
           }
         Some(Fuel) =>
           match v {
+            TomlString("unlimited") =>
+              partial = { ..partial, fuel: Some(Unlimited), }
             TomlInteger(n) =>
-              partial = { ..partial, fuel: Some(parse_fuel(n, source)), }
+              partial = {
+                ..partial,
+                fuel: Some(Limited(parse_fuel(n, source))),
+              }
             other =>
               bad(
                 source,
@@ -179,6 +189,7 @@ pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
 /// `GLEAM_PARSER_GLEAM` and `GLEAM_PARSER_FUEL` from `env`. An unset
 /// variable leaves the field unset; an empty or bad value is a
 /// `ConfigError` that names the variable.
+/// `GLEAM_PARSER_FUEL=unlimited` clears a fallback's finite limit.
 pub fn Config::from_env(env : Environment) -> Partial raise ConfigError {
   let mut partial = Partial::empty()
   for key in Key::all() {
@@ -191,11 +202,13 @@ pub fn Config::from_env(env : Environment) -> Partial raise ConfigError {
         match key {
           Gleam =>
             partial = { ..partial, dialect: Some(parse_gleam(text, source)), }
+          Fuel if text == "unlimited" =>
+            partial = { ..partial, fuel: Some(Unlimited), }
           Fuel => {
             let n = @string.parse_int64(text) catch {
               _ => bad(source, "expected an integer, found \"\{text}\"")
             }
-            partial = { ..partial, fuel: Some(parse_fuel(n, source)), }
+            partial = { ..partial, fuel: Some(Limited(parse_fuel(n, source))), }
           }
         }
     }

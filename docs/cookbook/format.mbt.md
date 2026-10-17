@@ -54,7 +54,7 @@ test "fm: format a parse result after checking its diagnostics" {
 
 The formatter is idempotent and keeps every comment once where the
 compiler's formatter is and does (the rare exceptions are listed under
-"Format Parity" in AGENTS.md). A module that
-is deeper than the fuel budget of the configuration is rejected by the
-parser first (see the configure article); a flat chain of any length
+"Format Parity" in AGENTS.md). Parsing and formatting have no default
+nesting cap. If you choose a finite nesting budget, deeper source is
+rejected by the parser first. A flat chain of any length
 (`a + b + c + …`, `a.b.c…`, `f()()…`) formats.

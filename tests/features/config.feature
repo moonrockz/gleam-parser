@@ -4,7 +4,7 @@ Feature: Parser configuration
 
   Scenario: Defaults
     When I resolve the configuration
-    Then the fuel budget is 100
+    Then nesting is unlimited
     And the dialect is "gleam-1.19"
 
   Scenario: A TOML text sets the fuel
@@ -23,6 +23,17 @@ Feature: Parser configuration
     And the caller sets the fuel to 5
     When I resolve the configuration
     Then the fuel budget is 5
+
+  Scenario: Unlimited in the environment clears a file's finite limit
+    Given the TOML text "[parser]\nfuel = 550\n"
+    And the environment variable "GLEAM_PARSER_FUEL" is "unlimited"
+    When I resolve the configuration
+    Then nesting is unlimited
+
+  Scenario: A file can explicitly choose unlimited nesting
+    Given the TOML text "[parser]\nfuel = 'unlimited'\n"
+    When I resolve the configuration
+    Then nesting is unlimited
 
   Scenario Outline: A bad value is an error that names its source
     Given the TOML text "<toml>"

@@ -61,7 +61,7 @@ pub fn parse_module(
     let warnings_start = p.warnings.length()
     let detached_start = p.detached_doc_comments.length()
     let commas_start = p.trailing_commas.length()
-    let outcome = try p.parse_definition() catch {
+    let outcome = try p.runner.run(() => p.parse_definition()) catch {
       e => Err(e)
     } noraise {
       d => Ok(d)
@@ -221,9 +221,9 @@ fn order_diagnostics(
 ///|
 /// One definition with its attributes; `None` when `token0` does not start
 /// one (and no attribute was seen).
-fn Parser::parse_definition(
+async fn Parser::parse_definition(
   self : Parser,
-) -> @ast.TargetedDefinition? raise ParseError {
+) -> @ast.TargetedDefinition? raise ParseError + nocancel {
   let attributes = Attributes()
   let location = self.parse_attributes(attributes)
   let def : @ast.Definition? = match (self.token0, self.token1) {

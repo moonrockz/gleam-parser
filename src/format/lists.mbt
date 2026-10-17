@@ -1,11 +1,11 @@
 ///|
 /// The compiler's `list`.
-fn Formatter::list(
+async fn Formatter::list(
   self : Formatter,
   elements : ArrayView[@ast.Expr],
   tail : @ast.Expr?,
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   if elements.is_empty() {
     return match tail {
       Some(tl) => self.expr(tl)
@@ -71,11 +71,11 @@ fn Formatter::list(
 
 ///|
 /// The compiler's `tuple`.
-fn Formatter::tuple(
+async fn Formatter::tuple(
   self : Formatter,
   elements : ArrayView[@ast.Expr],
   location : @span.SrcSpan,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   if elements.is_empty() {
     let comments = self.pop_comments(location.end)
     return match printed_comments(comments[:], false) {
@@ -99,10 +99,10 @@ fn Formatter::tuple(
 
 ///|
 /// The compiler's `bit_array_segment_expr`.
-fn Formatter::bit_array_segment_expr(
+async fn Formatter::bit_array_segment_expr(
   self : Formatter,
   expression : @ast.Expr,
-) -> @pretty.Doc raise FormatError {
+) -> @pretty.Doc raise FormatError + nocancel {
   match expression {
     BinOp(..) =>
       nest_if_broken(empty_break + self.expr(expression)) + empty_break

@@ -1,12 +1,16 @@
 ///|
 /// The left side of `=` or `->`. `None` when `token0` does not start a
 /// pattern.
-fn Parser::parse_pattern(self : Parser) -> @ast.Pattern? raise ParseError {
+async fn Parser::parse_pattern(
+  self : Parser,
+) -> @ast.Pattern? raise ParseError + nocancel {
   self.nested(op_pattern, () => self.parse_pattern_inner())
 }
 
 ///|
-fn Parser::parse_pattern_inner(self : Parser) -> @ast.Pattern? raise ParseError {
+async fn Parser::parse_pattern_inner(
+  self : Parser,
+) -> @ast.Pattern? raise ParseError + nocancel {
   let pattern : @ast.Pattern = match self.token0 {
     // Variable, or a module-qualified constructor
     Some({ kind: Name(name), span, .. }) => {
@@ -251,10 +255,10 @@ fn Parser::reject_suffix_literal(
 
 ///|
 /// `UpName( args )`, with an optional module prefix already consumed.
-fn Parser::expect_constructor_pattern(
+async fn Parser::expect_constructor_pattern(
   self : Parser,
   module_ : (@span.ByteOffset, String, @span.ByteOffset)?,
-) -> @ast.Pattern raise ParseError {
+) -> @ast.Pattern raise ParseError + nocancel {
   let (name_start, name, name_end) = self.expect_upname()
   let (arguments, spread, end) = self.parse_constructor_pattern_arguments(
     name_end,
@@ -278,10 +282,10 @@ fn Parser::expect_constructor_pattern(
 
 ///|
 /// `( args )` of a constructor pattern: arguments, spread span and end.
-fn Parser::parse_constructor_pattern_arguments(
+async fn Parser::parse_constructor_pattern_arguments(
   self : Parser,
   upname_end : @span.ByteOffset,
-) -> (Array[@ast.CallArg[@ast.Pattern]], @span.SrcSpan?, @span.ByteOffset) raise ParseError {
+) -> (Array[@ast.CallArg[@ast.Pattern]], @span.SrcSpan?, @span.ByteOffset) raise ParseError + nocancel {
   if self.maybe_one(LeftParen) is Some(_) {
     let (arguments, arguments_end_with_comma) = self.series_of_has_trailing_separator(
       p => p.parse_constructor_pattern_argument(),
@@ -303,9 +307,9 @@ fn Parser::parse_constructor_pattern_arguments(
 
 ///|
 /// `a: <pattern>`, `a:` (label shorthand) or `<pattern>`.
-fn Parser::parse_constructor_pattern_argument(
+async fn Parser::parse_constructor_pattern_argument(
   self : Parser,
-) -> @ast.CallArg[@ast.Pattern]? raise ParseError {
+) -> @ast.CallArg[@ast.Pattern]? raise ParseError + nocancel {
   match (self.token0, self.token1) {
     (
       Some({ kind: Name(name), span, .. }),
@@ -345,8 +349,8 @@ fn Parser::parse_constructor_pattern_argument(
 }
 
 ///|
-fn Parser::parse_patterns(
+async fn Parser::parse_patterns(
   self : Parser,
-) -> Array[@ast.Pattern] raise ParseError {
+) -> Array[@ast.Pattern] raise ParseError + nocancel {
   self.series_of(p => p.parse_pattern(), Some(Comma))
 }

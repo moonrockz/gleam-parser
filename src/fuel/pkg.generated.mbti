@@ -39,6 +39,12 @@ pub fn Fuel::left(Self) -> Int
 pub fn Fuel::spend(Self, Operation) -> Self raise FuelExhausted
 pub fn Fuel::spent(Self) -> Array[Spent]
 
+pub(all) enum NestingLimit {
+  Unlimited
+  Limited(Budget)
+} derive(Eq, @debug.Debug)
+pub fn NestingLimit::budget(Self) -> Budget?
+
 pub(all) struct Operation(String) derive(Eq, Hash, @debug.Debug)
 pub fn Operation::name(Self) -> String
 #deprecated
