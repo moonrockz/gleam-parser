@@ -35,7 +35,7 @@ fn RejectionWorld::verdicts_json(self : RejectionWorld) -> Json {
     let text = self.texts.get(fixture).unwrap_or("")
     let sha = match self.recorded_sha.get(fixture) {
       Some(recorded) => recorded
-      None => sha256_bytes_hex(@utf8.encode(text))
+      None => @tooling.sha256_hex(@utf8.encode(text))
     }
     let entry : Map[String, Json] = Map([("sha256", Json(sha)), (world_key, v)])
     entries[fixture] = Json::object(entry)
@@ -96,7 +96,7 @@ impl @moonspec.World for RejectionWorld with fn configure(self, setup) {
     fn(fixture : String) {
       let original = self.texts.get(fixture).unwrap_or("")
       self.verdicts[fixture] = { "accepted": true }
-      self.recorded_sha[fixture] = sha256_bytes_hex(@utf8.encode(original))
+      self.recorded_sha[fixture] = @tooling.sha256_hex(@utf8.encode(original))
       self.texts[fixture] = original + "// changed\n"
     },
   )

@@ -12,12 +12,12 @@ fn ReportWorld::new() -> ReportWorld {
 }
 
 ///|
-fn ReportWorld::report(self : ReportWorld) -> ParityReport {
+fn ReportWorld::report(self : ReportWorld) -> ParityReport raise {
   parity_report(
     self.files,
     self.baseline,
     commit=Some("abc123"),
-    gleam_version="1.19.2",
+    gleam_version=pinned_gleam_version(),
   )
 }
 
@@ -113,7 +113,7 @@ impl @moonspec.World for ReportWorld with fn configure(self, setup) {
       difference: None,
     })
   })
-  setup.when0("I render the JSON report", fn() {
+  setup.when0("I render the JSON report", fn() raise {
     self.output = report_json(self.report()).stringify()
   })
   setup.then4(
@@ -144,6 +144,11 @@ impl @moonspec.World for ReportWorld with fn configure(self, setup) {
       )
     },
   )
+  setup.then0("the JSON report names the pinned Gleam version", fn() raise {
+    @expect.expect(json_field(@json.parse(self.output), "gleam_version")).to_equal(
+      Json(pinned_gleam_version()),
+    )
+  })
   setup.then1("the JSON report lists {int} files", fn(n : Int32) raise {
     guard json_field(@json.parse(self.output), "files") is Array(files) else {
       fail("files is not an array")
@@ -170,7 +175,7 @@ impl @moonspec.World for ReportWorld with fn configure(self, setup) {
     })
     @expect.expect(found).to_be_true()
   })
-  setup.when0("I render the JUnit report", fn() {
+  setup.when0("I render the JUnit report", fn() raise {
     self.output = report_junit(self.report())
   })
   setup.then3(
@@ -189,7 +194,7 @@ impl @moonspec.World for ReportWorld with fn configure(self, setup) {
       "<testcase classname=\"baseline\" name=\"counts do not drop below the baseline\"/>",
     )
   })
-  setup.when0("I render the HTML report", fn() {
+  setup.when0("I render the HTML report", fn() raise {
     self.output = report_html(self.report())
   })
   setup.then1("the HTML report contains {string}", fn(text : String) raise {
@@ -200,7 +205,7 @@ impl @moonspec.World for ReportWorld with fn configure(self, setup) {
       n,
     )
   })
-  setup.when0("I render the Markdown summary", fn() {
+  setup.when0("I render the Markdown summary", fn() raise {
     self.output = report_markdown(self.report())
   })
   setup.then1("the summary contains {string}", fn(text : String) raise {

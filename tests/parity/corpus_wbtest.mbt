@@ -80,7 +80,7 @@ fn verified_source(key : String, expected_sha256 : String) -> String raise {
     fail("missing corpus file \{path}; run mise run corpus:fetch")
   }
   let bytes = @fs.read_file_to_bytes(path)
-  if sha256_bytes_hex(bytes) != expected_sha256 {
+  if @tooling.sha256_hex(bytes) != expected_sha256 {
     fail(
       "corpus file \{path} does not match its pinned hash; run rm -rf .corpus && mise run corpus:fetch",
     )

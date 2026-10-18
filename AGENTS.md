@@ -523,6 +523,10 @@ All operations use **file-based mise tasks** in `mise-tasks/`. Do not add inline
 Project tooling logic is written in MoonBit, not bash, `jq` or `awk`.
 
 - Put tooling logic in standalone scripts: `scripts/<name>.mbtx`.
+- `scripts/rejection.mbtx` launches `tests/rejection_record`, which imports
+  the unpublished `tests/tooling` helpers shared with the parity checks.
+  Standalone scripts cannot import local workspace packages on this toolchain.
+  `mise run test:scripts` also tests these two packages.
 - Keep each mise task a one-line launcher:
   `exec moon run -q --target wasm scripts/<name>.mbtx -- <args>`.
   `-q` hides dependency manifest warnings; errors and output still show.
@@ -590,6 +594,14 @@ published packages (233 files under `src/` and `test/`).
 - To add a package: add it to `packages.txt`, run `mise run corpus:manifest`,
   then `mise run corpus:goldens`, then `mise run parity:ratchet`; commit the
   manifest, the lock and the baseline.
+- To remove a package or bump it to a version with fewer files: update
+  `packages.txt`, run `mise run corpus:manifest` and `mise run corpus:goldens`,
+  then run `mise run test:parity` to inspect the new counts. Edit
+  `tests/corpus/baseline.json` by hand in that pull request to reflect the
+  intended removal. Review every lower count against the removed files, then
+  run `mise run test:parity` again. Commit the package list, manifest, lock
+  and baseline together. `mise run parity:ratchet` still refuses any count
+  below the baseline, including `files`.
 - To move to a new Gleam version: change the tag in
   `tools/gleam-ast-oracle/Cargo.toml` and `tests/corpus/gleam_version.txt`
   (a test checks they agree), port the compiler changes (`src/ast`,

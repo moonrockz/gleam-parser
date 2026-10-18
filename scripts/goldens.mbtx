@@ -119,7 +119,11 @@ async fn main {
   }
   let results = pair_results(stdout.text(), keys) catch {
     err => {
-      eprintln(err.to_string())
+      let message = match err {
+        Failure(message) => message
+        _ => err.to_string()
+      }
+      eprintln(message)
       @sys.exit(1)
       return
     }
@@ -178,6 +182,7 @@ impl @moonspec.World for GoldensWorld with fn configure(self, setup) {
   setup.when1("I pair the output with the keys {string}", fn(keys : String) {
     let list = keys.split(", ").map(k => k.to_owned()).collect()
     self.results = try pair_results(self.output, list) catch {
+      Failure(message) => Err(message)
       err => Err(err.to_string())
     } noraise {
       r => Ok(r)
@@ -191,7 +196,10 @@ impl @moonspec.World for GoldensWorld with fn configure(self, setup) {
   })
   setup.then1("pairing fails with {string}", fn(message : String) raise {
     guard self.results is Err(actual) else { fail("expected a failure") }
-    @expect.expect(actual).to_contain(message)
+    @expect.expect_all(s => {
+      s.expect(actual.has_suffix(message)).to_be_true()
+      s.expect(actual.contains("Failure(")).to_be_false()
+    })
   })
 }
 

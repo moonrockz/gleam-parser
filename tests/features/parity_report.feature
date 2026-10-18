@@ -13,6 +13,7 @@ Feature: Parity reports
     Then the JSON counts are 3 files, 3 tokenized, 2 parsed, 1 matched
     And the JSON delta is 0 files, 1 tokenized, 1 parsed, 1 matched
     And the JSON report lists 3 files
+    And the JSON report names the pinned Gleam version
     And JSON file "lustre@5.7.1/src/lustre.gleam" has diagnostic "GL-SCAN-001"
 
   Scenario: JUnit report groups files by package and skips unmatched files

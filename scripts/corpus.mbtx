@@ -185,6 +185,12 @@ fn download_failure_message(pkg : Pkg, zipball : String) -> String {
 }
 
 ///|
+/// The recovery step when a cached corpus source differs from the manifest.
+fn source_mismatch_message(path : String) -> String {
+  "sha256 mismatch: \{path}; delete this file or its package directory, then run mise run corpus:fetch again"
+}
+
+///|
 fn zipball_url(repository : String, tag : String) -> String {
   "\{repository}/archive/refs/tags/\{tag}.zip"
 }
@@ -201,6 +207,8 @@ fn package_dir(corpus : String, pkg : Pkg) -> String {
 }
 
 ///|
+/// Store explicit package overrides separately from the resolved repository
+/// and tag. Older manifests without an override remain valid.
 fn manifest_json(gleam_version : String, entries : Array[PackageEntry]) -> Json {
   let pkgs = entries.map(e => {
     let files = e.files.map(f => {
@@ -208,7 +216,7 @@ fn manifest_json(gleam_version : String, entries : Array[PackageEntry]) -> Json 
       let file : Json = { "path": Json(path), "sha256": Json(sha256) }
       file
     })
-    let entry : Json = {
+    let entry : Map[String, Json] = {
       "name": Json(e.pkg.name),
       "version": Json(e.pkg.version),
       "repository": Json(e.repository),
@@ -217,7 +225,12 @@ fn manifest_json(gleam_version : String, entries : Array[PackageEntry]) -> Json 
       "sha1": Json(e.zip_sha1),
       "files": Json::array(files),
     }
-    entry
+    match (e.pkg.repository, e.pkg.tag) {
+      (Some(repository), Some(tag)) =>
+        entry["override"] = { "repository": Json(repository), "tag": Json(tag) }
+      _ => ()
+    }
+    Json::object(entry)
   })
   { "gleam": Json(gleam_version), "packages": Json::array(pkgs) }
 }
@@ -248,8 +261,24 @@ fn parse_manifest(json : Json) -> (String, Array[PackageEntry]) raise {
       }
       (path, sha)
     })
+    let (override_repository, override_tag) = match p.get("override") {
+      None => (None, None)
+      Some(Object(o)) => {
+        guard o.get("repository") is Some(String(repository)) &&
+          o.get("tag") is Some(String(tag)) else {
+          fail("manifest: malformed override in \{name}")
+        }
+        (Some(repository), Some(tag))
+      }
+      _ => fail("manifest: malformed override in \{name}")
+    }
     {
-      pkg: { name, version, repository: None, tag: None, },
+      pkg: {
+        name,
+        version,
+        repository: override_repository,
+        tag: override_tag,
+      },
       repository,
       tag,
       zipball,
@@ -445,7 +474,7 @@ async fn fetch(manifest : String, corpus : String) -> Unit {
         eprintln("missing: \{full}")
         bad += 1
       } else if hex(@crypto.sha256(@fs.read_file(full).binary())) != expected {
-        eprintln("sha256 mismatch: \{full}")
+        eprintln(source_mismatch_message(full))
         bad += 1
       }
     }
@@ -536,6 +565,12 @@ impl @moonspec.World for CorpusWorld with fn configure(self, setup) {
       @expect.expect(download_failure_message(pkg, zipball)).to_equal(expected)
     },
   )
+  setup.then2("the source mismatch message for {string} is {string}", fn(
+    path : String,
+    expected : String,
+  ) raise {
+    @expect.expect(source_mismatch_message(path)).to_equal(expected)
+  })
   setup.then3("the zipball of {string} at {string} is {string}", fn(
     repository : String,
     tag : String,
@@ -551,8 +586,8 @@ impl @moonspec.World for CorpusWorld with fn configure(self, setup) {
       }
       self.entry = Some({
         pkg,
-        repository: "https://github.com/example/repo",
-        tag: "v\{pkg.version}",
+        repository: pkg.repository.unwrap_or("https://github.com/example/repo"),
+        tag: pkg.tag.unwrap_or("v\{pkg.version}"),
         zipball: "https://example.test/zip",
         zip_sha1: "0",
         files: [(path, sha)],
@@ -589,4 +624,30 @@ async test "corpus feature" {
     ]),
   )
   |> ignore
+}
+
+///|
+async test "package_files reads src when test is absent" {
+  let dir = @fs.tmpdir(prefix="gleam-parser-corpus-")
+  defer @fs.rmdir(dir, recursive=true)
+  @fs.mkdir("\{dir}/src/nested", recursive=true)
+  @fs.write_file("\{dir}/src/main.gleam", "abc")
+  @fs.write_file("\{dir}/src/nested/other.gleam", "abc")
+  @fs.write_file("\{dir}/src/README.md", "ignored")
+  let files = package_files(dir)
+  files.sort_by((a, b) => a.0.compare(b.0))
+  let no_test = !@fs.exists("\{dir}/test")
+  @expect.expect_all(s => {
+    s
+    .expect(files)
+    .to_equal([
+      (
+        "src/main.gleam", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      ),
+      (
+        "src/nested/other.gleam", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      ),
+    ])
+    s.expect(no_test).to_be_true()
+  })
 }

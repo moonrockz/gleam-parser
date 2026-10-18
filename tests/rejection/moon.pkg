@@ -1,12 +1,11 @@
 import {
+  "moonrockz/gleam_parser_tests/tooling",
   "moonrockz/gleam-parser" @gleam,
   "moonrockz/moonspec",
   "moonrockz/expect",
   "moonbitlang/async",
   "moonbitlang/x/fs",
-  "moonbitlang/x/crypto",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
-  "moonbitlang/core/encoding/hex",
   "moonbitlang/core/encoding/utf8",
 } for "wbtest"

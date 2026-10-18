@@ -6,3 +6,6 @@ set -euo pipefail
 for script in scripts/*.mbtx; do
   moon test --target wasm "$script"
 done
+
+moon test tests/tooling --target wasm
+moon test tests/rejection_record --target wasm

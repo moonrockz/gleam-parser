@@ -145,7 +145,7 @@ fn failure_codes(files : Array[FileReport]) -> Array[(String, Int32)] {
     if by_count != 0 {
       by_count
     } else {
-      compare_lexical(a.0, b.0)
+      @tooling.compare_lexical(a.0, b.0)
     }
   })
   list
@@ -189,6 +189,7 @@ fn report_json(r : ParityReport) -> Json {
   })
   {
     "commit": optional_string(r.commit),
+    "gleam_version": Json(r.gleam_version),
     "counts": counts_to_json(r.counts),
     "baseline": match r.baseline {
       Some(b) => counts_to_json(b)
