@@ -61,3 +61,11 @@ Feature: Gleam parity corpus
 
   Scenario: A failed download names the tag override
     Then the download failure message for "wibble@1.0.0" at "https://github.com/a/b/archive/refs/tags/v1.0.0.zip" is "wibble@1.0.0: cannot download https://github.com/a/b/archive/refs/tags/v1.0.0.zip; if the tag is not v1.0.0, add github.com/owner/repo#tag to packages.txt"
+
+  Scenario: A manifest round trip keeps a repository and tag override
+    Given a manifest entry for "x@1.0.0 github.com/c/d#release-1.0.0" with file "src/x.gleam" hashed "ab"
+    When I write and read the manifest
+    Then the manifest entry is unchanged
+
+  Scenario: A source hash mismatch tells the reader how to fetch a clean copy
+    Then the source mismatch message for ".corpus/x@1.0.0/src/x.gleam" is "sha256 mismatch: .corpus/x@1.0.0/src/x.gleam; delete this file or its package directory, then run mise run corpus:fetch again"

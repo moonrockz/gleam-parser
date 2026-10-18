@@ -73,6 +73,7 @@ Feature: Gleam parity scoreboard
       | files | tokenized | parsed | matched | result                                          |
       | 232   | 12        | 5      | 1       | 232 files, 12 tokenized, 5 parsed, 1 matched    |
       | 232   | 9         | 5      | 0       | refused: tokenized: 9 < baseline 10             |
+      | 231   | 10        | 5      | 0       | refused: files: 231 < baseline 232              |
 
   Scenario: Lock and manifest must list the same files with the same sources
     Given the lock text:
@@ -98,3 +99,17 @@ Feature: Gleam parity scoreboard
     Given the golden JSON '{"a": "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"}'
     And the gleam-parser JSON '{"a": "x"}'
     Then the brief form of the golden JSON has 120 characters and ends with "..."
+
+  Scenario Outline: Repeated lock keys are source problems even with matching hashes
+    Given the lock text:
+      """
+      pkg_a@1.0.0/src/a.gleam 11 aa
+      pkg_a@1.0.0/src/a.gleam <source> bb
+      """
+    And the manifest sources "pkg_a@1.0.0/src/a.gleam 11"
+    Then the source problems are "<problems>"
+
+    Examples:
+      | source | problems |
+      | 11 | duplicate lock key: pkg_a@1.0.0/src/a.gleam |
+      | 99 | duplicate lock key: pkg_a@1.0.0/src/a.gleam; source hash differs from the manifest: pkg_a@1.0.0/src/a.gleam |

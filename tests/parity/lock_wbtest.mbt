@@ -75,25 +75,11 @@ fn parse_lock(text : String) -> Array[LockEntry] raise {
 /// Format lock entries sorted by key, one per line.
 fn format_lock(entries : Array[LockEntry]) -> String {
   let sorted = entries.copy()
-  sorted.sort_by((a, b) => compare_lexical(a.key, b.key))
+  sorted.sort_by((a, b) => @tooling.compare_lexical(a.key, b.key))
   let sb = StringBuilder()
   sb.write_string(lock_header + "\n")
   for e in sorted {
     sb.write_string("\{e.key} \{e.source_sha256} \{format_golden(e.golden)}\n")
   }
   sb.to_string()
-}
-
-///|
-/// Plain lexical order by UTF-16 code unit. `String::compare` orders shorter
-/// strings first, which makes the lock hard to read.
-fn compare_lexical(a : String, b : String) -> Int32 {
-  let n = if a.length() < b.length() { a.length() } else { b.length() }
-  for i in 0..<n {
-    let c = a.code_unit_at(i).compare(b.code_unit_at(i))
-    if c != 0 {
-      return c
-    }
-  }
-  a.length().compare(b.length())
 }

@@ -51,7 +51,7 @@ impl @moonspec.World for ParityWorld with fn configure(self, setup) {
     canonical : String,
   ) raise {
     @expect.expect(golden_hash(self.oracle_json)).to_equal(
-      sha256_hex(canonical),
+      @tooling.sha256_hex(@utf8.encode(canonical)),
     )
   })
   setup.given4(

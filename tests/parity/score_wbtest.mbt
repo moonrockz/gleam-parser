@@ -88,6 +88,9 @@ fn source_problems(
   let problems = []
   let locked : Map[String, Bool] = Map([])
   for entry in lock {
+    if locked.contains(entry.key) {
+      problems.push("duplicate lock key: \{entry.key}")
+    }
     locked[entry.key] = true
     match expected.get(entry.key) {
       None => problems.push("not in the manifest: \{entry.key}")

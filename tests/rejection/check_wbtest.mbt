@@ -30,30 +30,12 @@ priv struct Pending {
 } derive(Eq, Debug)
 
 ///|
-fn sha256_bytes_hex(bytes : Bytes) -> String {
-  @hex.encode(Bytes::from_array(@crypto.sha256(bytes)))
-}
-
-///|
-/// Compare strings by code unit (`String::compare` compares length first).
-fn compare_lexical(a : String, b : String) -> Int32 {
-  let n = if a.length() < b.length() { a.length() } else { b.length() }
-  for i in 0..<n {
-    let c = a.code_unit_at(i).compare(b.code_unit_at(i))
-    if c != 0 {
-      return c
-    }
-  }
-  a.length().compare(b.length())
-}
-
-///|
 fn compare_pending(a : Pending, b : Pending) -> Int32 {
-  let by_fixture = compare_lexical(a.fixture, b.fixture)
+  let by_fixture = @tooling.compare_lexical(a.fixture, b.fixture)
   if by_fixture != 0 {
     return by_fixture
   }
-  compare_lexical(a.check, b.check)
+  @tooling.compare_lexical(a.check, b.check)
 }
 
 ///|
@@ -145,7 +127,7 @@ fn mismatches(
       fail("\{verdicts_path}: malformed entry \{fixture} (no \{key} verdict)")
     }
     let bytes = read(fixture)
-    if sha256_bytes_hex(bytes) != sha256 {
+    if @tooling.sha256_hex(bytes) != sha256 {
       fail("\{fixture} changed: run `mise run rejection:record`")
     }
     found.append(fixture_mismatches(fixture, @utf8.decode(bytes), v))
@@ -192,7 +174,7 @@ fn gleam_files(dir : String) -> Array[String] raise {
   }
 
   go("")
-  found.sort_by(compare_lexical)
+  found.sort_by(@tooling.compare_lexical)
   found
 }
 
