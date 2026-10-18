@@ -6,6 +6,38 @@ is 0.x, a minor release can contain breaking changes.
 
 <!-- git-cliff: end of header -->
 
+## [0.4.0] - 2026-10-18
+
+Parsing and formatting now accept deeply nested Gleam source without a default
+nesting limit or growth of the machine stack. Callers can still set a finite
+nesting budget. This release also validates source coordinates and AST indexes,
+fixes Unicode diagnostic alignment and parser recovery metadata, and improves
+the parity and rejection tooling. Custom dialect keyword lists now use typed
+keywords and control which words the parser reserves. These API changes need
+the migrations below.
+
+### ⚠️ Breaking changes
+
+- *(span)* Source coordinates, AST indexes, bit array units, path indexes and traversal depths use validated types. Replace raw integers with native constructors such as `ByteOffset(value)`, which raise typed errors, or named `from_*` factories, which return `Option`. `Position(line, column)` takes raw integers; `Position::at` takes validated coordinates. Span lengths return `Option`. Construct comments with `Comment(...)` or `Comment::from_parts` instead of struct literals. See the tested [source coordinates migration guide](https://github.com/moonrockz/gleam-parser/blob/v0.4.0/docs/cookbook/source-coordinates.mbt.md). ([#18](https://github.com/moonrockz/gleam-parser/pull/18))
+- *(parser)* `Dialect.keywords` takes `ArrayView[Keyword]`. Replace strings in custom keyword lists with `Keyword` cases such as `Keyword::Echo`. Omitted keywords now parse as ordinary names. The default dialect reserves all compiler keywords. ([#19](https://github.com/moonrockz/gleam-parser/pull/19))
+- *(parser)* `Config.fuel` is `NestingLimit`, and `Partial.fuel` is `Option[NestingLimit]`. Replace `fuel: budget` with `fuel: Limited(budget)` and `fuel: Some(budget)` with `fuel: Some(Limited(budget))`. The default is `Unlimited`. TOML `fuel = "unlimited"` and `GLEAM_PARSER_FUEL=unlimited` remove a fallback limit. See the tested [configuration guide](https://github.com/moonrockz/gleam-parser/blob/v0.4.0/docs/cookbook/configure.mbt.md). ([#20](https://github.com/moonrockz/gleam-parser/pull/20))
+
+### 🚀 Features
+
+- *(parser)* [**breaking**] Remove default nesting limits ([#20](https://github.com/moonrockz/gleam-parser/pull/20)) by @DamianReeves
+
+### 🐛 Bug fixes
+
+- *(ast)* Enforce decoder scalar constraints ([#17](https://github.com/moonrockz/gleam-parser/pull/17)) by @DamianReeves
+- *(parser)* [**breaking**] Align Unicode diagnostics, discard failed-definition metadata and honor dialect keywords ([#19](https://github.com/moonrockz/gleam-parser/pull/19)) by @DamianReeves
+- *(tooling)* Detect duplicate lock keys, preserve manifest overrides and clarify corpus recovery ([#22](https://github.com/moonrockz/gleam-parser/pull/22)) by @DamianReeves
+
+### 🚜 Refactoring
+
+- *(span)* [**breaking**] Validate coordinate and index domains ([#18](https://github.com/moonrockz/gleam-parser/pull/18)) by @DamianReeves
+
+**Full changelog**: https://github.com/moonrockz/gleam-parser/compare/v0.3.0...v0.4.0
+
 ## [0.3.0] - 2026-10-16
 
 This release adds the formatter and the syntax tree. `format(text)` writes
