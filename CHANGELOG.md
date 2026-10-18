@@ -6,6 +6,32 @@ is 0.x, a minor release can contain breaking changes.
 
 <!-- git-cliff: end of header -->
 
+## [0.4.0] - 2026-10-18
+
+<!-- Highlights: replace this comment with a few sentences on what this release brings. -->
+
+### ⚠️ Breaking changes
+
+- *(span)* Construct coordinates, indexes, units and depths with ([#18](https://github.com/moonrockz/gleam-parser/pull/18))
+- *(parser)* Dialect.keywords now takes ArrayView[Keyword]. Replace ([#19](https://github.com/moonrockz/gleam-parser/pull/19))
+- *(parser)* Config.fuel is NestingLimit and Partial.fuel is ([#20](https://github.com/moonrockz/gleam-parser/pull/20))
+
+### 🚀 Features
+
+- *(parser)* [**breaking**] Remove default nesting limits ([#20](https://github.com/moonrockz/gleam-parser/pull/20)) by @DamianReeves
+
+### 🐛 Bug fixes
+
+- *(ast)* Enforce decoder scalar constraints ([#17](https://github.com/moonrockz/gleam-parser/pull/17)) by @DamianReeves
+- *(parser)* [**breaking**] Address parser review follow-ups ([#19](https://github.com/moonrockz/gleam-parser/pull/19)) by @DamianReeves
+- *(tooling)* Polish parity and rejection checks ([#22](https://github.com/moonrockz/gleam-parser/pull/22)) by @DamianReeves
+
+### 🚜 Refactoring
+
+- *(span)* [**breaking**] Validate coordinate and index domains ([#18](https://github.com/moonrockz/gleam-parser/pull/18)) by @DamianReeves
+
+**Full changelog**: https://github.com/moonrockz/gleam-parser/compare/v0.3.0...v0.4.0
+
 ## [0.3.0] - 2026-10-16
 
 This release adds the formatter and the syntax tree. `format(text)` writes
