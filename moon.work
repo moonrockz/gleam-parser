@@ -1,5 +1,6 @@
 members = [
   ".",
   "./tests",
+  "./profiles/morphir",
   "./docs/cookbook",
 ]

@@ -15,4 +15,5 @@ import {
   "moonrockz/gleam-parser/dialect",
   "moonrockz/gleam-parser/fuel",
   "moonbitlang/core/quickcheck",
+  "moonrockz/gleam-parser/targets" @target,
 } for "test"

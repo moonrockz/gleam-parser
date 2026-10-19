@@ -52,3 +52,25 @@ budget. It does not depend on the target's machine stack size.
 
 **Nesting budget**: A positive maximum number of syntax operations that can
 be open at the same time. An operation returns its unit when it closes.
+
+## Dialects and targets
+
+**Dialect**: The language rules a parser accepts. The standard dialect is
+Gleam 1.19; an additive dialect also accepts explicitly registered targets.
+
+**Profile**: A named, reusable configuration supplied by a module. Profiles
+register targets and compose explicitly with a dialect.
+
+**Target**: An execution or translation destination named by `@target` or
+`@external`. A source-language target is distinct from the MoonBit platform
+on which the parser runs.
+
+**Target restriction**: Metadata that associates a definition with one target.
+It does not cause parsing to remove other definitions.
+
+**External binding**: A target-specific reference to an external module and
+symbol, with its source location. A binding does not restrict its definition
+to that target or verify that the symbol exists.
+
+**Target registry**: The validated target identities available in a dialect.
+An unregistered name remains an error even when other extensions are enabled.

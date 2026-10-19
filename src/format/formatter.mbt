@@ -300,8 +300,7 @@ async fn Formatter::targeted_definition(
   let document = self.documented_definition(definition.definition)
   let document = match definition.target {
     None => document
-    Some(Erlang) => t("@target(erlang)") + line_doc + document
-    Some(JavaScript) => t("@target(javascript)") + line_doc + document
+    Some(target) => t("@target(" + target.name() + ")") + line_doc + document
   }
   let document = group(document)
   match comments {

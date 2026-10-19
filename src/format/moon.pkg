@@ -1,4 +1,5 @@
 import {
+  "moonrockz/gleam-parser/dialect",
   "moonrockz/gleam-parser/work",
   "moonrockz/gleam-parser/span",
   "moonrockz/gleam-parser/scanner",

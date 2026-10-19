@@ -66,7 +66,11 @@ async fn Formatter::type_alias(
   self : Formatter,
   alias_ : @ast.TypeAlias,
 ) -> @pretty.Doc raise FormatError + nocancel {
-  let attrs = attributes(alias_.deprecation, alias_.publicity, None, None)
+  let attrs = attributes(
+    alias_.deprecation,
+    alias_.publicity,
+    @ast.ExternalBindings::empty(),
+  )
   let head = attrs + pub_(alias_.publicity) + t("type ") + t(alias_.alias_)
   let head = if alias_.parameters.is_empty() {
     head

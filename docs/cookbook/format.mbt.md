@@ -30,6 +30,7 @@ test "fm: a syntax error" {
     ParseFailed(diagnostics) =>
       @gleam.render_plain(diagnostics[0], @gleam.SourceText(text), "main.gleam")
     OutOfFuel(_) => "out of fuel"
+    DialectMismatch(..) => "different dialect"
   }
   @expect.expect(message).to_contain("Syntax error")
 }

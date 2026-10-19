@@ -72,7 +72,7 @@ Find the node at a byte offset and its path (from a tested doc example):
 test {
   let tree = @gleam.Tree(@gleam.parse_text("pub fn add(a, b) {\n  a + b\n}\n"))
   // Byte 25 is the `b` in `a + b`.
-  let b = tree.node_at(25).unwrap()
+  let b = tree.node_at(@gleam.ByteOffset::from_int(25).unwrap()).unwrap()
   inspect("\{b.category()}/\{b.kind()}", content="expression/var")
   inspect(tree.node_path(b).unwrap(), content="definitions[0].body[0].expression[0].right[0]")
 }
@@ -103,3 +103,55 @@ import {
 - `mise run test:parity` and `mise run test:rejection`: parity with the Gleam
   compiler on the corpus and on the rejection fixtures (see `AGENTS.md`).
 - See `AGENTS.md` for conventions and `docs/cookbook/` for tested examples.
+
+## Optional target profiles
+
+Standard Gleam stays the default. A core-only consumer can register its own
+source-language target without installing a profile module:
+
+```moonbit
+test {
+  let orbit = @gleam.Target::extension("orbit")
+  let dialect = @gleam.Dialect::gleam_1_19().register_target(orbit)
+  let config = { ..@gleam.Config::default(), dialect }
+  let result = @gleam.parse_text("@target(orbit) pub const answer = 42", config~)
+  assert_eq(result.has_errors(), false)
+  let document = @gleam.decode_extended(@gleam.encode_extended(result))
+  assert_eq(document.parsed, result.parsed())
+}
+```
+
+`@external(orbit, "module", "symbol")` uses the same registry. Functions and
+external types retain one binding per target in `externals`; use
+`external_for(target)` for lookup. Bindings do not create target restrictions.
+Parsing retains every definition. A registration supplies no backend and does
+not resolve foreign symbols.
+
+For reusable configurations, construct a `Profile` and apply it with
+`Dialect::with_profile`. Compose compatible profiles explicitly. Conflicts
+raise typed errors that identify both providers. TOML profile names resolve
+only through the `Profiles` registry that the application supplies.
+
+The optional [Morphir module](profiles/morphir/src/README.mbt.md) is published
+as `moonrockz/gleam-parser-morphir`. Install it separately, then enable it:
+
+```moonbit
+let dialect = @gleam.Dialect::gleam_1_19().with_profile(@morphir.profile())
+let config = { ..@gleam.Config::default(), dialect }
+let result = @gleam.parse_text(
+  "@external(morphir, \"example/domain\", \"CustomerId\")\npub type CustomerId\n",
+  config~,
+)
+```
+
+`format_parsed(result)` uses the parse dialect. An explicitly different dialect
+raises `DialectMismatch`. Compiler-compatible `encode_parsed` preserves standard
+JSON bytes and raises `NonStandardTarget` for extension-bearing ASTs. Use
+`encode_extended(result)` for versioned JSON with generic bindings and dialect
+identity. Decoding does not load profile code.
+
+The [tested cookbook](docs/cookbook/target-profiles.mbt.md) covers core-only use,
+custom registration, composition, conflicts, configuration lookup, JSON, and
+formatting. See the [0.5 migration guide](docs/migration-0.5.md) for changed AST
+fields and encoder signatures, and [extended JSON schema](docs/extended-json.md)
+for the interchange contract.

@@ -661,8 +661,10 @@ fn gen_definition(size : Int32, rs : @splitmix.RandomState) -> @ast.Definition {
         deprecation: ast_deprecation(rs),
         return_annotation: ast_opt(rs, () => gen_type_ast(s, rs)),
         documentation: ast_opt(rs, () => ast_doc(rs)),
-        external_erlang: ast_opt(rs, () => ast_external(rs)),
-        external_javascript: ast_opt(rs, () => ast_external(rs)),
+        externals: @ast.ExternalBindings::from_standard(
+          ast_opt(rs, () => ast_external(rs)),
+          ast_opt(rs, () => ast_external(rs)),
+        ),
       })
     1 =>
       TypeAlias({
@@ -699,8 +701,10 @@ fn gen_definition(size : Int32, rs : @splitmix.RandomState) -> @ast.Definition {
         deprecation: ast_deprecation(rs),
         opaque_: ast_pick(rs, 2) == 0,
         parameters: ast_list(rs, s, () => ast_spanned(rs)),
-        external_erlang: ast_opt(rs, () => ast_external(rs)),
-        external_javascript: ast_opt(rs, () => ast_external(rs)),
+        externals: @ast.ExternalBindings::from_standard(
+          ast_opt(rs, () => ast_external(rs)),
+          ast_opt(rs, () => ast_external(rs)),
+        ),
       })
     3 =>
       Import({

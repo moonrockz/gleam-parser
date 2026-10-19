@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser/targets"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror RegistrationError {
+  InvalidName(String)
+  Conflict(String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct Name {
+  value : String
+} derive(Eq, Hash, @debug.Debug)
+pub fn Name::Name(String) -> Self raise RegistrationError
+pub fn Name::from_string(String) -> Self?
+pub fn Name::to_string(Self) -> String
+
+pub struct Registry {
+  targets : ArrayView[Target]
+} derive(Eq, @debug.Debug)
+pub fn Registry::all(Self) -> Array[Target]
+pub fn Registry::register(Self, Target) -> Self raise RegistrationError
+pub fn Registry::resolve(Self, String, aliases? : Bool) -> Target?
+pub fn Registry::standard() -> Self
+
+pub(all) enum Target {
+  Erlang
+  JavaScript
+  Extension(Name)
+} derive(Eq, Hash, @debug.Debug)
+pub fn Target::extension(String) -> Self raise RegistrationError
+pub fn Target::name(Self) -> String
+pub fn Target::of(String) -> Self?
+
+// Type aliases
+
+// Traits

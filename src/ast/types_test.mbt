@@ -21,8 +21,7 @@ test "a parsed module with one function builds and compares by value" {
     deprecation: NotDeprecated,
     return_annotation: None,
     documentation: None,
-    external_erlang: None,
-    external_javascript: None,
+    externals: @ast.ExternalBindings::from_standard(None, None),
   }
   let m = @ast.Module::{
     definitions: [

@@ -123,6 +123,7 @@ pub fn ParseErrorType::details(Self) -> ParseErrorDetails
 pub fn ParseErrorType::kind(Self) -> String
 
 pub(all) struct ParseResult {
+  config : @config.Config
   module_ : @ast.Module
   extra : @ast.ModuleExtra
   warnings : ArrayView[@ast.Warning]

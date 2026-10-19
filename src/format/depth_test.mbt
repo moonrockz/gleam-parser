@@ -55,6 +55,7 @@ test "a smaller fuel budget stops the formatter with OutOfFuel when the parser g
     OutOfFuel(FuelExhausted(budget~, ..)) =>
       "OutOfFuel budget=\{budget.units()}"
     ParseFailed(_) => "ParseFailed"
+    DialectMismatch(..) => "DialectMismatch"
   }
   inspect(out, content="OutOfFuel budget=3")
 }

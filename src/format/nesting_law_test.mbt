@@ -8,7 +8,7 @@ test "law: format never crashes on any text: formatted text or ParseFailed" {
         true
       } catch {
         ParseFailed(_) => true
-        OutOfFuel(_) => false
+        OutOfFuel(_) | DialectMismatch(..) => false
       }
     },
     count=200,

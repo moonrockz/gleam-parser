@@ -32,8 +32,7 @@ async fn Formatter::statement_fn(
   let attrs = attributes(
     function.deprecation,
     function.publicity,
-    function.external_erlang,
-    function.external_javascript,
+    function.externals,
   )
   let arguments = []
   for a in function.arguments {

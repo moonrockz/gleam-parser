@@ -20,7 +20,11 @@ test "an explicit budget rejects deep lists in function bodies without overflowi
 ///|
 fn round_trips(r : @parser.ParseResult) -> Bool {
   let parsed = r.parsed()
-  let text = @ast.canonical(@ast.encode_parsed(parsed))
+  let text = @ast.canonical(
+    @ast.encode_parsed(parsed) catch {
+      _ => return false
+    },
+  )
   try @ast.decode_parsed(@json.parse(text)) catch {
     _ => false
   } noraise {

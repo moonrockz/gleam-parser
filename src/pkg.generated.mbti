@@ -14,6 +14,7 @@ import {
   "moonrockz/gleam-parser/scanner",
   "moonrockz/gleam-parser/span",
   "moonrockz/gleam-parser/syntax",
+  "moonrockz/gleam-parser/targets",
 }
 
 // Values
@@ -22,6 +23,8 @@ pub fn[V : @syntax.Visitor] accept(@syntax.NodeRef, V) -> Unit
 pub fn canonical(Json) -> String
 
 pub fn decode_expr(Json) -> @ast.Expr raise @ast.DecodeError
+
+pub fn decode_extended(Json) -> @ast.Extended raise @ast.DecodeError
 
 pub fn decode_oracle_output(Json) -> @ast.OracleOutput raise @ast.DecodeError
 
@@ -35,9 +38,11 @@ pub fn encode_diagnostics(ArrayView[@diagnostic.Diagnostic]) -> Json
 
 pub fn encode_expr(@ast.Expr) -> Json
 
-pub fn encode_oracle_output(@ast.OracleOutput) -> Json
+pub fn encode_extended(@parser.ParseResult) -> Json raise @ast.ExtendedError
 
-pub fn encode_parsed(@ast.Parsed) -> Json
+pub fn encode_oracle_output(@ast.OracleOutput) -> Json raise @ast.ExportError
+
+pub fn encode_parsed(@ast.Parsed) -> Json raise @ast.ExportError
 
 pub fn[A] fold(@syntax.NodeRef, A, (A, @syntax.NodeRef) -> (A, @syntax.Control), leave? : (A, @syntax.NodeRef) -> A) -> A
 
@@ -91,6 +96,8 @@ pub using @ast {type Assignment}
 pub using @ast {type AssignmentKind}
 
 pub using @ast {type BinOp}
+
+pub using @ast {type BindingError}
 
 pub using @ast {type BitArrayOption}
 
@@ -158,9 +165,19 @@ pub using @syntax {type Event}
 
 pub using @syntax {type EventReader}
 
+pub using @ast {type ExportError}
+
 pub using @ast {type Expr}
 
+pub using @ast {type Extended}
+
+pub using @ast {type ExtendedError}
+
 pub using @ast {type External}
+
+pub using @ast {type ExternalBinding}
+
+pub using @ast {type ExternalBindings}
 
 pub using @format {type FormatError}
 
@@ -236,6 +253,12 @@ pub using @ast {type Pattern}
 
 pub using @span {type Position}
 
+pub using @dialect {type Profile}
+
+pub using @dialect {type ProfileError}
+
+pub using @dialect {type Profiles}
+
 pub using @ast {type Publicity}
 
 pub using @ast {type RecordBeingUpdated}
@@ -245,6 +268,8 @@ pub using @ast {type RecordConstructor}
 pub using @ast {type RecordConstructorArg}
 
 pub using @ast {type RecordUpdateArg}
+
+pub using @targets {type RegistrationError}
 
 pub using @dialect {type Rule}
 
@@ -266,7 +291,11 @@ pub using @ast {type StringPrefixLeftSideAssignment}
 
 pub using @ast {type TailPattern}
 
-pub using @ast {type Target}
+pub using @targets {type Target}
+
+pub using @targets {type Name as TargetName}
+
+pub using @targets {type Registry as TargetRegistry}
 
 pub using @ast {type TargetedDefinition}
 

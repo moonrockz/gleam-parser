@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+#MISE description="Publish the optional profile selected by GLEAM_PUBLISH_MODULE_DIR"
+exec moon run -q --target wasm scripts/publish.mbtx

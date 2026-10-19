@@ -17,8 +17,7 @@ fn[A] parse_error(
 priv struct Attributes {
   mut target : @ast.Target?
   mut deprecated : @ast.Deprecation
-  mut external_erlang : @ast.External?
-  mut external_javascript : @ast.External?
+  mut externals : @ast.ExternalBindings
   mut internal : @span.SrcSpan?
 }
 
@@ -27,15 +26,14 @@ fn Attributes::Attributes() -> Attributes {
   {
     target: None,
     deprecated: NotDeprecated,
-    external_erlang: None,
-    external_javascript: None,
+    externals: @ast.ExternalBindings::empty(),
     internal: None,
   }
 }
 
 ///|
 fn Attributes::has_function_only(self : Attributes) -> Bool {
-  self.external_erlang is Some(_) || self.external_javascript is Some(_)
+  !self.externals.is_empty()
 }
 
 ///|
@@ -43,10 +41,7 @@ fn Attributes::has_external_for(
   self : Attributes,
   target : @ast.Target,
 ) -> Bool {
-  match target {
-    Erlang => self.external_erlang is Some(_)
-    JavaScript => self.external_javascript is Some(_)
-  }
+  self.externals.get(target) is Some(_)
 }
 
 ///|
@@ -54,10 +49,10 @@ fn Attributes::set_external_for(
   self : Attributes,
   target : @ast.Target,
   external : @ast.External,
-) -> Unit {
-  match target {
-    Erlang => self.external_erlang = Some(external)
-    JavaScript => self.external_javascript = Some(external)
+) -> Unit raise ParseError {
+  // The caller checks duplicates and reports the annotation's source span.
+  self.externals = self.externals.with_binding(target, external) catch {
+    _ => parse_error(DuplicateAttribute, external.location)
   }
 }
 

@@ -1,0 +1,67 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/process",
+}
+
+///|
+/// Verify the core archive and build a core-only consumer outside this workspace.
+async fn main {
+  let (code, output) = @process.collect_output_merged("moon", ["package"])
+  guard code == 0 else { fail(output.text()) }
+  let mut archive : String? = None
+  for line in output.text().split("\n") {
+    if line.has_prefix("Package to ") {
+      archive = Some(line[11:].trim().to_owned())
+    }
+  }
+  guard archive is Some(archive) else {
+    fail("moon package did not report its archive")
+  }
+  let (code, listing) = @process.collect_output_merged("unzip", ["-Z1", archive])
+  guard code == 0 else { fail(listing.text()) }
+  for name in listing.text().split("\n") {
+    if name.has_prefix("profiles/") || name.contains("gleam-parser-morphir") {
+      fail("the core archive contains an optional profile: \{name}")
+    }
+  }
+  let (code, directory) = @process.collect_output_merged("mktemp", ["-d"])
+  guard code == 0 else { fail(directory.text()) }
+  let scratch = directory.text().trim().to_owned()
+  defer @fs.rmdir(scratch, recursive=true)
+  @fs.mkdir("\{scratch}/core")
+  @fs.mkdir("\{scratch}/src")
+  let code = @process.run("unzip", ["-q", archive, "-d", "\{scratch}/core"])
+  guard code == 0 else { fail("cannot extract core archive") }
+  @fs.write_file("\{scratch}/moon.work", "members = [\".\", \"./core\"]\n")
+  @fs.write_file(
+    "\{scratch}/moon.mod",
+    "name = \"example/core_only\"\nversion = \"0.0.1\"\nsource = \"src\"\nimport { \"moonrockz/gleam-parser@0.0.0\" }\n",
+  )
+  @fs.write_file(
+    "\{scratch}/src/moon.pkg",
+    "import { \"moonrockz/gleam-parser\" @gleam }\n",
+  )
+  let consumer =
+    #|test {
+    #|  assert_eq(@gleam.parse_text("pub const x = 1").has_errors(), false)
+    #|  assert_eq(@gleam.parse_text("@target(morphir) pub const x = 1").has_errors(), true)
+    #|  let target = @gleam.Target::extension("fresh_destination")
+    #|  let config = { ..@gleam.Config::default(), dialect: @gleam.Dialect::gleam_1_19().register_target(target) }
+    #|  let result = @gleam.parse_text("@external(fresh_destination, \"m\", \"f\") pub fn f() -> Int", config~)
+    #|  assert_eq(result.has_errors(), false)
+    #|  assert_eq(@gleam.decode_extended(@gleam.encode_extended(result)).parsed, result.parsed())
+    #|}
+  @fs.write_file("\{scratch}/src/consumer_test.mbt", consumer)
+  let (code, checked) = @process.collect_output_merged(
+    "moon",
+    ["test", "src", "--target", "js"],
+    cwd=scratch,
+  )
+  guard code == 0 else { fail(checked.text()) }
+  if @fs.exists("\{scratch}/.mooncakes/moonrockz/gleam-parser-morphir") {
+    fail("a core-only consumer installed the optional Morphir module")
+  }
+  println("Core archive excludes profiles; isolated core-only consumer passed.")
+}

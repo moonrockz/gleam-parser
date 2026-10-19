@@ -6,7 +6,11 @@ async fn Formatter::record_constructor(
 ) -> @pretty.Doc raise FormatError + nocancel {
   let comments = self.pop_comments(constructor_.location.start)
   let doc_comments = self.doc_comments(constructor_.location.start)
-  let attrs = attributes(constructor_.deprecation, Private, None, None)
+  let attrs = attributes(
+    constructor_.deprecation,
+    Private,
+    @ast.ExternalBindings::empty(),
+  )
   let doc = if constructor_.arguments.is_empty() {
     if self.any_comments(constructor_.location.end) {
       group(
@@ -46,12 +50,7 @@ async fn Formatter::custom_type(
   type_ : @ast.CustomType,
 ) -> @pretty.Doc raise FormatError + nocancel {
   let _ = self.pop_empty_lines(type_.location.end)
-  let attrs = attributes(
-    type_.deprecation,
-    type_.publicity,
-    type_.external_erlang,
-    type_.external_javascript,
-  )
+  let attrs = attributes(type_.deprecation, type_.publicity, type_.externals)
   let doc = attrs +
     pub_(type_.publicity) +
     (if type_.opaque_ { t("opaque type ") } else { t("type ") }) +

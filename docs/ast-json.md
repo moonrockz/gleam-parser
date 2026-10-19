@@ -1,6 +1,6 @@
 # AST JSON
 
-The canonical JSON of gleam-parser's AST. `@ast.encode_parsed` writes it,
+The compiler-compatible canonical JSON of gleam-parser's standard AST. `@ast.encode_parsed` writes it,
 `@ast.decode_parsed` reads it, and the Rust oracle `tools/gleam-ast-oracle`
 writes the same bytes from the Gleam compiler's parser (v1.19.2). Parity is
 byte equality of this text.
@@ -111,3 +111,12 @@ Variants the parser never builds are not in the schema: `Pattern::Invalid`,
 ## Example
 
 `tests/fixtures/ast/*.gleam` with their `*.json`.
+
+## Registered targets
+
+The internal AST uses generic `externals` collections. This compatibility
+format retains the compiler's `external_erlang` and `external_javascript`
+fields and exact standard bytes. Module, definition, warning, and oracle
+encoders raise `ExportError::NonStandardTarget` for extension-bearing values.
+Use the separate [extended JSON format](extended-json.md) to preserve them.
+See the [0.5 migration guide](migration-0.5.md).

@@ -98,8 +98,7 @@ async fn Parser::parse_function(
       body: body[:],
       return_annotation,
       deprecation: attributes.deprecated,
-      external_erlang: attributes.external_erlang,
-      external_javascript: attributes.external_javascript,
+      externals: attributes.externals,
     }),
   )
 }

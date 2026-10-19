@@ -112,7 +112,10 @@ fn article(type_name : String) -> String {
 
 ///|
 /// The `[parser]` table of a `gleam-parser.toml` text: `gleam = "1.19"`,
-/// `fuel = 100` or `fuel = "unlimited"`. Every key is optional.
+/// `fuel = 100` or `fuel = "unlimited"`, and `profiles = ["provider/name@1"]`.
+/// Every key is optional. Resolve profile identities only through the supplied
+/// `profiles` registry; its default is empty. Missing profiles and composition
+/// conflicts raise `ConfigError` at `parser.profiles`. No modules are loaded.
 /// An omitted fuel key inherits the fallback. The default is unlimited.
 /// A syntax error, an unknown table
 /// or key, a value of the wrong type, a `fuel` below 1 or an unknown Gleam
@@ -128,7 +131,10 @@ fn article(type_name : String) -> String {
 ///   inspect(p.dialect is None, content="true")
 /// }
 /// ```
-pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
+pub fn Config::from_toml(
+  text : String,
+  profiles~ : @dialect.Profiles = @dialect.Profiles::empty(),
+) -> Partial raise ConfigError {
   let root = @toml.parse(text) catch {
     e => bad(TomlSyntax, toml_message("\{e}"))
   }
@@ -138,6 +144,7 @@ pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
       bad(TomlSyntax, "expected a table, found \{article(other.type_name())}")
   }
   let mut partial = Partial::empty()
+  let mut requested : ArrayView[String]? = None
   for name, value in tables {
     if name != "parser" {
       bad(TomlKey(name), "unknown table")
@@ -152,6 +159,28 @@ pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
     }
     for key_name, v in parser {
       let source = TomlKey("parser.\{key_name}")
+      if key_name == "profiles" {
+        let names = match v {
+          TomlArray(values) =>
+            values.map(value => {
+              match value {
+                TomlString(name) => name
+                other =>
+                  bad(
+                    source,
+                    "expected a profile identity string, found \{article(other.type_name())}",
+                  )
+              }
+            })
+          other =>
+            bad(
+              source,
+              "expected an array, found \{article(other.type_name())}",
+            )
+        }
+        requested = Some(names[:])
+        continue
+      }
       match Key::of_toml(key_name) {
         None => bad(source, "unknown key")
         Some(Gleam) =>
@@ -181,6 +210,28 @@ pub fn Config::from_toml(text : String) -> Partial raise ConfigError {
           }
       }
     }
+  }
+  if requested is Some(identities) {
+    let dialect = profiles.apply(
+      partial.dialect.unwrap_or(@dialect.Dialect::gleam_1_19()),
+      identities,
+    ) catch {
+      MissingProfile(name) =>
+        bad(TomlKey("parser.profiles"), "profile \"\{name}\" is not available")
+      DuplicateProfile(name) =>
+        bad(
+          TomlKey("parser.profiles"),
+          "profile \"\{name}\" is requested more than once",
+        )
+      InvalidIdentity(name) =>
+        bad(TomlKey("parser.profiles"), "invalid profile identity \"\{name}\"")
+      TargetConflict(name~, existing~, incoming~) =>
+        bad(
+          TomlKey("parser.profiles"),
+          "target \"\{name}\" conflicts between \"\{existing}\" and \"\{incoming}\"",
+        )
+    }
+    partial = { ..partial, dialect: Some(dialect), }
   }
   partial
 }
@@ -222,7 +273,8 @@ pub fn Config::from_env(env : Environment) -> Partial raise ConfigError {
 /// contributes nothing, a file that cannot be read is a `ConfigError`
 /// with `File(path)` and the system's text, and a TOML error from the file
 /// names the file in front of its message. The only function of this
-/// package with I/O.
+/// package with I/O. Optional profile names resolve only through the supplied
+/// `profiles` registry, which is empty by default.
 ///
 /// ```mbt nocheck
 /// fn parse_with_config(text : String) -> @gleam.ParseResult raise {
@@ -233,6 +285,7 @@ pub fn Config::from_env(env : Environment) -> Partial raise ConfigError {
 pub fn Config::load(
   path~ : String = "gleam-parser.toml",
   env? : Environment,
+  profiles~ : @dialect.Profiles = @dialect.Profiles::empty(),
 ) -> Config raise ConfigError {
   let env = match env {
     Some(e) => e
@@ -243,7 +296,7 @@ pub fn Config::load(
       @fs.IOError(detail) => bad(File(path), "cannot read the file: \{detail}")
     }
     // A TOML error from the file names the file in front of its message.
-    Config::from_toml(text) catch {
+    Config::from_toml(text, profiles~) catch {
       ConfigError(source~, message~) =>
         raise ConfigError(source~, message="\{path}: \{message}")
     }

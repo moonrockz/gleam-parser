@@ -13,6 +13,8 @@
 /// }
 /// ```
 pub(all) struct ParseResult {
+  /// The configuration used to parse this result. Formatting uses it by default.
+  config : @config.Config
   module_ : @ast.Module
   extra : @ast.ModuleExtra
   warnings : ArrayView[@ast.Warning]
@@ -115,6 +117,7 @@ pub fn parse_module(
     trailing_commas: p.trailing_commas[:],
   }
   {
+    config,
     module_: { definitions: definitions[:], },
     extra,
     warnings: warnings[:],
@@ -362,20 +365,14 @@ fn Parser::expect_target(
         sp(@span.ByteOffset::zero(), @span.ByteOffset::zero()),
       )
     Some({ kind: Name(name), span, .. }) =>
-      match name {
-        "js" => {
-          self.warn(DeprecatedTargetShorthand(location=span, target=JavaScript))
-          JavaScript
-        }
-        "erl" => {
-          self.warn(DeprecatedTargetShorthand(location=span, target=Erlang))
-          Erlang
-        }
-        _ =>
-          match @ast.Target::of(name) {
-            Some(t) if self.config.dialect.knows_target(name) => t
-            _ => parse_error(UnknownTarget, span)
+      match self.config.dialect.targets.resolve(name, aliases=true) {
+        Some(target) => {
+          if name != target.name() {
+            self.warn(DeprecatedTargetShorthand(location=span, target~))
           }
+          target
+        }
+        None => parse_error(UnknownTarget, span)
       }
     Some(_) => parse_error(ExpectedTargetName, paren_location)
   }
@@ -389,8 +386,9 @@ fn Parser::parse_external_attribute(
   attributes : Attributes,
 ) -> @span.ByteOffset raise ParseError {
   let (_, target_name, _) = self.expect_name(Target)
-  let target : @ast.Target = match @ast.Target::of(target_name) {
-    Some(t) if self.config.dialect.knows_target(target_name) => t
+  let target : @ast.Target = match
+    self.config.dialect.targets.resolve(target_name) {
+    Some(t) => t
     _ => parse_error(UnknownTarget, sp(start, end))
   }
   let _ = self.expect_one(Comma)

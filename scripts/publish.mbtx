@@ -20,11 +20,11 @@ let duplicated : String = "is duplicated with an existing version"
 
 ///|
 /// The `version = "..."` value of a moon.mod file.
-fn mod_version(moon_mod : String) -> String? {
+fn mod_field(moon_mod : String, key : String) -> String? {
   for line in moon_mod.split("\n") {
     let line = line.trim()
-    guard line.has_prefix("version") else { continue }
-    let rest = line.view(start_offset=7).trim_start()
+    guard line.has_prefix(key) else { continue }
+    let rest = line.view(start_offset=key.length()).trim_start()
     guard rest.has_prefix("=") else { continue }
     let value = rest.view(start_offset=1).trim()
     if value.length() >= 2 && value.has_prefix("\"") && value.has_suffix("\"") {
@@ -37,16 +37,22 @@ fn mod_version(moon_mod : String) -> String? {
 }
 
 ///|
+fn mod_version(moon_mod : String) -> String? {
+  mod_field(moon_mod, "version")
+}
+
+///|
 /// A release tag (`ref_type` "tag") must be `v` + the module version. Other
 /// refs (a manual run from a branch) are not checked.
 fn check_ref(
   ref_type : String,
   ref_name : String,
   version : String,
+  prefix~ : String = "v",
 ) -> Result[Unit, String] {
-  if ref_type == "tag" && ref_name != "v" + version {
+  if ref_type == "tag" && ref_name != prefix + version {
     Err(
-      "tag \{ref_name} does not match moon.mod version \{version} (v\{version})",
+      "tag \{ref_name} does not match moon.mod version \{version} (\{prefix}\{version})",
     )
   } else {
     Ok(())
@@ -74,7 +80,10 @@ fn classify(exit_code : Int32, output : String) -> Outcome {
 
 ///|
 async fn main {
-  let moon_mod = @fs.read_file("moon.mod").text()
+  let directory = @env.get_env_var("GLEAM_PUBLISH_MODULE_DIR").unwrap_or(".")
+  let prefix = @env.get_env_var("GLEAM_PUBLISH_TAG_PREFIX").unwrap_or("v")
+  let moon_mod = @fs.read_file("\{directory}/moon.mod").text()
+  let module_name = mod_field(moon_mod, "name").unwrap_or("module")
   guard mod_version(moon_mod) is Some(version) else {
     eprintln("moon.mod has no version")
     @sys.exit(1)
@@ -82,19 +91,23 @@ async fn main {
   }
   let ref_type = @env.get_env_var("GITHUB_REF_TYPE").unwrap_or("")
   let ref_name = @env.get_env_var("GITHUB_REF_NAME").unwrap_or("")
-  if check_ref(ref_type, ref_name, version) is Err(message) {
+  if check_ref(ref_type, ref_name, version, prefix~) is Err(message) {
     eprintln(message)
     @sys.exit(1)
     return
   }
-  let (code, output) = @process.collect_output_merged("moon", ["publish"])
+  let (code, output) = @process.collect_output_merged(
+    "moon",
+    ["publish"],
+    cwd=directory,
+  )
   let output = output.text()
   println(output.trim_end())
   match classify(code, output) {
-    Published => println("Published moonrockz/gleam-parser \{version}")
+    Published => println("Published \{module_name} \{version}")
     AlreadyPublished =>
       println(
-        "moonrockz/gleam-parser \{version} is already published (a second release run for this tag); nothing to do",
+        "\{module_name} \{version} is already published (a second release run for this tag); nothing to do",
       )
     Failed => @sys.exit(1)
   }
@@ -183,4 +196,21 @@ async test "publish feature" {
     ]),
   )
   |> ignore
+}
+
+///|
+test "profile publication uses its own manifest and tag prefix" {
+  let manifest = "name = \"moonrockz/gleam-parser-morphir\"\nversion = \"0.1.0\"\n"
+  @expect.expect_all(s => {
+    s
+    .expect(mod_field(manifest, "name"))
+    .to_equal(Some("moonrockz/gleam-parser-morphir"))
+    s.expect(mod_version(manifest)).to_equal(Some("0.1.0"))
+    s
+    .expect(check_ref("tag", "morphir-v0.1.0", "0.1.0", prefix="morphir-v"))
+    .to_equal(Ok(()))
+    s
+    .expect(check_ref("tag", "v0.1.0", "0.1.0", prefix="morphir-v") is Err(_))
+    .to_be_true()
+  })
 }

@@ -273,6 +273,8 @@ fn assign_name(a : AssignName) -> Json {
 /// Encode a module with its trivia positions and parse-time warnings.
 /// Use `canonical` to write the JSON in the oracle's key order.
 /// Encoding uses no recursive calls and has no depth limit.
+/// Raise `ExportError::NonStandardTarget` if any target restriction, binding,
+/// or warning contains an extension. Use `encode_extended` to preserve it.
 ///
 /// ```mbt check
 /// test {
@@ -284,7 +286,11 @@ fn assign_name(a : AssignName) -> Json {
 ///   assert_eq(@ast.decode_parsed(@ast.encode_parsed(p)), p)
 /// }
 /// ```
-pub fn encode_parsed(p : Parsed) -> Json {
+pub fn encode_parsed(p : Parsed) -> Json raise ExportError {
+  check_module(p.module_)
+  for warning in p.warnings {
+    check_warning(warning)
+  }
   run(enc_parsed(p, j => Done(j)))
 }
 
@@ -296,7 +302,7 @@ fn[R] enc_parsed(p : Parsed, k : (Json) -> Step[R]) -> Step[R] {
       obj([
         ("module", module_),
         ("extra", encode_extra(p.extra)),
-        ("warnings", list(p.warnings, encode_warning)),
+        ("warnings", list(p.warnings, warning_json)),
       ]),
     )
   })
@@ -304,7 +310,9 @@ fn[R] enc_parsed(p : Parsed, k : (Json) -> Step[R]) -> Step[R] {
 
 ///|
 /// Encode a module as a JSON object with its definitions in source order.
-pub fn encode_module(m : Module) -> Json {
+/// Raise `ExportError` for an extension restriction or external binding.
+pub fn encode_module(m : Module) -> Json raise ExportError {
+  check_module(m)
   run(enc_module(m, j => Done(j)))
 }
 
@@ -317,8 +325,12 @@ fn[R] enc_module(m : Module, k : (Json) -> Step[R]) -> Step[R] {
 
 ///|
 /// Encode a definition with its optional target.
-/// An absent target is written as `null`.
-pub fn encode_targeted_definition(d : TargetedDefinition) -> Json {
+/// An absent target is written as `null`. Raise `ExportError` for an extension
+/// restriction or external binding.
+pub fn encode_targeted_definition(
+  d : TargetedDefinition,
+) -> Json raise ExportError {
+  check_targeted_definition(d)
   run(enc_targeted_definition(d, j => Done(j)))
 }
 
@@ -339,8 +351,10 @@ fn[R] enc_targeted_definition(
 }
 
 ///|
-/// Encode a definition as a tagged JSON object.
-pub fn encode_definition(d : Definition) -> Json {
+/// Encode a definition as a tagged JSON object. Raise `ExportError` if it
+/// contains an extension external binding.
+pub fn encode_definition(d : Definition) -> Json raise ExportError {
+  check_definition(d)
   run(enc_definition(d, j => Done(j)))
 }
 
@@ -381,8 +395,8 @@ fn[R] enc_definition(d : Definition, k : (Json) -> Step[R]) -> Step[R] {
             ("deprecation", deprecation(c.deprecation)),
             ("opaque", Json::boolean(c.opaque_)),
             ("parameters", list(c.parameters, spanned_string)),
-            ("external_erlang", opt(c.external_erlang, external)),
-            ("external_javascript", opt(c.external_javascript, external)),
+            ("external_erlang", opt(c.external_for(Erlang), external)),
+            ("external_javascript", opt(c.external_for(JavaScript), external)),
           ]),
         )
       })
@@ -453,8 +467,8 @@ fn[R] enc_function(
             ("deprecation", deprecation(f.deprecation)),
             ("return_annotation", return_annotation),
             ("documentation", opt(f.documentation, documentation)),
-            ("external_erlang", opt(f.external_erlang, external)),
-            ("external_javascript", opt(f.external_javascript, external)),
+            ("external_erlang", opt(f.external_for(Erlang), external)),
+            ("external_javascript", opt(f.external_for(JavaScript), external)),
           ]),
         )
       })
@@ -1696,8 +1710,15 @@ pub fn encode_extra(x : ModuleExtra) -> Json {
 }
 
 ///|
-/// Encode a parse-time warning as a tagged JSON object.
-pub fn encode_warning(w : Warning) -> Json {
+/// Encode a parse-time warning as a tagged JSON object. Raise `ExportError`
+/// if a constructed shorthand warning contains an extension target.
+pub fn encode_warning(w : Warning) -> Json raise ExportError {
+  check_warning(w)
+  warning_json(w)
+}
+
+///|
+fn warning_json(w : Warning) -> Json {
   let simple = (kind : String, location : @span.SrcSpan) => {
     obj([("kind", str(kind)), ("location", encode_span(location))])
   }
