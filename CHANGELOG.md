@@ -6,6 +6,21 @@ is 0.x, a minor release can contain breaking changes.
 
 <!-- git-cliff: end of header -->
 
+## [0.5.1] - 2026-10-19
+
+<!-- Highlights: replace this comment with a few sentences on what this release brings. -->
+
+### 🐛 Bug fixes
+
+- *(release)* Isolate profile archives ([#27](https://github.com/moonrockz/gleam-parser/pull/27)) by @DamianReeves
+- *(morphir)* Support standalone profile imports ([#28](https://github.com/moonrockz/gleam-parser/pull/28)) by @DamianReeves
+
+### 📚 Documentation
+
+- *(morphir)* Show supported Gleam syntax ([#29](https://github.com/moonrockz/gleam-parser/pull/29)) by @DamianReeves
+
+**Full changelog**: https://github.com/moonrockz/gleam-parser/compare/v0.5.0...v0.5.1
+
 ## [0.5.0] - 2026-10-19
 
 Register custom targets and compose optional profiles through public APIs.
