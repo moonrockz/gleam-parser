@@ -79,6 +79,56 @@ fn classify(exit_code : Int32, output : String) -> Outcome {
 }
 
 ///|
+/// Run a nested module outside ancestor ignore rules and workspace overrides.
+/// A copied module keeps its own .moonignore and resolves published dependencies.
+async fn run_module(directory : String, check_only : Bool) -> (Int32, String) {
+  async fn run_at(path : String) -> (Int32, String) {
+    let (code, output) = @process.collect_output_merged(
+      "moon",
+      if check_only {
+        ["package"]
+      } else {
+        ["publish"]
+      },
+      cwd=path,
+    )
+    if check_only && code == 0 {
+      let mut archive : String? = None
+      for line in output.text().split("\n") {
+        if line.has_prefix("Package to ") {
+          archive = Some(line[11:].trim().to_owned())
+        }
+      }
+      guard archive is Some(archive) else {
+        fail("moon package did not report its archive")
+      }
+      let (listed, names) = @process.collect_output_merged("unzip", [
+        "-Z1", archive,
+      ])
+      if listed != 0 ||
+        !names
+        .text()
+        .split("\n")
+        .any(name => name == "moon.mod" || name == "moon.mod.json") {
+        fail("module archive has no manifest")
+      }
+    }
+    (code, output.text())
+  }
+  if directory == "." {
+    return run_at(directory)
+  }
+  let (code, output) = @process.collect_output_merged("mktemp", ["-d"])
+  guard code == 0 else { fail(output.text()) }
+  let scratch = output.text().trim().to_owned()
+  defer @fs.rmdir(scratch, recursive=true)
+  let staged = "\{scratch}/module"
+  let code = @process.run("cp", ["-R", directory, staged])
+  guard code == 0 else { fail("cannot stage module \{directory}") }
+  run_at(staged)
+}
+
+///|
 async fn main {
   let directory = @env.get_env_var("GLEAM_PUBLISH_MODULE_DIR").unwrap_or(".")
   let prefix = @env.get_env_var("GLEAM_PUBLISH_TAG_PREFIX").unwrap_or("v")
@@ -96,13 +146,18 @@ async fn main {
     @sys.exit(1)
     return
   }
-  let (code, output) = @process.collect_output_merged(
-    "moon",
-    ["publish"],
-    cwd=directory,
-  )
-  let output = output.text()
+  let check_only = @env.get_env_var("GLEAM_PUBLISH_CHECK_ONLY") == Some("true")
+  let (code, output) = run_module(directory, check_only)
   println(output.trim_end())
+  if check_only {
+    if code != 0 {
+      @sys.exit(code)
+    }
+    println(
+      "Validated archive for \{module_name} \{version}; nothing published",
+    )
+    return
+  }
   match classify(code, output) {
     Published => println("Published \{module_name} \{version}")
     AlreadyPublished =>

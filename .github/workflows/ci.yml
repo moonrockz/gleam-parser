@@ -70,6 +70,13 @@ jobs:
       - name: Verify core-only packaging
         run: mise run test:profile-package
 
+      - name: Verify independently packaged Morphir module
+        env:
+          GLEAM_PUBLISH_MODULE_DIR: profiles/morphir
+          GLEAM_PUBLISH_TAG_PREFIX: morphir-v
+          GLEAM_PUBLISH_CHECK_ONLY: "true"
+        run: mise run release:profile
+
       - name: Check rejection parity
         run: mise run test:rejection
 

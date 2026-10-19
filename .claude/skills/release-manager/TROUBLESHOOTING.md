@@ -128,3 +128,18 @@ Fix: correct `CHANGELOG.md` in a `docs(changelog)` pull request, then
 **A broken version is on mooncakes.io**
 A version cannot be replaced or deleted. Fix forward: release a patch version
 with the fix.
+
+## A nested profile archive has no module manifest
+
+Symptom: `moon publish` refuses a profile archive because `moon.mod` is missing.
+The zip can be empty even though `moon package` returned success.
+
+Cause: ignore rules from a parent directory also apply when MoonBit packages a
+nested module. The core's `profiles/` exclusion hides the optional module.
+
+Fix: the shared publisher stages a selected nested module outside the repository
+before packaging or publishing. It preserves the module's own ignore rules and
+resolves its published dependencies without workspace overrides. Keep the core's
+exclusion. Run `GLEAM_PUBLISH_MODULE_DIR=profiles/morphir
+GLEAM_PUBLISH_CHECK_ONLY=true mise run release:profile` to verify the archive
+without publishing. CI checks both the core exclusion and the staged profile.
