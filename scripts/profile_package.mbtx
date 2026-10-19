@@ -64,4 +64,52 @@ async fn main {
     fail("a core-only consumer installed the optional Morphir module")
   }
   println("Core archive excludes profiles; isolated core-only consumer passed.")
+  // A separate workspace tests the profile's public import path against the
+  // published core. The consumer declares no direct core dependency.
+  let (profile_code, profile_directory) = @process.collect_output_merged(
+    "mktemp",
+    ["-d"],
+  )
+  guard profile_code == 0 else { fail(profile_directory.text()) }
+  let profile_scratch = profile_directory.text().trim().to_owned()
+  defer @fs.rmdir(profile_scratch, recursive=true)
+  let copied = @process.run("cp", [
+    "-R",
+    "profiles/morphir",
+    "\{profile_scratch}/profile",
+  ])
+  guard copied == 0 else { fail("cannot stage profile consumer") }
+  @fs.mkdir("\{profile_scratch}/src")
+  @fs.write_file(
+    "\{profile_scratch}/moon.work",
+    "members = [\".\", \"./profile\"]\n",
+  )
+  @fs.write_file(
+    "\{profile_scratch}/moon.mod",
+    "name = \"example/profile_only\"\nversion = \"0.0.1\"\nsource = \"src\"\nimport { \"moonrockz/gleam-parser-morphir@0.0.0\" }\n",
+  )
+  @fs.write_file(
+    "\{profile_scratch}/src/moon.pkg",
+    "import { \"moonrockz/gleam-parser-morphir\" @morphir } for \"test\"\n",
+  )
+  let profile_consumer =
+    #|test {
+    #|  let source = "@external(morphir, \"m\", \"f\") pub fn f() -> Int"
+    #|  assert_eq(@morphir.parse_text(source).has_errors(), true)
+    #|  let config = { ..@morphir.Config::default(), dialect: @morphir.Dialect::gleam_1_19().with_profile(@morphir.profile()) }
+    #|  let result = @morphir.parse_text(source, config~)
+    #|  assert_eq(result.has_errors(), false)
+    #|  assert_eq(@morphir.decode_extended(@morphir.encode_extended(result)).parsed, result.parsed())
+    #|  assert_eq(@morphir.parse_text(@morphir.format_parsed(result), config~).has_errors(), false)
+    #|}
+  @fs.write_file("\{profile_scratch}/src/consumer_test.mbt", profile_consumer)
+  let (profile_code, profile_checked) = @process.collect_output_merged(
+    "moon",
+    ["test", "src", "--target", "js"],
+    cwd=profile_scratch,
+  )
+  guard profile_code == 0 else { fail(profile_checked.text()) }
+  println(
+    "Isolated Morphir-only consumer passed with published core dependency.",
+  )
 }

@@ -2,7 +2,7 @@
 /// Return the Morphir profile's release version. It is independent of the
 /// core parser version. This module requires core parser 0.5.0 or later.
 pub fn version() -> String {
-  "0.1.0"
+  "0.1.1"
 }
 
 ///|
@@ -15,9 +15,9 @@ pub fn version() -> String {
 ///
 /// ```mbt check
 /// test {
-///   let dialect = @gleam.Dialect::gleam_1_19().with_profile(@morphir.profile())
-///   let config = { ..@gleam.Config::default(), dialect, }
-///   let result = @gleam.parse_text(
+///   let dialect = @morphir.Dialect::gleam_1_19().with_profile(@morphir.profile())
+///   let config = { ..@morphir.Config::default(), dialect, }
+///   let result = @morphir.parse_text(
 ///     "@target(morphir) pub const answer = 42",
 ///     config~,
 ///   )
@@ -27,7 +27,45 @@ pub fn version() -> String {
 /// ```
 pub fn profile() -> @gleam.Profile raise {
   @gleam.Profile(
-    "moonrockz/gleam-parser-morphir@0.1.0",
+    "moonrockz/gleam-parser-morphir@0.1.1",
     [@gleam.Target::extension("morphir")][:],
   )
+}
+
+///|
+/// Common core APIs for consumers that install only the Morphir module.
+/// Parsing still defaults to strict standard Gleam. Enable `profile()` in a
+/// dialect and pass its configuration explicitly to accept Morphir annotations.
+/// These are re-exports of the core functions, with identical errors and behavior.
+/// For other core APIs, declare a direct `moonrockz/gleam-parser` dependency.
+///
+/// ```mbt check
+/// test {
+///   let text = "@target(morphir) pub const value = 1"
+///   assert_eq(@morphir.parse_text(text).has_errors(), true)
+///   let config = {
+///     ..@morphir.Config::default(),
+///     dialect: @morphir.Dialect::gleam_1_19().with_profile(@morphir.profile()),
+///   }
+///   let result = @morphir.parse_text(text, config~)
+///   assert_eq(result.has_errors(), false)
+///   assert_eq(
+///     @morphir.decode_extended(@morphir.encode_extended(result)).parsed,
+///     result.parsed(),
+///   )
+/// }
+/// ```
+pub using @gleam {
+  type Config,
+  type Dialect,
+  type Profile,
+  type Profiles,
+  type Target,
+  parse_text,
+  format,
+  format_parsed,
+  encode_extended,
+  decode_extended,
+  encode_parsed,
+  decode_parsed,
 }
