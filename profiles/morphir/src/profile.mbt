@@ -12,6 +12,19 @@ pub fn version() -> String {
 /// the profile. Pass it to `Dialect::with_profile` explicitly.
 /// The registration supplies syntax and AST metadata, not a Morphir backend.
 /// Module and symbol strings are opaque references interpreted by consumers.
+/// It accepts these Gleam annotations, which the standard preset rejects:
+///
+/// ```gleam
+/// @target(morphir)
+/// pub const answer = 42
+///
+/// @external(morphir, "example/domain", "CustomerId")
+/// pub type CustomerId
+/// ```
+///
+/// `@target` records a restriction. `@external` records a binding without
+/// adding a restriction. Standard Erlang and JavaScript bindings can coexist
+/// with a Morphir binding on the same function or external type.
 ///
 /// ```mbt check
 /// test {

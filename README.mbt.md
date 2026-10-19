@@ -133,7 +133,31 @@ raise typed errors that identify both providers. TOML profile names resolve
 only through the `Profiles` registry that the application supplies.
 
 The optional [Morphir module](profiles/morphir/src/README.mbt.md) is published
-as `moonrockz/gleam-parser-morphir`. Install it separately, then enable it:
+as `moonrockz/gleam-parser-morphir`. With its profile enabled, the parser accepts
+Gleam such as:
+
+```gleam
+@target(morphir)
+pub const destination = "morphir"
+
+@external(erlang, "erlang", "length")
+@external(javascript, "./list.mjs", "length")
+@external(morphir, "morphir/sdk/list", "length")
+pub fn length(xs: List(a)) -> Int
+
+@target(morphir)
+@external(morphir, "example/domain", "CustomerId")
+pub type CustomerId
+```
+
+`@target(morphir)` marks a definition for a downstream translator.
+`@external(morphir, ...)` records an external binding and can coexist with
+standard bindings. The standard preset rejects the Morphir annotations.
+The profile supplies parsing and metadata; it does not generate Morphir code
+or resolve the illustrative foreign references above. See the module's
+[source examples and tested parser calls](profiles/morphir/src/README.mbt.md#what-gleam-does-this-profile-accept).
+
+Install the optional module separately, then enable it:
 
 ```moonbit
 let dialect = @gleam.Dialect::gleam_1_19().with_profile(@morphir.profile())
