@@ -143,3 +143,17 @@ resolves its published dependencies without workspace overrides. Keep the core's
 exclusion. Run `GLEAM_PUBLISH_MODULE_DIR=profiles/morphir
 GLEAM_PUBLISH_CHECK_ONLY=true mise run release:profile` to verify the archive
 without publishing. CI checks both the core exclusion and the staged profile.
+
+## A profile-only consumer cannot import core APIs
+
+Symptom: the README example cannot resolve `moonrockz/gleam-parser` after the
+consumer installs only `moonrockz/gleam-parser-morphir`.
+
+Cause: MoonBit requires a direct module dependency for a direct package import.
+A transitive dependency does not authorize that import. Workspace tests can hide
+this problem when the profile's own manifest declares core.
+
+Fix: Morphir 0.1.1 re-exports the common core APIs used by its README. Consumers
+can use `@morphir` alone. Consumers that need other core APIs must also declare
+core directly. `mise run test:profile-package` checks a consumer with only the
+Morphir dependency against published core, in addition to core isolation.

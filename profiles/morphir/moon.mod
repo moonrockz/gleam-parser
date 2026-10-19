@@ -1,6 +1,6 @@
 name = "moonrockz/gleam-parser-morphir"
 
-version = "0.1.0"
+version = "0.1.1"
 
 import {
   "moonrockz/gleam-parser@0.5.0",

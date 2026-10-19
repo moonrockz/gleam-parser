@@ -2,10 +2,29 @@
 package "moonrockz/gleam-parser-morphir"
 
 import {
+  "moonrockz/gleam-parser/ast",
+  "moonrockz/gleam-parser/config",
   "moonrockz/gleam-parser/dialect",
+  "moonrockz/gleam-parser/format",
+  "moonrockz/gleam-parser/parser",
+  "moonrockz/gleam-parser/targets",
 }
 
 // Values
+pub fn decode_extended(Json) -> @ast.Extended raise @ast.DecodeError
+
+pub fn decode_parsed(Json) -> @ast.Parsed raise @ast.DecodeError
+
+pub fn encode_extended(@parser.ParseResult) -> Json raise @ast.ExtendedError
+
+pub fn encode_parsed(@ast.Parsed) -> Json raise @ast.ExportError
+
+pub fn format(String, config? : @config.Config) -> String raise @format.FormatError
+
+pub fn format_parsed(@parser.ParseResult, config? : @config.Config) -> String raise @format.FormatError
+
+pub fn parse_text(String, config? : @config.Config) -> @parser.ParseResult
+
 pub fn profile() -> @dialect.Profile raise
 
 pub fn version() -> String
@@ -15,5 +34,14 @@ pub fn version() -> String
 // Types and methods
 
 // Type aliases
+pub using @config {type Config}
+
+pub using @dialect {type Dialect}
+
+pub using @dialect {type Profile}
+
+pub using @dialect {type Profiles}
+
+pub using @targets {type Target}
 
 // Traits
