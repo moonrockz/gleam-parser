@@ -21,8 +21,8 @@ pub(all) struct Config {
 } derive(Eq, @debug.Debug)
 pub fn Config::default() -> Self
 pub fn Config::from_env(Environment) -> Partial raise ConfigError
-pub fn Config::from_toml(String) -> Partial raise ConfigError
-pub fn Config::load(path? : String, env? : Environment) -> Self raise ConfigError
+pub fn Config::from_toml(String, profiles? : @dialect.Profiles) -> Partial raise ConfigError
+pub fn Config::load(path? : String, env? : Environment, profiles? : @dialect.Profiles) -> Self raise ConfigError
 pub fn Config::to_partial(Self) -> Partial
 pub fn Config::with_fallback(Self, Partial) -> Self
 

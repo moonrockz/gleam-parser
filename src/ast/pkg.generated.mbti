@@ -5,6 +5,7 @@ import {
   "moonbitlang/core/bigint",
   "moonbitlang/core/debug",
   "moonrockz/gleam-parser/span",
+  "moonrockz/gleam-parser/targets",
 }
 
 // Values
@@ -17,6 +18,8 @@ pub fn decode_constant(Json) -> Constant raise DecodeError
 pub fn decode_definition(Json) -> Definition raise DecodeError
 
 pub fn decode_expr(Json) -> Expr raise DecodeError
+
+pub fn decode_extended(Json) -> Extended raise DecodeError
 
 pub fn decode_extra(Json) -> ModuleExtra raise DecodeError
 
@@ -38,17 +41,19 @@ pub fn encode_clause_guard(ClauseGuard) -> Json
 
 pub fn encode_constant(Constant) -> Json
 
-pub fn encode_definition(Definition) -> Json
+pub fn encode_definition(Definition) -> Json raise ExportError
 
 pub fn encode_expr(Expr) -> Json
 
+pub fn encode_extended(Extended) -> Json raise ExtendedError
+
 pub fn encode_extra(ModuleExtra) -> Json
 
-pub fn encode_module(Module) -> Json
+pub fn encode_module(Module) -> Json raise ExportError
 
-pub fn encode_oracle_output(OracleOutput) -> Json
+pub fn encode_oracle_output(OracleOutput) -> Json raise ExportError
 
-pub fn encode_parsed(Parsed) -> Json
+pub fn encode_parsed(Parsed) -> Json raise ExportError
 
 pub fn encode_pattern(Pattern) -> Json
 
@@ -58,15 +63,28 @@ pub fn encode_span(@span.SrcSpan) -> Json
 
 pub fn encode_statement(Statement) -> Json
 
-pub fn encode_targeted_definition(TargetedDefinition) -> Json
+pub fn encode_targeted_definition(TargetedDefinition) -> Json raise ExportError
 
 pub fn encode_type_ast(TypeAst) -> Json
 
-pub fn encode_warning(Warning) -> Json
+pub fn encode_warning(Warning) -> Json raise ExportError
 
 // Errors
+pub(all) suberror BindingError {
+  DuplicateBinding(@targets.Target)
+} derive(Eq, @debug.Debug)
+
 pub(all) suberror DecodeError {
   DecodeError(path~ : String, message~ : String)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror ExportError {
+  NonStandardTarget(target~ : @targets.Target, location~ : @span.SrcSpan)
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror ExtendedError {
+  UnregisteredTarget(@targets.Target)
+  InvalidIdentity(String)
 } derive(Eq, @debug.Debug)
 
 pub(all) suberror InvalidBitArrayUnit {
@@ -240,9 +258,9 @@ pub(all) struct CustomType {
   deprecation : Deprecation
   opaque_ : Bool
   parameters : ArrayView[SpannedString]
-  external_erlang : External?
-  external_javascript : External?
+  externals : ExternalBindings
 } derive(Eq, @debug.Debug)
+pub fn CustomType::external_for(Self, @targets.Target) -> External?
 
 pub(all) enum Definition {
   Function(Function)
@@ -251,6 +269,7 @@ pub(all) enum Definition {
   Import(Import)
   ModuleConstant(ModuleConstant)
 } derive(Eq, @debug.Debug)
+pub fn Definition::external_bindings(Self) -> ExternalBindings
 pub fn Definition::location(Self) -> @span.SrcSpan
 
 pub(all) enum Deprecation {
@@ -290,11 +309,34 @@ pub fn Expr::location(Self) -> @span.SrcSpan
 pub impl Eq for Expr
 pub impl @debug.Debug for Expr
 
+pub struct Extended {
+  parsed : Parsed
+  dialect : String
+  profiles : ArrayView[String]
+  targets : @targets.Registry
+} derive(Eq, @debug.Debug)
+pub fn Extended::Extended(Parsed, dialect~ : String, targets~ : @targets.Registry, profiles? : ArrayView[String]) -> Self raise ExtendedError
+
 pub(all) struct External {
   module_ : String
   function : String
   location : @span.SrcSpan
 } derive(Eq, @debug.Debug)
+
+pub(all) struct ExternalBinding {
+  target : @targets.Target
+  external : External
+} derive(Eq, @debug.Debug)
+
+pub struct ExternalBindings {
+  bindings : ArrayView[ExternalBinding]
+} derive(Eq, @debug.Debug)
+pub fn ExternalBindings::all(Self) -> Array[ExternalBinding]
+pub fn ExternalBindings::empty() -> Self
+pub fn ExternalBindings::from_standard(External?, External?) -> Self
+pub fn ExternalBindings::get(Self, @targets.Target) -> External?
+pub fn ExternalBindings::is_empty(Self) -> Bool
+pub fn ExternalBindings::with_binding(Self, @targets.Target, External) -> Self raise BindingError
 
 pub(all) struct Function {
   location : @span.SrcSpan
@@ -307,9 +349,9 @@ pub(all) struct Function {
   deprecation : Deprecation
   return_annotation : TypeAst?
   documentation : Documentation?
-  external_erlang : External?
-  external_javascript : External?
+  externals : ExternalBindings
 } derive(Eq, @debug.Debug)
+pub fn Function::external_for(Self, @targets.Target) -> External?
 
 pub(all) enum FunctionLiteralKind {
   Capture(hole~ : @span.SrcSpan)
@@ -463,16 +505,9 @@ pub(all) struct TailPattern {
   pattern : Pattern
 } derive(Eq, @debug.Debug)
 
-pub(all) enum Target {
-  Erlang
-  JavaScript
-} derive(Eq, Hash, @debug.Debug)
-pub fn Target::name(Self) -> String
-pub fn Target::of(String) -> Self?
-
 pub(all) struct TargetedDefinition {
   definition : Definition
-  target : Target?
+  target : @targets.Target?
 } derive(Eq, @debug.Debug)
 
 pub(all) enum TodoKind {
@@ -572,10 +607,11 @@ pub(all) enum Warning {
   DeprecatedListSpreadAsVariablePattern(location~ : @span.SrcSpan, name~ : String)
   DeprecatedRecordSpreadPattern(location~ : @span.SrcSpan)
   DeprecatedEmptyClauseGuard(location~ : @span.SrcSpan)
-  DeprecatedTargetShorthand(target~ : Target, location~ : @span.SrcSpan)
+  DeprecatedTargetShorthand(target~ : @targets.Target, location~ : @span.SrcSpan)
   DetachedDocComment(location~ : @span.SrcSpan)
 } derive(Eq, @debug.Debug)
 
 // Type aliases
+pub using @targets {type Target}
 
 // Traits

@@ -21,7 +21,7 @@ test "a syntax error raises ParseFailed with the parser's error diagnostics" {
     None
   } catch {
     ParseFailed(ds) => Some(ds.length())
-    OutOfFuel(_) => None
+    OutOfFuel(_) | DialectMismatch(..) => None
   }
   debug_inspect(failed, content="Some(1)")
 }
@@ -50,4 +50,23 @@ test "width counts grapheme clusters at the limit: 70 two-code-point clusters br
     @format.format("const a = \"" + word + "\"\n"),
     content="const a =\n  \"" + word + "\"\n",
   )
+}
+
+///|
+test "formatting retains the parse dialect and rejects a conflicting explicit config" {
+  let orbit = @ast.Target::extension("orbit")
+  let config = {
+    ..@config.Config::default(),
+    dialect: @config.Config::default().dialect.register_target(orbit),
+  }
+  let text = "@target(orbit)\n@external(orbit, \"space\", \"call\")\npub fn call() -> Int\n"
+  let result = @parser.parse_text(text, config~)
+  @expect.expect(@format.format_parsed(result)).to_equal(text)
+  let rejected = try {
+    let _ = @format.format_parsed(result, config=@config.Config::default())
+    false
+  } catch {
+    _ => true
+  }
+  @expect.expect(rejected).to_be_true()
 }

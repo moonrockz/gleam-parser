@@ -111,7 +111,7 @@ fn holds_kind(v : Json) -> Bool {
 /// The JSON of a node's payload, for the nodes with a public encoder.
 fn encoded(n : @syntax.NodeRef) -> Json? {
   match n {
-    Definition(t) => Some(@ast.encode_definition(t.definition))
+    Definition(t) => Some(try! @ast.encode_definition(t.definition))
     Statement(s) => Some(@ast.encode_statement(s))
     Expr(e) => Some(@ast.encode_expr(e))
     Pattern(p) => Some(@ast.encode_pattern(p))

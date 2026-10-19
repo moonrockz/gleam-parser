@@ -828,6 +828,7 @@ test "every other node kind round-trips 2000 deep through the Json value on ever
         }
       } catch {
         @ast.DecodeError(path~, message~) => "\{path}: \{message}"
+        _ => "unexpected export error"
       }
       x.expect((name, back == text)).to_equal((name, true))
     }

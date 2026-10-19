@@ -532,7 +532,11 @@ async fn Formatter::module_constant(
   self : Formatter,
   c : @ast.ModuleConstant,
 ) -> @pretty.Doc raise FormatError + nocancel {
-  let attrs = attributes(c.deprecation, c.publicity, None, None)
+  let attrs = attributes(
+    c.deprecation,
+    c.publicity,
+    @ast.ExternalBindings::empty(),
+  )
   // The compiler counts `const ` as 5 columns (its CONST_SPACE_DOCUMENT
   // declares 5), so the space has no width here.
   let head = attrs +

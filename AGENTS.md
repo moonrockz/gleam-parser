@@ -32,7 +32,7 @@ in stages (bd epics `v0.1`, `v0.2`, `v0.3`):
   `const`, `pub`, `fn`, `type`, `opaque` or `@` in column 1) and goes on;
   the skipped tokens are a `Skipped` CST definition. Warnings and trailing
   commas from a failed definition are discarded. `ParseResult` holds
-  `module_`, `extra`, `warnings`, `cst` and `diagnostics`;
+  `module_`, `extra`, `warnings`, `cst`, `diagnostics` and `config`;
   `ParseResult::parsed()` is the oracle's `Parsed`. See "Parser contract".
 - **AST** — a mirror of the compiler's untyped AST at v1.19.2 (`src/ast`),
   without analysis-only fields (see `docs/ast-json.md`), with a canonical
@@ -917,3 +917,23 @@ until the pushes succeed.
 
 Never stop before pushing; that leaves work stranded on one machine. If a push
 fails, resolve the cause and retry.
+
+
+## Registered target profiles (0.5)
+
+`src/targets` owns validated extension names, standard identities, and immutable
+registries. `src/dialect` owns explicit `Profile` composition and caller-supplied
+`Profiles` lookup. Both annotation forms resolve through the registry; only
+`@target` accepts the compiler's deprecated standard aliases. Core code must not
+branch on optional profile names.
+
+Function and custom-type ASTs store `ExternalBindings`. The compiler-compatible
+codec retains legacy external JSON fields and raises `ExportError` on extension
+metadata. `src/ast/extended.mbt` implements the separate versioned format with
+registry validation. See `docs/extended-json.md` and `docs/migration-0.5.md`.
+
+`profiles/morphir` is a separate published module with its own version. It depends
+on core 0.5.0 and is excluded from the core archive. Its tested README lives in
+`profiles/morphir/src/README.mbt.md`. `mise run test:profile-package` checks the
+core archive and compiles an isolated core-only consumer. Unit and target tasks
+include `src/targets` and the optional module. Publish the core before the profile.

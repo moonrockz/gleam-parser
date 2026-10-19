@@ -544,8 +544,9 @@ fn[R] dec_definition(
             deprecation,
             opaque_,
             parameters,
-            external_erlang,
-            external_javascript,
+            externals: ExternalBindings::from_standard(
+              external_erlang, external_javascript,
+            ),
           }),
         )
       })
@@ -644,8 +645,9 @@ fn[R] dec_function(
           deprecation,
           return_annotation,
           documentation,
-          external_erlang,
-          external_javascript,
+          externals: ExternalBindings::from_standard(
+            external_erlang, external_javascript,
+          ),
         })
       })
     })

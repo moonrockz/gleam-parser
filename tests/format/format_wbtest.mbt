@@ -93,6 +93,7 @@ fn format_or_error(text : String) -> Result[String, String] {
   Ok(@gleam.format(text)) catch {
     ParseFailed(ds) => Err("ParseFailed: \{ds.length()} error diagnostic(s)")
     OutOfFuel(_) => Err("OutOfFuel")
+    DialectMismatch(..) => Err("DialectMismatch")
   }
 }
 

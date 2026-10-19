@@ -161,13 +161,34 @@ fn round_trip_problems(key : String, text : String) -> Array[String] {
     return ["\{key}: does not parse"]
   }
   let parsed = result.parsed()
-  let canonical = @gleam.canonical(@gleam.encode_parsed(parsed))
+  let additive = @gleam.Dialect::gleam_1_19().register_target(
+    @gleam.Target::extension("corpus_extension"),
+  ) catch {
+    _ => return ["\{key}: cannot construct additive dialect"]
+  }
+  let extended = @gleam.parse_text(text, config={
+    ..@gleam.Config::default(),
+    dialect: additive,
+  })
+  if extended.parsed() != parsed || extended.diagnostics != result.diagnostics {
+    return ["\{key}: additive profile changes standard parse"]
+  }
+  let canonical = @gleam.canonical(
+    @gleam.encode_parsed(parsed) catch {
+      _ => return ["\{key}: standard export failed"]
+    },
+  )
   let same = try @gleam.decode_parsed(@json.parse(canonical)) catch {
     _ => false
   } noraise {
     back =>
       back == parsed &&
-      @gleam.canonical(@gleam.encode_parsed(back)) == canonical
+      @gleam.canonical(
+        @gleam.encode_parsed(back) catch {
+          _ => return ["\{key}: standard re-export failed"]
+        },
+      ) ==
+      canonical
   }
   if same {
     []

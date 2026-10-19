@@ -155,6 +155,7 @@ pub fn canonical(json : Json) -> String {
 
 ///|
 /// Encode a module with its trivia positions and parse-time warnings.
+/// Raise `ExportError` for extension targets; use `encode_extended` to retain them.
 /// Use `canonical` to write the JSON in the oracle's key order.
 ///
 /// ```mbt check
@@ -163,7 +164,7 @@ pub fn canonical(json : Json) -> String {
 ///   assert_eq(@gleam.decode_parsed(@gleam.encode_parsed(parsed)), parsed)
 /// }
 /// ```
-pub fn encode_parsed(p : Parsed) -> Json {
+pub fn encode_parsed(p : Parsed) -> Json raise @ast.ExportError {
   @ast.encode_parsed(p)
 }
 
@@ -176,7 +177,8 @@ pub fn decode_parsed(json : Json) -> Parsed raise DecodeError {
 
 ///|
 /// Encode an oracle result, either a parsed module or its first error.
-pub fn encode_oracle_output(o : OracleOutput) -> Json {
+/// Raise `ExportError` if the parsed module contains extension targets.
+pub fn encode_oracle_output(o : OracleOutput) -> Json raise @ast.ExportError {
   @ast.encode_oracle_output(o)
 }
 
@@ -435,4 +437,67 @@ pub fn render_terminal(
 /// Diagnostics as JSON (gleam-parser's own shape).
 pub fn encode_diagnostics(ds : ArrayView[Diagnostic]) -> Json {
   @report.encode_diagnostics(ds)
+}
+
+///|
+/// Validated source-language target registration. A target does not supply a backend.
+pub using @target {type RegistrationError}
+
+///|
+/// A validated registry of source-language targets. Standard targets are always present.
+pub type TargetRegistry = @target.Registry
+
+///|
+/// A validated extension name. Standard target names and aliases are reserved.
+pub type TargetName = @target.Name
+
+///|
+/// Named optional registrations and the application's available-profile registry.
+pub using @dialect {type Profile, type Profiles, type ProfileError}
+
+///|
+/// Generic bindings, checked standard export errors, and versioned extended documents.
+pub using @ast {
+  type ExternalBindings,
+  type ExternalBinding,
+  type BindingError,
+  type ExportError,
+  type Extended,
+  type ExtendedError,
+}
+
+///|
+/// Encode a parse result in the versioned extended JSON format. Record the
+/// dialect, profile identities, and registry used to parse the source. This
+/// preserves extension targets and bindings that compiler-compatible export rejects.
+///
+/// ```mbt check
+/// test {
+///   let orbit = @gleam.Target::extension("orbit")
+///   let config = {
+///     ..@gleam.Config::default(),
+///     dialect: @gleam.Dialect::gleam_1_19().register_target(orbit),
+///   }
+///   let result = @gleam.parse_text("@target(orbit) const answer = 42", config~)
+///   let document = @gleam.decode_extended(@gleam.encode_extended(result))
+///   assert_eq(document.parsed, result.parsed())
+/// }
+/// ```
+pub fn encode_extended(result : ParseResult) -> Json raise @ast.ExtendedError {
+  @ast.encode_extended(
+    @ast.Extended(
+      result.parsed(),
+      dialect=result.config.dialect.name,
+      targets=result.config.dialect.targets,
+      profiles=result.config.dialect.profiles.map(p => p.identity)[:],
+    ),
+  )
+}
+
+///|
+/// Decode extended JSON with its embedded registry. No optional module is
+/// loaded. Reject unsupported versions, invalid registrations, unknown target
+/// references, and duplicate bindings with a source path in `DecodeError`.
+pub fn decode_extended(json : Json) -> @ast.Extended raise DecodeError {
+  @ast.decode_extended(json)
 }

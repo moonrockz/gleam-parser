@@ -26,30 +26,8 @@ pub(all) struct TargetedDefinition {
 } derive(Eq, Debug)
 
 ///|
-/// `build::Target`.
-pub(all) enum Target {
-  Erlang
-  JavaScript
-} derive(Eq, Debug, Hash)
-
-///|
-/// Return the target's JSON name, `erlang` or `javascript`.
-pub fn Target::name(self : Target) -> String {
-  match self {
-    Erlang => "erlang"
-    JavaScript => "javascript"
-  }
-}
-
-///|
-/// Read a target's JSON name. Return `None` for an unknown name.
-pub fn Target::of(name : String) -> Target? {
-  match name {
-    "erlang" => Some(Erlang)
-    "javascript" => Some(JavaScript)
-    _ => None
-  }
-}
+/// Standard and validated extension target identities.
+pub using @target {type Target}
 
 ///|
 pub(all) enum Definition {
@@ -109,8 +87,8 @@ pub(all) struct Function {
   deprecation : Deprecation
   return_annotation : TypeAst?
   documentation : Documentation?
-  external_erlang : External?
-  external_javascript : External?
+  /// Target-specific external bindings. These do not restrict the definition.
+  externals : ExternalBindings
 } derive(Eq, Debug)
 
 ///|
@@ -194,8 +172,8 @@ pub(all) struct CustomType {
   deprecation : Deprecation
   opaque_ : Bool
   parameters : ArrayView[SpannedString]
-  external_erlang : External?
-  external_javascript : External?
+  /// Target-specific external bindings. These do not restrict the definition.
+  externals : ExternalBindings
 } derive(Eq, Debug)
 
 ///|

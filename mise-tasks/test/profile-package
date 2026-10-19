@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+#MISE description="Verify core-only packaging and an isolated consumer"
+exec moon run -q --target wasm scripts/profile_package.mbtx

@@ -67,6 +67,9 @@ jobs:
       - name: Run cookbook tests
         run: mise run test:docs
 
+      - name: Verify core-only packaging
+        run: mise run test:profile-package
+
       - name: Check rejection parity
         run: mise run test:rejection
 

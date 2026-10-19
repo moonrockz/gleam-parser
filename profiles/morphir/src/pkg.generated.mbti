@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonrockz/gleam-parser-morphir"
+
+import {
+  "moonrockz/gleam-parser/dialect",
+}
+
+// Values
+pub fn profile() -> @dialect.Profile raise
+
+pub fn version() -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

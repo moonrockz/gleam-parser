@@ -72,8 +72,7 @@ async fn Parser::parse_custom_type(
       parameters: parameters[:],
       constructors: constructors[:],
       deprecation: attributes.deprecated,
-      external_erlang: attributes.external_erlang,
-      external_javascript: attributes.external_javascript,
+      externals: attributes.externals,
     }),
   )
 }
@@ -87,8 +86,7 @@ async fn Parser::parse_record_constructor(
   let attributes = Attributes()
   let attr_loc = self.parse_attributes(attributes)
   if attr_loc is Some(attr_span) {
-    if attributes.external_erlang is Some(_) ||
-      attributes.external_javascript is Some(_) ||
+    if !attributes.externals.is_empty() ||
       attributes.target is Some(_) ||
       attributes.internal is Some(_) {
       parse_error(UnknownAttributeRecordVariant, attr_span)

@@ -1,4 +1,5 @@
 import {
+  "moonrockz/gleam-parser/targets" @target,
   "moonrockz/gleam-parser/work",
   "moonbitlang/core/debug",
   "moonbitlang/core/builtin",

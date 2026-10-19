@@ -10,6 +10,7 @@ pub(all) enum OracleOutput {
 
 ///|
 /// Encode a parsed module or the compiler's first error.
+/// Raise `ExportError` if the parsed module contains an extension target.
 /// Use `canonical` to write the JSON text, then add a line feed for oracle output.
 ///
 /// ```mbt check
@@ -22,7 +23,7 @@ pub(all) enum OracleOutput {
 ///   assert_eq(@ast.decode_oracle_output(@ast.encode_oracle_output(value)), value)
 /// }
 /// ```
-pub fn encode_oracle_output(o : OracleOutput) -> Json {
+pub fn encode_oracle_output(o : OracleOutput) -> Json raise ExportError {
   match o {
     Parsed(p) => encode_parsed(p)
     Error(kind~, lexical_kind~, location~) =>

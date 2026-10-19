@@ -169,10 +169,10 @@ test "attributes and targets" {
     .expect(f.deprecation)
     .to_equal(@ast.Deprecation::Deprecated(message="old"))
     e
-    .expect(f.external_erlang)
+    .expect(f.external_for(Erlang))
     .to_equal(Some({ module_: "m", function: "f", location: sp(32, 59), }))
     e
-    .expect(f.external_javascript.map(x => x.location))
+    .expect(f.external_for(JavaScript).map(x => x.location))
     .to_equal(Some(sp(60, 97)))
     e.expect(f.body.length()).to_equal(0)
     e.expect(f.body_start).to_equal(None)

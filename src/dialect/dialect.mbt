@@ -57,7 +57,9 @@ pub(all) struct Dialect {
   /// Reserved scanner keywords. Omitted keywords parse as ordinary names.
   keywords : ArrayView[@scanner.Keyword]
   attributes : ArrayView[String]
-  targets : ArrayView[String]
+  targets : @target.Registry
+  /// Explicitly composed profiles, in deterministic identity order.
+  profiles : ArrayView[Profile]
   deprecations : ArrayView[Rule]
 } derive(Eq, Debug)
 
@@ -92,7 +94,8 @@ pub fn Dialect::gleam_1_19() -> Dialect {
       @scanner.Keyword::Use,
     ][:],
     attributes: ["external", "target", "deprecated", "internal"][:],
-    targets: ["erlang", "javascript"][:],
+    targets: @target.Registry::standard(),
+    profiles: [][:],
     deprecations: Rule::all()[:],
   }
 }
@@ -111,9 +114,9 @@ pub fn Dialect::knows_attribute(self : Dialect, name : String) -> Bool {
 
 ///|
 /// Whether this dialect accepts the canonical name of a target.
-/// Shorthand names are resolved by the parser before this check.
+/// Use `targets.resolve(name, aliases=true)` to include standard shorthands.
 pub fn Dialect::knows_target(self : Dialect, name : String) -> Bool {
-  self.targets.contains(name)
+  self.targets.resolve(name) is Some(_)
 }
 
 ///|
@@ -165,4 +168,22 @@ pub fn Dialect::version(self : Dialect) -> String {
 /// ```
 pub fn Dialect::reserves(self : Dialect, keyword : @scanner.Keyword) -> Bool {
   self.keywords.contains(keyword)
+}
+
+///|
+/// Register an extension target in a new dialect. All other language rules
+/// stay the same. Raise `RegistrationError::Conflict` for a repeated identity.
+///
+/// ```mbt check
+/// test {
+///   let orbit = @target.Target::extension("orbit")
+///   let dialect = @dialect.Dialect::gleam_1_19().register_target(orbit)
+///   assert_eq(dialect.knows_target("orbit"), true)
+/// }
+/// ```
+pub fn Dialect::register_target(
+  self : Dialect,
+  target : @target.Target,
+) -> Dialect raise @target.RegistrationError {
+  { ..self, targets: self.targets.register(target), }
 }

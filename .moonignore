@@ -12,3 +12,6 @@ CLAUDE.md
 AGENTS.md
 lefthook.yml
 cliff.toml
+
+# Optional profiles are independently published modules.
+profiles/

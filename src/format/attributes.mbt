@@ -4,25 +4,16 @@
 fn attributes(
   deprecation : @ast.Deprecation,
   publicity : @ast.Publicity,
-  external_erlang : @ast.External?,
-  external_javascript : @ast.External?,
+  externals : @ast.ExternalBindings,
 ) -> @pretty.Doc {
   let parts : Array[@pretty.Doc] = []
   if deprecation is Deprecated(message~) {
     parts.push(t("@deprecated(\"") + @pretty.raw_text(message) + t("\")"))
   }
-  if external_erlang is Some(e) {
+  for binding in externals.all() {
+    let e = binding.external
     parts.push(
-      t("@external(erlang, \"") +
-      @pretty.raw_text(e.module_) +
-      t("\", \"") +
-      @pretty.raw_text(e.function) +
-      t("\")"),
-    )
-  }
-  if external_javascript is Some(e) {
-    parts.push(
-      t("@external(javascript, \"") +
+      t("@external(" + binding.target.name() + ", \"") +
       @pretty.raw_text(e.module_) +
       t("\", \"") +
       @pretty.raw_text(e.function) +

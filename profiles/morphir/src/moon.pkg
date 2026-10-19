@@ -1,0 +1,7 @@
+import {
+  "moonrockz/gleam-parser" @gleam,
+}
+
+import {
+  "moonrockz/gleam-parser-morphir" @morphir,
+} for "test"

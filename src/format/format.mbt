@@ -1,6 +1,8 @@
 ///|
 /// Why `format` gives no text.
 pub(all) suberror FormatError {
+  /// An explicit formatting dialect differs from the parse dialect.
+  DialectMismatch(expected~ : @dialect.Dialect, supplied~ : @dialect.Dialect)
   /// The text has a diagnostic with severity `Error` (all of them, in the
   /// parser's order). Render them with `@report.render_plain`.
   ParseFailed(Array[@diagnostic.Diagnostic])
@@ -36,7 +38,10 @@ pub fn format(
 ///|
 /// Format a parse result, as `format` formats text. The source is rebuilt
 /// from the CST (byte for byte), so the comments keep their text. Raises
-/// `ParseFailed` when the result has an error diagnostic.
+/// `ParseFailed` when the result has an error diagnostic. By default, use the
+/// configuration stored in the result. An explicit different dialect raises
+/// `DialectMismatch`; an explicit fuel change is allowed. Every target and
+/// external binding is preserved. Layout changes can move source locations.
 ///
 /// ```mbt check
 /// test {
@@ -54,8 +59,16 @@ pub fn format_parsed(
     .to_array()
   guard errors.is_empty() else { raise ParseFailed(errors) }
   let config = match config {
-    Some(c) => c
-    None => @config.Config::default()
+    Some(c) => {
+      if c.dialect != result.config.dialect {
+        raise DialectMismatch(
+          expected=result.config.dialect,
+          supplied=c.dialect,
+        )
+      }
+      c
+    }
+    None => result.config
   }
   let source = @scanner.SourceText(result.cst.to_source())
   let formatter = Formatter(result.extra, source, config)

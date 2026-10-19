@@ -286,3 +286,27 @@ test "load names the file in a TOML error and keeps the read error's text" {
     .to_equal(Some(true))
   })
 }
+
+///|
+test "TOML profiles resolve only through the application registry" {
+  let profile = @dialect.Profile(
+    "example/orbit@1",
+    [@target.Target::extension("orbit")][:],
+  )
+  let profiles = @dialect.Profiles([profile][:])
+  let text = "[parser]\nprofiles = [\"example/orbit@1\"]\ngleam = \"1.19\"\n"
+  let config = @config.Config::from_toml(text, profiles~).to_config(
+    @config.Config::default(),
+  )
+  @expect.expect(config.dialect.knows_target("orbit")).to_be_true()
+  let missing = try {
+    let _ = @config.Config::from_toml(text)
+    None
+  } catch {
+    @config.ConfigError(source~, message~) =>
+      Some((source, message.contains("example/orbit@1")))
+  }
+  @expect.expect(missing).to_equal(
+    Some((@config.TomlKey("parser.profiles"), true)),
+  )
+}

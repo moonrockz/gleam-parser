@@ -15,3 +15,4 @@ article prefixes its top-level names (`gs_`, …).
 | [configure.mbt.md](configure.mbt.md) | Set the dialect and the fuel budget; load a configuration from TOML and the environment |
 | [traverse.mbt.md](traverse.mbt.md) | Choose a traversal: walk, fold, reduce, a visitor, events, a cursor, and the node at a position |
 | [format.mbt.md](format.mbt.md) | Format a module or a parse result as `gleam format` does |
+| [target-profiles.mbt.md](target-profiles.mbt.md) | Register targets, compose profiles, resolve configuration, choose JSON formats, and enable Morphir |
