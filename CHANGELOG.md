@@ -6,6 +6,26 @@ is 0.x, a minor release can contain breaking changes.
 
 <!-- git-cliff: end of header -->
 
+## [0.5.0] - 2026-10-19
+
+Register custom targets and compose optional profiles through public APIs.
+Both annotation forms retain target restrictions and generic external bindings
+through parsing, syntax inspection, extended JSON, and formatting. Standard
+Gleam remains strict and keeps its compiler-compatible JSON and formatter output.
+Morphir is available as a [separately installed profile module](https://github.com/moonrockz/gleam-parser/blob/v0.5.0/profiles/morphir/src/README.mbt.md).
+This release changes AST fields and target-bearing encoder signatures; see the
+[migration guide](https://github.com/moonrockz/gleam-parser/blob/v0.5.0/docs/migration-0.5.md).
+
+### Breaking changes
+
+- Replace `Function` and `CustomType` external fields with `ExternalBindings`; use `external_for(target)` for lookup. `Dialect.targets` is now a validated `TargetRegistry`. Handle `Extension` targets, `ExportError` from target-bearing compiler-compatible encoders, and `FormatError::DialectMismatch`. `ParseResult` now stores its parse configuration. The [tested profile scenarios](https://github.com/moonrockz/gleam-parser/blob/v0.5.0/docs/cookbook/target-profiles.mbt.md) show construction, composition, serialization, and formatting. ([#25](https://github.com/moonrockz/gleam-parser/pull/25))
+
+### Features
+
+- *(dialect)* [**breaking**] Support registered target profiles ([#25](https://github.com/moonrockz/gleam-parser/pull/25)) by @DamianReeves
+
+**Full changelog**: https://github.com/moonrockz/gleam-parser/compare/v0.4.0...v0.5.0
+
 ## [0.4.0] - 2026-10-18
 
 Parsing and formatting now accept deeply nested Gleam source without a default
