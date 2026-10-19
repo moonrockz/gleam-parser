@@ -1,7 +1,7 @@
 # Morphir target profile for gleam-parser
 
 This optional MoonBit module adds the `morphir` target to the core parser.
-It has its own release identity, `moonrockz/gleam-parser-morphir@0.1.1`, and
+It has its own release identity, `moonrockz/gleam-parser-morphir@0.1.2`, and
 requires core parser 0.5.0. Installing the core does not install this module.
 
 Install it with `moon add moonrockz/gleam-parser-morphir`. In `moon.pkg`, import:
@@ -183,7 +183,7 @@ test "mr: compose a separately defined target" {
   assert_eq(dialect.knows_target("scala"), true)
   let available = @morphir.Profiles([@morphir.profile(), scala][:])
   let config = @morphir.Config::from_toml(
-    "[parser]\nprofiles = [\"moonrockz/gleam-parser-morphir@0.1.1\", \"example/scala@1\"]\n",
+    "[parser]\nprofiles = [\"moonrockz/gleam-parser-morphir@0.1.2\", \"example/scala@1\"]\n",
     profiles=available,
   ).to_config(@morphir.Config::default())
   assert_eq(config.dialect, dialect)
@@ -200,6 +200,6 @@ and [migration guide](../../../docs/migration-0.5.md).
 
 Publish the required core version first. Run the `Release Morphir profile`
 workflow on the commit to release. Verify the module version on mooncakes.io,
-then create the `morphir-v0.1.1` GitHub release at the same commit. Future profile
+then create the `morphir-v0.1.2` GitHub release at the same commit. Future profile
 releases update this module's manifest, `version()`, profile identity, and notes
 independently of the core version.

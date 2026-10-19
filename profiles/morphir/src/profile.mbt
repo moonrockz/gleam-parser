@@ -2,7 +2,7 @@
 /// Return the Morphir profile's release version. It is independent of the
 /// core parser version. This module requires core parser 0.5.0 or later.
 pub fn version() -> String {
-  "0.1.1"
+  "0.1.2"
 }
 
 ///|
@@ -40,7 +40,7 @@ pub fn version() -> String {
 /// ```
 pub fn profile() -> @gleam.Profile raise {
   @gleam.Profile(
-    "moonrockz/gleam-parser-morphir@0.1.1",
+    "moonrockz/gleam-parser-morphir@0.1.2",
     [@gleam.Target::extension("morphir")][:],
   )
 }

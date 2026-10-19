@@ -8,14 +8,19 @@ is 0.x, a minor release can contain breaking changes.
 
 ## [0.5.1] - 2026-10-19
 
-<!-- Highlights: replace this comment with a few sentences on what this release brings. -->
+The README now shows Gleam source accepted by the optional Morphir profile,
+including target restrictions, external types, and mixed Erlang, JavaScript,
+and Morphir function bindings. The separately published Morphir 0.1.2 includes
+the same [tested scenarios and API documentation](https://github.com/moonrockz/gleam-parser/blob/morphir-v0.1.2/profiles/morphir/src/README.mbt.md).
+Parsing behavior is unchanged. The commits below also record the independent
+profile packaging and import fixes already published in Morphir 0.1.1.
 
-### 🐛 Bug fixes
+### Bug fixes
 
 - *(release)* Isolate profile archives ([#27](https://github.com/moonrockz/gleam-parser/pull/27)) by @DamianReeves
 - *(morphir)* Support standalone profile imports ([#28](https://github.com/moonrockz/gleam-parser/pull/28)) by @DamianReeves
 
-### 📚 Documentation
+### Documentation
 
 - *(morphir)* Show supported Gleam syntax ([#29](https://github.com/moonrockz/gleam-parser/pull/29)) by @DamianReeves
 
