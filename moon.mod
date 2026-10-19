@@ -1,6 +1,6 @@
 name = "moonrockz/gleam-parser"
 
-version = "0.4.0"
+version = "0.5.0"
 
 import {
   "moonrockz/expect@0.6.1",

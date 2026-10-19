@@ -6,6 +6,20 @@ is 0.x, a minor release can contain breaking changes.
 
 <!-- git-cliff: end of header -->
 
+## [0.5.0] - 2026-10-19
+
+<!-- Highlights: replace this comment with a few sentences on what this release brings. -->
+
+### ⚠️ Breaking changes
+
+- *(dialect)* Replace Function and CustomType external fields with ([#25](https://github.com/moonrockz/gleam-parser/pull/25))
+
+### 🚀 Features
+
+- *(dialect)* [**breaking**] Support registered target profiles ([#25](https://github.com/moonrockz/gleam-parser/pull/25)) by @DamianReeves
+
+**Full changelog**: https://github.com/moonrockz/gleam-parser/compare/v0.4.0...v0.5.0
+
 ## [0.4.0] - 2026-10-18
 
 Parsing and formatting now accept deeply nested Gleam source without a default
