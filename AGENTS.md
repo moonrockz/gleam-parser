@@ -937,3 +937,14 @@ on core 0.5.0 and is excluded from the core archive. Its tested README lives in
 `profiles/morphir/src/README.mbt.md`. `mise run test:profile-package` checks the
 core archive and compiles an isolated core-only consumer. Unit and target tasks
 include `src/targets` and the optional module. Publish the core before the profile.
+
+## Shared OpenSpec configuration
+
+Use the shared `html-design` schema for new changes. Read `openspec/README.md`
+and `openspec/config.yaml`; repository-local tracking and approval rules still apply.
+The files under `openspec/schemas/html-design/` and `scripts/openspec-ext.mbtx`
+are managed by Mission Control's openspec-ext bundle. Change the shared source
+and reinstall instead of editing these snapshots. Run `mise run openspec:check`
+and `mise exec -- openspec validate --all --strict` after configuration changes.
+OpenSpec artifacts are committed project documentation; existing scratch-document
+rules continue to apply to local notes. Existing changes retain their own schema.
